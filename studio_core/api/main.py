@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from studio_core.api.routes.audiobooks import router as audiobooks_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
+from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
 from studio_core.api.routes.jobs import router as jobs_router
@@ -15,6 +17,7 @@ from studio_core.api.routes.sagas import router as sagas_router
 from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
+from studio_core.api.routes.videos import router as videos_router
 from studio_core.core.config import APP_CONFIG
 from studio_core.core.storage import ensure_storage_structure
 
@@ -50,6 +53,9 @@ app.include_router(sponsors_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
 app.include_router(factory_router, prefix="/api")
 app.include_router(publishing_router, prefix="/api")
+app.include_router(ebooks_router, prefix="/api")
+app.include_router(audiobooks_router, prefix="/api")
+app.include_router(videos_router, prefix="/api")
 
 
 @app.get("/")
@@ -60,4 +66,4 @@ def root() -> dict:
         "version": APP_CONFIG.app_version,
         "docs": "/docs",
         "health": "/api/health"
-}
+    }
