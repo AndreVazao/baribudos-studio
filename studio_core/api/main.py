@@ -11,7 +11,15 @@ from studio_core.api.routes.projects import router as projects_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
 from studio_core.core.config import APP_CONFIG
 from studio_core.core.storage import ensure_storage_structure
+from studio_core.api.routes.settings import router as settings_router
+from studio_core.api.routes.sagas import router as sagas_router
+from studio_core.api.routes.sponsors import router as sponsors_router
+from studio_core.api.routes.jobs import router as jobs_router
 
+app.include_router(settings_router, prefix="/api")
+app.include_router(sagas_router, prefix="/api")
+app.include_router(sponsors_router, prefix="/api")
+app.include_router(jobs_router, prefix="/api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
