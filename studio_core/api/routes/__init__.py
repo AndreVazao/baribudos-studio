@@ -9,4 +9,7 @@ __all__ = [
     "jobs",
     "factory",
     "publishing",
+    "ebooks",
+    "audiobooks",
+    "videos",
 ]
