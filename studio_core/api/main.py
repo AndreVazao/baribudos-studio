@@ -6,20 +6,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from studio_core.api.routes.diagnostics import router as diagnostics_router
+from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
+from studio_core.api.routes.jobs import router as jobs_router
 from studio_core.api.routes.projects import router as projects_router
+from studio_core.api.routes.publishing import router as publishing_router
+from studio_core.api.routes.sagas import router as sagas_router
+from studio_core.api.routes.settings import router as settings_router
+from studio_core.api.routes.sponsors import router as sponsors_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
 from studio_core.core.config import APP_CONFIG
 from studio_core.core.storage import ensure_storage_structure
-from studio_core.api.routes.settings import router as settings_router
-from studio_core.api.routes.sagas import router as sagas_router
-from studio_core.api.routes.sponsors import router as sponsors_router
-from studio_core.api.routes.jobs import router as jobs_router
 
-app.include_router(settings_router, prefix="/api")
-app.include_router(sagas_router, prefix="/api")
-app.include_router(sponsors_router, prefix="/api")
-app.include_router(jobs_router, prefix="/api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,6 +44,12 @@ app.include_router(health_router, prefix="/api")
 app.include_router(diagnostics_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(settings_router, prefix="/api")
+app.include_router(sagas_router, prefix="/api")
+app.include_router(sponsors_router, prefix="/api")
+app.include_router(jobs_router, prefix="/api")
+app.include_router(factory_router, prefix="/api")
+app.include_router(publishing_router, prefix="/api")
 
 
 @app.get("/")
