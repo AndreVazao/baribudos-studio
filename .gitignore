@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Env
+.env
+
+# Storage runtime
+storage/temp/
+storage/logs/
+storage/exports/
+storage/uploads/
+storage/videos/
+storage/audiobooks/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
