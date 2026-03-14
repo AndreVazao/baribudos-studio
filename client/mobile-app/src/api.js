@@ -307,4 +307,41 @@ export async function updateIpPalette(slug, palette, user) {
       user_role: user?.role || ""
     })
   }))
-      }
+}
+
+export async function getIpBranding(slug, user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-branding/${slug}?${query}`))
+}
+
+export async function updateIpBranding(slug, brandAssets, user) {
+  return handle(fetch(`${getApiBase()}/ip-branding/${slug}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      brand_assets: brandAssets,
+      user_id: user?.id || "",
+      user_name: user?.name || "",
+      user_role: user?.role || ""
+    })
+  }))
+}
+
+export async function uploadIpBrandingAsset(slug, assetType, file, user) {
+  const form = new FormData()
+  form.append("asset_type", assetType)
+  form.append("user_id", user?.id || "")
+  form.append("user_name", user?.name || "")
+  form.append("user_role", user?.role || "")
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/ip-branding/${slug}/upload`, {
+    method: "POST",
+    body: form
+  }))
+    }
