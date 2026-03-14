@@ -101,15 +101,18 @@ def _default_protagonist(saga_id: str) -> str:
 
 def _default_story_text(payload: Dict[str, Any]) -> str:
     saga_id = str(payload.get("saga_id", "baribudos")).strip()
+    runtime = load_ip_runtime(saga_id)
+    metadata = runtime.get("metadata", {}) or {}
+
     title = str(payload.get("title", "Nova História")).strip()
-    saga_name = str(payload.get("saga_name", "Os Baribudos")).strip()
+    saga_name = str(payload.get("saga_name") or metadata.get("series_name") or runtime.get("name") or "Saga").strip()
     protagonist = str(payload.get("protagonist", _default_protagonist(saga_id))).strip()
     value_theme = str(payload.get("value_theme", _default_value_from_canon(saga_id))).strip()
     final_phrase = _default_final_phrase_from_canon(saga_id)
 
     return (
         f"{protagonist} acordou cedo no universo de {saga_name}. "
-        f"Nesse dia, algo estranho chamou a sua atenção. "
+        f"Em '{title}', algo estranho chamou a sua atenção. "
         f"Sentiu curiosidade, mas também uma pequena dúvida no coração. "
         f"Com calma, observou melhor, respirou fundo e decidiu não avançar sem pensar. "
         f"Depois de conversar com quem o ajuda a crescer, compreendeu uma lição sobre {value_theme}. "
@@ -123,6 +126,9 @@ def generate_story(payload: Dict[str, Any]) -> Dict[str, Any]:
     language = str(payload.get("language", "pt-PT")).strip()
     saga_id = str(payload.get("saga_id", "baribudos")).strip()
 
+    runtime = load_ip_runtime(saga_id)
+    metadata = runtime.get("metadata", {}) or {}
+
     raw_text = _normalize_text(
         payload.get("raw_text")
         or payload.get("input", {}).get("raw_text")
@@ -134,12 +140,15 @@ def generate_story(payload: Dict[str, Any]) -> Dict[str, Any]:
         max_words_per_page=int(payload.get("max_words_per_page", 35))
     )
 
-    runtime = load_ip_runtime(saga_id)
     return {
         "id": str(uuid4()),
         "title": title,
         "language": language,
         "saga_id": saga_id,
+        "series_name": metadata.get("series_name") or runtime.get("name") or "",
+        "tagline": metadata.get("tagline", ""),
+        "mission": metadata.get("mission", ""),
+        "target_age": metadata.get("target_age", ""),
         "main_characters": runtime.get("main_characters", []),
         "raw_text": raw_text,
         "structure": _default_structure_from_canon(saga_id),
@@ -153,13 +162,20 @@ def generate_volume_guide(payload: Dict[str, Any]) -> Dict[str, Any]:
     story_title = str(story.get("title", project_title)).strip()
     page_count = len(story.get("pages", []) or [])
     saga_id = str(story.get("saga_id", "baribudos")).strip()
+
+    runtime = load_ip_runtime(saga_id)
+    metadata = runtime.get("metadata", {}) or {}
+
     final_phrase = _default_final_phrase_from_canon(saga_id)
+    mission = str(metadata.get("mission", "")).strip()
+    target_age = str(metadata.get("target_age", "")).strip()
 
     content = (
         f"Guia do volume: {story_title}\n\n"
-        f"Este volume foi preparado para leitura calma e partilhada.\n"
-        f"Número de páginas: {page_count}\n"
-        f"Objetivo emocional: promover conversa segura entre criança e família.\n\n"
+        f"Série: {metadata.get('series_name') or runtime.get('name') or '-'}\n"
+        f"Missão: {mission}\n"
+        f"Faixa etária alvo: {target_age}\n"
+        f"Número de páginas: {page_count}\n\n"
         f"Sugestão de uso:\n"
         f"- Ler sem pressa.\n"
         f"- Perguntar à criança o que sentiu.\n"
@@ -170,4 +186,4 @@ def generate_volume_guide(payload: Dict[str, Any]) -> Dict[str, Any]:
         "id": str(uuid4()),
         "title": f"Guia - {story_title}",
         "content": content
-    }
+        }
