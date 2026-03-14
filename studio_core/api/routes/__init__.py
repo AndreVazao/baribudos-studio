@@ -3,6 +3,7 @@ __all__ = [
     "diagnostics",
     "users",
     "projects",
+    "project_commercial",
     "settings",
     "sagas",
     "sponsors",
