@@ -61,6 +61,7 @@ class ProjectPatch(BaseModel):
     story: Optional[Dict[str, Any]] = None
     cover_image: Optional[str] = None
     illustration_path: Optional[str] = None
+    commercial: Optional[Dict[str, Any]] = None
 
 
 class Project(BaseModel):
@@ -77,6 +78,20 @@ class Project(BaseModel):
     visible_to_owner_only: bool = True
     cover_image: str = ""
     illustration_path: str = ""
+    commercial: Dict[str, Any] = Field(default_factory=lambda: {
+        "internal_code": "",
+        "isbn": "",
+        "asin": "",
+        "price": "",
+        "currency": "EUR",
+        "collection_seal": "",
+        "marketplaces": [],
+        "commercial_status": "draft",
+        "channels": [],
+        "keywords": [],
+        "subtitle": "",
+        "blurb": ""
+    })
     front_matter: Dict[str, Any] = Field(default_factory=dict)
     story: Dict[str, Any] = Field(default_factory=lambda: {
         "title": "",
