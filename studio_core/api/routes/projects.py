@@ -101,6 +101,12 @@ def patch_project(project_id: str, payload: ProjectPatch, user_name: str = "", u
         if payload.editorial_status is not None:
             updated["editorial_status"] = payload.editorial_status
 
+        if payload.cover_image is not None:
+            updated["cover_image"] = payload.cover_image
+
+        if payload.illustration_path is not None:
+            updated["illustration_path"] = payload.illustration_path
+
         if payload.front_matter is not None:
             updated["front_matter"] = {
                 **current.get("front_matter", {}),
