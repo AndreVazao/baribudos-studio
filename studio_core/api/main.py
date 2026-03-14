@@ -21,6 +21,7 @@ from studio_core.api.routes.ip_creator import router as ip_creator_router
 from studio_core.api.routes.ip_metadata import router as ip_metadata_router
 from studio_core.api.routes.ip_palette import router as ip_palette_router
 from studio_core.api.routes.jobs import router as jobs_router
+from studio_core.api.routes.project_commercial import router as project_commercial_router
 from studio_core.api.routes.projects import router as projects_router
 from studio_core.api.routes.publishing import router as publishing_router
 from studio_core.api.routes.saga_loader import router as saga_loader_router
@@ -67,6 +68,7 @@ app.include_router(health_router, prefix="/api")
 app.include_router(diagnostics_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(project_commercial_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(sagas_router, prefix="/api")
 app.include_router(sponsors_router, prefix="/api")
