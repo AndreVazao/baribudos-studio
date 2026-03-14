@@ -1,0 +1,68 @@
+{
+  "ip": "Os Baribudos",
+
+  "episode_format": {
+    "target_duration_minutes": 4,
+    "min_duration": 3,
+    "max_duration": 6,
+    "intro_seconds": 5,
+    "outro_seconds": 7
+  },
+
+  "intro_standard": {
+    "logo_required": true,
+    "forest_ambience": true,
+    "soft_music": true,
+    "narrator_voice": "calm"
+  },
+
+  "scene_structure_standard": [
+    "establishing_peaceful_scene",
+    "curiosity_event",
+    "temptation_or_warning",
+    "emotional_pause",
+    "mentor_guidance",
+    "decision_moment",
+    "family_resolution",
+    "moral_sentence"
+  ],
+
+  "visual_rules": {
+    "soft_colors": true,
+    "bright_forest": true,
+    "no_darkness": true,
+    "character_visibility": "clear",
+    "emotional_readability": true
+  },
+
+  "dialogue_rules": {
+    "short_sentences": true,
+    "pauses_required": true,
+    "emotionally_clear": true,
+    "no_fast_talking": true
+  },
+
+  "sound_design": {
+    "ambient_forest": true,
+    "soft_background_music": true,
+    "no_sudden_loud_sounds": true,
+    "gentle_effects": true
+  },
+
+  "animation_style": {
+    "movement_speed": "slow_gentle",
+    "camera_motion": "minimal",
+    "focus_on_expression": true
+  },
+
+  "lesson_delivery": {
+    "implicit": true,
+    "never_preachy": true,
+    "family_discussion": true
+  },
+
+  "closing_rule": {
+    "phrase_required": true,
+    "default_phrase": "Na dúvida, escolhe o caminho seguro."
+  }
+}
