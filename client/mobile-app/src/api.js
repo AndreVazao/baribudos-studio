@@ -20,6 +20,31 @@ function normalizeApiUrl(url) {
   return value
 }
 
+function getApiOrigin() {
+  const base = getApiBase()
+  return base.replace(/\/api$/, "")
+}
+
+export function resolveBackendFileUrl(filePath) {
+  const path = String(filePath || "").trim()
+  if (!path) return ""
+
+  if (/^https?:\/\//i.test(path)) {
+    return path
+  }
+
+  const marker = "/storage/"
+  const normalized = path.replace(/\\/g, "/")
+  const index = normalized.indexOf(marker)
+
+  if (index >= 0) {
+    const relative = normalized.slice(index)
+    return `${getApiOrigin()}${relative}`
+  }
+
+  return ""
+}
+
 export function getApiBase() {
   return normalizeApiUrl(localStorage.getItem(STORAGE_KEY) || DEFAULT_API)
 }
@@ -278,136 +303,4 @@ export async function getIpBySlug(slug, user) {
 
 export async function getIpPermissions(slug, user) {
   const query = new URLSearchParams({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-creator/${slug}/permissions?${query}`))
-}
-
-export async function getIpPalette(slug, user) {
-  const query = new URLSearchParams({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-palette/${slug}?${query}`))
-}
-
-export async function updateIpPalette(slug, palette, user) {
-  return handle(fetch(`${getApiBase()}/ip-palette/${slug}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      palette,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
-}
-
-export async function getIpBranding(slug, user) {
-  const query = new URLSearchParams({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-branding/${slug}?${query}`))
-}
-
-export async function updateIpBranding(slug, brandAssets, user) {
-  return handle(fetch(`${getApiBase()}/ip-branding/${slug}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      brand_assets: brandAssets,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
-}
-
-export async function uploadIpBrandingAsset(slug, assetType, file, user) {
-  const form = new FormData()
-  form.append("asset_type", assetType)
-  form.append("user_id", user?.id || "")
-  form.append("user_name", user?.name || "")
-  form.append("user_role", user?.role || "")
-  form.append("file", file)
-
-  return handle(fetch(`${getApiBase()}/ip-branding/${slug}/upload`, {
-    method: "POST",
-    body: form
-  }))
-}
-
-export async function getIpCharacters(slug, user) {
-  const query = new URLSearchParams({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-characters/${slug}?${query}`))
-}
-
-export async function updateIpCharacters(slug, mainCharacters, user) {
-  return handle(fetch(`${getApiBase()}/ip-characters/${slug}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      main_characters: mainCharacters,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
-}
-
-export async function getIpCanon(slug, canonType, user) {
-  const query = new URLSearchParams({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-canons/${slug}/${canonType}?${query}`))
-}
-
-export async function updateIpCanon(slug, canonType, data, user) {
-  return handle(fetch(`${getApiBase()}/ip-canons/${slug}/${canonType}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      data,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
-}
-
-export async function buildCover(payload) {
-  return handle(fetch(`${getApiBase()}/covers/build`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
-}
-
-export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
-  const form = new FormData()
-  form.append("saga_id", sagaId)
-  form.append("project_id", projectId)
-  form.append("file", file)
-
-  return handle(fetch(`${getApiBase()}/illustrations/upload`, {
-    method: "POST",
-    body: form
-  }))
-}
+    user_id
