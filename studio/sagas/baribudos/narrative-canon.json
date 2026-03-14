@@ -1,0 +1,77 @@
+{
+  "ip": "Os Baribudos",
+
+  "core_identity": {
+    "mission": "Histórias que Protegem",
+    "purpose": "Desenvolvimento emocional infantil",
+    "tone": "calm_safe_educational",
+    "world_theme": "nature_as_learning_space",
+    "magic_level": "subtle_symbolic"
+  },
+
+  "narrative_structure_standard": [
+    "simple_introduction",
+    "strange_element_or_problem",
+    "emotional_questioning",
+    "gentle_guidance_or_reflection",
+    "progressive_transformation",
+    "implicit_moral",
+    "final_strong_sentence"
+  ],
+
+  "episode_structure_standard": [
+    "curiosity_event",
+    "temptation_or_doubt",
+    "warning_signal",
+    "conscious_decision",
+    "family_conversation",
+    "practical_moral"
+  ],
+
+  "story_rules": {
+    "no_explicit_violence": true,
+    "threat_symbolic": true,
+    "family_resolution": true,
+    "safe_ending": true,
+    "child_empowerment": true
+  },
+
+  "language_style": {
+    "sentence_length": "short",
+    "vocabulary": "simple",
+    "emotional_clarity": true,
+    "reflection_encouraged": true
+  },
+
+  "values_pool": [
+    "responsibility",
+    "sharing",
+    "courage",
+    "patience",
+    "self_protection",
+    "nature_care",
+    "critical_thinking",
+    "trust_awareness"
+  ],
+
+  "villains_symbolic": [
+    {
+      "name": "Criatura Encapuzada",
+      "represents": "manipulation"
+    },
+    {
+      "name": "Eco da Floresta",
+      "represents": "dangerous_secrets"
+    },
+    {
+      "name": "Névoa Doce",
+      "represents": "tempting_offers"
+    },
+    {
+      "name": "Caminho Fácil",
+      "represents": "unsafe_shortcuts"
+    }
+  ],
+
+  "final_phrase_rule": "Na dúvida, escolhe o caminho seguro."
+}
