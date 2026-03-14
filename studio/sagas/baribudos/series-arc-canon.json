@@ -1,0 +1,68 @@
+{
+  "ip": "Os Baribudos",
+
+  "series_model": "continuous_growth",
+
+  "arc_principle": {
+    "each_story_teaches_one_value": true,
+    "characters_evolve_slowly": true,
+    "lessons_repeat_in_new_forms": true,
+    "family_bond_strengthens": true
+  },
+
+  "character_growth_rules": {
+    "Tilo": {
+      "arc": "innocence_to_awareness",
+      "growth_speed": "slow"
+    },
+    "Mila": {
+      "arc": "curiosity_to_understanding",
+      "growth_speed": "medium"
+    },
+    "Roko": {
+      "arc": "impulsiveness_to_responsibility",
+      "growth_speed": "medium"
+    },
+    "Luma": {
+      "arc": "emotional_anchor_constant",
+      "growth_speed": "stable"
+    },
+    "Magnus": {
+      "arc": "mentor_constant",
+      "growth_speed": "stable"
+    }
+  },
+
+  "season_structure": {
+    "episodes_per_season": 8,
+    "books_per_volume": 5,
+    "volume_creates_major_theme": true
+  },
+
+  "emotional_progression": [
+    "basic_safety",
+    "decision_awareness",
+    "trust_discernment",
+    "self_control",
+    "social_responsibility",
+    "independence_with_guidance"
+  ],
+
+  "villain_recurrence": {
+    "symbolic_entities_return": true,
+    "never_defeated_permanently": true,
+    "represent_internal_challenges": true
+  },
+
+  "continuity_rules": {
+    "memory_of_previous_events": true,
+    "no_personality_reset": true,
+    "lessons_accumulate": true
+  },
+
+  "mini_movie_rule": {
+    "enabled": true,
+    "created_after_each_volume": true,
+    "structure": "compiled_story_arc"
+  }
+}
