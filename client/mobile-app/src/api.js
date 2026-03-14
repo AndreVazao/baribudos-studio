@@ -284,4 +284,27 @@ export async function getIpPermissions(slug, user) {
   }).toString()
 
   return handle(fetch(`${getApiBase()}/ip-creator/${slug}/permissions?${query}`))
-    }
+}
+
+export async function getIpPalette(slug, user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-palette/${slug}?${query}`))
+}
+
+export async function updateIpPalette(slug, palette, user) {
+  return handle(fetch(`${getApiBase()}/ip-palette/${slug}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      palette,
+      user_id: user?.id || "",
+      user_name: user?.name || "",
+      user_role: user?.role || ""
+    })
+  }))
+      }
