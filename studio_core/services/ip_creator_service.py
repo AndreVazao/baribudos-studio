@@ -46,6 +46,16 @@ def get_ip_schema_template() -> Dict[str, Any]:
         "status": "draft",
         "default_language": "pt-PT",
         "output_languages": ["pt-PT"],
+        "metadata": {
+            "author_default": "",
+            "producer": "",
+            "tagline": "",
+            "mission": "",
+            "target_age": "",
+            "series_name": "",
+            "genre": "",
+            "description": ""
+        },
         "brand_assets": {
             "studio_logo": "",
             "series_logo": "",
@@ -89,6 +99,16 @@ def _default_baribudos_registry_entry() -> Dict[str, Any]:
         "status": "active",
         "default_language": "pt-PT",
         "output_languages": ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"],
+        "metadata": {
+            "author_default": "André Vazão",
+            "producer": "Baribudos Studio",
+            "tagline": "Histórias que Protegem",
+            "mission": "Desenvolvimento emocional infantil",
+            "target_age": "4-10",
+            "series_name": "Os Baribudos",
+            "genre": "Infantil Educativo Ilustrado",
+            "description": "Coleção educativa emocional com natureza, descoberta e proteção."
+        },
         "brand_assets": {
             "studio_logo": "public/brand/baribudos-studio-logo.png",
             "series_logo": "public/brand/os-baribudos-logo.png",
@@ -190,6 +210,11 @@ def create_ip(payload: Dict[str, Any]) -> Dict[str, Any]:
     owner_id = str(payload.get("owner_id", "")).strip()
     owner_name = str(payload.get("owner_name", "")).strip()
 
+    metadata = {
+        **template["metadata"],
+        **(payload.get("metadata") or {})
+    }
+
     item = {
         **template,
         "id": str(uuid4()),
@@ -207,6 +232,7 @@ def create_ip(payload: Dict[str, Any]) -> Dict[str, Any]:
         "status": str(payload.get("status", "draft")).strip(),
         "default_language": str(payload.get("default_language", "pt-PT")).strip(),
         "output_languages": payload.get("output_languages") or ["pt-PT"],
+        "metadata": metadata,
         "brand_assets": payload.get("brand_assets") or template["brand_assets"],
         "palette": payload.get("palette") or template["palette"],
         "main_characters": payload.get("main_characters") or [],
@@ -233,7 +259,7 @@ def update_ip(slug: str, patch: Dict[str, Any]) -> Dict[str, Any]:
         current["id"],
         lambda item: {
             **item,
-            **{k: v for k, v in patch.items() if k not in {"id", "slug", "created_at"}},
+            **{k: v for k, v in patch.items() if k not in {"id", "slug", "created_at", "palette", "brand_assets", "metadata"}},
             "palette": {
                 **(item.get("palette") or {}),
                 **(patch.get("palette") or {})
@@ -241,6 +267,10 @@ def update_ip(slug: str, patch: Dict[str, Any]) -> Dict[str, Any]:
             "brand_assets": {
                 **(item.get("brand_assets") or {}),
                 **(patch.get("brand_assets") or {})
+            },
+            "metadata": {
+                **(item.get("metadata") or {}),
+                **(patch.get("metadata") or {})
             },
             "updated_at": now_iso()
         }
@@ -360,6 +390,6 @@ def list_ip_assets_schema() -> Dict[str, Any]:
         "logo_editor": True,
         "palette_editor": True,
         "character_editor": True,
-        "canon_builder": True
-    }
-    
+        "canon_builder": True,
+        "metadata_editor": True
+}
