@@ -230,6 +230,21 @@ export async function updateProjectCommercial(projectId, commercial, user) {
   }))
 }
 
+export async function getPublicationPackage(projectId) {
+  return handle(fetch(`${getApiBase()}/publication-package/${projectId}`))
+}
+
+export async function freezePublicationPackage(projectId, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/publication-package/${projectId}/freeze?${query}`, {
+    method: "POST"
+  }))
+}
+
 export async function listJobs() {
   return handle(fetch(`${getApiBase()}/jobs`))
 }
