@@ -29,6 +29,7 @@ import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
 import OutputsPanel from "./OutputsPanel.jsx"
 import ProjectCommercialEditorPanel from "./ProjectCommercialEditorPanel.jsx"
 import PublicationPackagePanel from "./PublicationPackagePanel.jsx"
+import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -347,6 +348,7 @@ export default function DashboardPanel({ user }) {
       <IpCharactersEditorPanel user={user} />
       <IpCanonsEditorPanel user={user} />
       <ProjectCommercialEditorPanel user={user} />
+      <PublishReadinessPanel user={user} />
       <PublicationPackagePanel user={user} />
       <IpCoverBuilderPanel user={user} onCoverBuilt={handleCoverBuilt} />
       <OutputsPanel projects={projects} />
@@ -514,6 +516,7 @@ export default function DashboardPanel({ user }) {
             <div>ASIN: {project.commercial?.asin || "-"}</div>
             <div>Preço: {project.commercial?.price || "-"} {project.commercial?.currency || ""}</div>
             <div>Status comercial: {project.commercial?.commercial_status || "-"}</div>
+            <div>Pronto para publicar: {project.ready_for_publish ? "Sim" : "Não"}</div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton>
@@ -542,4 +545,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-    }
+  }
