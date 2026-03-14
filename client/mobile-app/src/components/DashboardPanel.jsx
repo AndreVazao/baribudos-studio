@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   createProject,
   createSaga,
@@ -9,6 +9,7 @@ import {
   exportVideo,
   getFactoryCapabilities,
   getSettings,
+  listIps,
   listJobs,
   listProjects,
   listPublications,
@@ -79,18 +80,27 @@ export default function DashboardPanel({ user }) {
   const [factoryCaps, setFactoryCaps] = useState(null)
   const [users, setUsers] = useState([])
   const [projects, setProjects] = useState([])
+  const [ips, setIps] = useState([])
   const [sagas, setSagas] = useState([])
   const [sponsors, setSponsors] = useState([])
   const [jobs, setJobs] = useState([])
   const [publications, setPublications] = useState([])
 
   const [newProjectTitle, setNewProjectTitle] = useState("")
+  const [newProjectIpSlug, setNewProjectIpSlug] = useState("")
+  const [newProjectLanguage, setNewProjectLanguage] = useState("pt-PT")
+
   const [newSagaName, setNewSagaName] = useState("")
   const [newSponsorName, setNewSponsorName] = useState("")
 
   useEffect(() => {
     loadAll()
   }, [])
+
+  const selectedProjectIp = useMemo(
+    () => ips.find((item) => item.slug === newProjectIpSlug) || null,
+    [ips, newProjectIpSlug]
+  )
 
   async function loadAll() {
     const [
@@ -99,6 +109,7 @@ export default function DashboardPanel({ user }) {
       factoryRes,
       usersRes,
       projectsRes,
+      ipsRes,
       sagasRes,
       sponsorsRes,
       jobsRes,
@@ -109,21 +120,29 @@ export default function DashboardPanel({ user }) {
       getFactoryCapabilities(),
       listUsers(),
       listProjects(user),
+      listIps(user),
       listSagas(),
       listSponsors(),
       listJobs(),
       listPublications()
     ])
 
+    const ipsList = ipsRes?.ips || []
+
     setSettings(settingsRes || {})
     setDiagnostic(diagnosticRes?.diagnostics || diagnosticRes || null)
     setFactoryCaps(factoryRes?.capabilities || null)
     setUsers(usersRes?.users || [])
     setProjects(projectsRes?.projects || [])
+    setIps(ipsList)
     setSagas(sagasRes || [])
     setSponsors(sponsorsRes || [])
     setJobs(jobsRes || [])
     setPublications(publicationsRes?.publications || [])
+
+    if (!newProjectIpSlug && ipsList.length) {
+      setNewProjectIpSlug(ipsList[0].slug)
+    }
   }
 
   function handleCoverBuilt(projectId, coverResult) {
@@ -145,12 +164,16 @@ export default function DashboardPanel({ user }) {
 
   async function handleCreateProject() {
     if (!newProjectTitle.trim()) return
+    if (!selectedProjectIp) {
+      alert("Seleciona uma IP para o projeto.")
+      return
+    }
 
     await createProject({
       title: newProjectTitle,
-      saga_slug: "baribudos",
-      saga_name: "Baribudos",
-      language: "pt-PT",
+      saga_slug: selectedProjectIp.slug,
+      saga_name: selectedProjectIp.name,
+      language: newProjectLanguage,
       output_languages: DEFAULT_LANGUAGES,
       created_by: user?.id || "",
       created_by_name: user?.name || "",
@@ -361,12 +384,55 @@ export default function DashboardPanel({ user }) {
       </Card>
 
       <Card title="Criar Projeto">
+        <label>IP / Saga</label>
+        <select
+          value={newProjectIpSlug}
+          onChange={(e) => setNewProjectIpSlug(e.target.value)}
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+        >
+          <option value="">Selecionar IP</option>
+          {ips.map((ip) => (
+            <option key={ip.id} value={ip.slug}>
+              {ip.name}
+            </option>
+          ))}
+        </select>
+
+        <label>Língua base</label>
+        <select
+          value={newProjectLanguage}
+          onChange={(e) => setNewProjectLanguage(e.target.value)}
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+        >
+          {DEFAULT_LANGUAGES.map((lang) => (
+            <option key={lang} value={lang}>
+              {lang}
+            </option>
+          ))}
+        </select>
+
         <input
           value={newProjectTitle}
           onChange={(e) => setNewProjectTitle(e.target.value)}
           placeholder="Título do projeto"
           style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
         />
+
+        {selectedProjectIp ? (
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              background: "rgba(255,255,255,0.55)"
+            }}
+          >
+            <div><strong>IP selecionada:</strong> {selectedProjectIp.name}</div>
+            <div><strong>Slug:</strong> {selectedProjectIp.slug}</div>
+            <div><strong>Privada:</strong> {selectedProjectIp.visible_to_owner_only ? "Sim" : "Não"}</div>
+          </div>
+        ) : null}
+
         <ActionButton onClick={handleCreateProject}>Criar projeto</ActionButton>
       </Card>
 
@@ -385,6 +451,7 @@ export default function DashboardPanel({ user }) {
           >
             <div><strong>{project.title}</strong></div>
             <div>Saga: {project.saga_name}</div>
+            <div>Slug IP: {project.saga_slug}</div>
             <div>Língua: {project.language}</div>
             <div>Dono: {project.created_by_name || "-"}</div>
             <div>Ilustração base: {project.illustration_path || "-"}</div>
@@ -417,4 +484,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-}
+                  }
