@@ -67,7 +67,12 @@ export default function IpCreatorPanel({ user }) {
       publishable_by_roles: ["owner", "admin"],
       cloneable: true,
       default_language: defaultLanguage,
-      output_languages: [defaultLanguage]
+      output_languages: [defaultLanguage],
+      brand_assets: {
+        studio_logo: "public/brand/baribudos-studio-logo.png",
+        series_logo: "",
+        seal_logo: ""
+      }
     })
 
     setName("")
