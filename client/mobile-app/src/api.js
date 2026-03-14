@@ -391,3 +391,11 @@ export async function updateIpCanon(slug, canonType, data, user) {
     })
   }))
 }
+
+export async function buildCover(payload) {
+  return handle(fetch(`${getApiBase()}/covers/build`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {})
+  }))
+                                     }
