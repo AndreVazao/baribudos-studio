@@ -11,12 +11,14 @@ router = APIRouter(prefix="/age-badges", tags=["age-badges"])
 def create_age_badge(payload: dict) -> dict:
     try:
         saga_id = str(payload.get("saga_id", "baribudos")).strip()
-        age_range = str(payload.get("age_range", "4-10 anos")).strip()
+        age_range = str(payload.get("age_range", "4-10")).strip()
+        language = str(payload.get("language", "pt-PT")).strip()
         output_name = payload.get("output_name")
 
         result = generate_age_badge(
             saga_id=saga_id,
             age_range=age_range,
+            language=language,
             output_name=output_name,
         )
         return {"ok": True, "result": result}
