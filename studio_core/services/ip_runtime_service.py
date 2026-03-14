@@ -43,9 +43,24 @@ def load_ip_runtime(slug: str) -> Dict[str, Any]:
     characters_master = _load_json(saga_root / "characters-master.json") or {}
 
     brand_assets = ip.get("brand_assets", {}) or {}
+    metadata = ip.get("metadata", {}) or {}
 
     return {
         "ip": ip,
+        "slug": ip.get("slug", slug),
+        "name": ip.get("name", slug),
+        "default_language": ip.get("default_language", "pt-PT"),
+        "output_languages": ip.get("output_languages", ["pt-PT"]),
+        "metadata": {
+            "author_default": metadata.get("author_default", ""),
+            "producer": metadata.get("producer", ""),
+            "tagline": metadata.get("tagline", ""),
+            "mission": metadata.get("mission", ""),
+            "target_age": metadata.get("target_age", ""),
+            "series_name": metadata.get("series_name", ""),
+            "genre": metadata.get("genre", ""),
+            "description": metadata.get("description", ""),
+        },
         "palette": ip.get("palette", {}) or {},
         "brand_assets": {
             "studio_logo": _resolve_public_asset(brand_assets.get("studio_logo", "")),
@@ -62,4 +77,4 @@ def load_ip_runtime(slug: str) -> Dict[str, Any]:
             "characters": characters_master,
         },
         "main_characters": ip.get("main_characters", []) or [],
-      }
+    }
