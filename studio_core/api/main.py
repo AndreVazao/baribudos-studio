@@ -13,6 +13,7 @@ from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
+from studio_core.api.routes.illustrations import router as illustrations_router
 from studio_core.api.routes.ip_branding import router as ip_branding_router
 from studio_core.api.routes.ip_canons import router as ip_canons_router
 from studio_core.api.routes.ip_characters import router as ip_characters_router
@@ -30,13 +31,11 @@ from studio_core.api.routes.videos import router as videos_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path
 from studio_core.core.storage import ensure_storage_structure
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_storage_structure()
     ensure_default_owner()
     yield
-
 
 app = FastAPI(
     title=APP_CONFIG.app_name,
@@ -77,7 +76,7 @@ app.include_router(ip_palette_router, prefix="/api")
 app.include_router(ip_branding_router, prefix="/api")
 app.include_router(ip_characters_router, prefix="/api")
 app.include_router(ip_canons_router, prefix="/api")
-
+app.include_router(illustrations_router, prefix="/api")
 
 @app.get("/")
 def root() -> dict:
