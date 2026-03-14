@@ -5,6 +5,7 @@ __all__ = [
     "projects",
     "project_commercial",
     "publication_package",
+    "publish_readiness",
     "settings",
     "sagas",
     "sponsors",
