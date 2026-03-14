@@ -1,0 +1,65 @@
+{
+  "ip": "Os Baribudos",
+  "author": "André Vazão",
+  "produced_by": "Baribudos Studio",
+  "age_target": "4-10",
+
+  "visual_dna": {
+    "body_shape": "small_round",
+    "fur": "short_soft_fluffy",
+    "eyes": "big_green_expressive",
+    "ears": "small_rounded",
+    "nose": "small_round",
+    "hands": "4_fingers",
+    "feet": "short",
+    "eyebrows": "expressive",
+    "style_rule": "never_realistic_never_scary"
+  },
+
+  "color_palette": {
+    "primary_green": "#2F5E2E",
+    "secondary_green": "#6FA86A",
+    "gold_accent": "#D4A73C",
+    "cream_background": "#F5EED6",
+    "brown_nature": "#8B5E3C"
+  },
+
+  "lighting_rules": {
+    "type": "soft_cinematic",
+    "temperature": "warm",
+    "magic_glow": "subtle",
+    "no_dark_scenes": true
+  },
+
+  "environment_rules": {
+    "world": "enchanted_forest",
+    "atmosphere": "peaceful_magical",
+    "particles": "golden_dust",
+    "nature_presence": "constant"
+  },
+
+  "illustration_rules": {
+    "main_image_per_page": true,
+    "text_space_required": true,
+    "balanced_layout": true,
+    "soft_edges": true,
+    "watercolor_digital": true
+  },
+
+  "cover_rules": {
+    "logo_top": true,
+    "age_badge_top_right": true,
+    "seal_bottom_left": true,
+    "character_center": true,
+    "magic_element_visible": true,
+    "title_gold": true,
+    "studio_credit_bottom": true
+  },
+
+  "emotional_tone": [
+    "curiosity",
+    "gentle_discovery",
+    "emotional_learning",
+    "calm_wonder"
+  ]
+}
