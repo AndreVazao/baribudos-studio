@@ -74,10 +74,8 @@ def _draw_title(draw: ImageDraw.ImageDraw, title: str, width: int, gold: tuple[i
     font = _fit_font(title, max_width=width - 180, start_size=88)
     bbox = font.getbbox(title)
     text_w = bbox[2] - bbox[0]
-
     x = (width - text_w) // 2
     y = 1120
-
     draw.text((x + 3, y + 3), title, font=font, fill=(60, 40, 20, 160))
     draw.text((x, y), title, font=font, fill=gold)
 
@@ -99,15 +97,17 @@ def build_cover(
     age_range: str,
     illustration_path: str,
     language: str = "pt-PT",
-    producer: str = "Produzido por Baribudos Studio",
+    producer: str | None = None,
     output_name: str | None = None,
 ) -> Dict[str, Any]:
     runtime = load_ip_runtime(saga_id)
     palette = runtime.get("palette", {}) or {}
+    metadata = runtime.get("metadata", {}) or {}
     brand_assets = runtime.get("brand_assets", {}) or {}
 
     cream = _hex_to_rgb(palette.get("background", "#F5EED6"))
     gold = _hex_to_rgb(palette.get("accent", "#D4A73C"))
+    producer_text = str(producer or metadata.get("producer") or "Produzido por Studio").strip()
 
     width, height = 1600, 1600
     cover = Image.new("RGBA", (width, height), cream + (255,))
@@ -125,16 +125,15 @@ def build_cover(
         language=language,
         output_name=f"{_safe_name(saga_id)}_{_safe_name(age_range)}_{_safe_name(language)}.png"
     )
-    badge_path = badge["file_path"]
 
     _paste_scaled(cover, brand_assets.get("series_logo"), (220, 40, 1380, 250))
-    _paste_scaled(cover, badge_path, (40, 30, 360, 360))
+    _paste_scaled(cover, badge.get("file_path"), (40, 30, 360, 360))
     _paste_scaled(cover, brand_assets.get("seal_logo"), (40, 1260, 360, 1540))
     _paste_scaled(cover, brand_assets.get("studio_logo"), (1180, 1320, 1560, 1540))
 
     draw = ImageDraw.Draw(cover)
     _draw_title(draw, title, width, gold)
-    _draw_footer(draw, width, producer)
+    _draw_footer(draw, width, producer_text)
 
     output_dir = resolve_storage_path("exports", project_id, "covers")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -150,8 +149,9 @@ def build_cover(
         "title": title,
         "age_range": age_range,
         "language": language,
+        "producer": producer_text,
         "file_name": file_name,
         "file_path": str(file_path),
-        "badge_file_path": badge_path,
+        "badge_file_path": badge.get("file_path"),
         "engine": "python-cover-builder"
-}
+    }
