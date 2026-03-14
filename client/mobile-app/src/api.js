@@ -367,4 +367,27 @@ export async function updateIpCharacters(slug, mainCharacters, user) {
       user_role: user?.role || ""
     })
   }))
-                         }
+}
+
+export async function getIpCanon(slug, canonType, user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-canons/${slug}/${canonType}?${query}`))
+}
+
+export async function updateIpCanon(slug, canonType, data, user) {
+  return handle(fetch(`${getApiBase()}/ip-canons/${slug}/${canonType}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      data,
+      user_id: user?.id || "",
+      user_name: user?.name || "",
+      user_role: user?.role || ""
+    })
+  }))
+}
