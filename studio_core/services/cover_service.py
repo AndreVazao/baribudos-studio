@@ -1,25 +1,14 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, Dict
 from uuid import uuid4
 
 from PIL import Image, ImageDraw, ImageFont
 
-from studio_core.core.config import resolve_project_path, resolve_storage_path
+from studio_core.core.config import resolve_storage_path
 from studio_core.services.age_badge_service import generate_age_badge
-
-
-def _load_json(path: Path) -> Dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _load_visual_canon(saga_id: str) -> Dict[str, Any]:
-    canon_path = resolve_project_path("studio", "sagas", saga_id, "visual-canon.json")
-    if not canon_path.exists():
-        raise FileNotFoundError(f"Visual canon não encontrado para saga: {saga_id}")
-    return _load_json(canon_path)
+from studio_core.services.ip_runtime_service import load_ip_runtime
 
 
 def _hex_to_rgb(value: str) -> tuple[int, int, int]:
@@ -41,14 +30,12 @@ def _get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         "C:/Windows/Fonts/verdanab.ttf",
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
     ]
-
     for candidate in candidates:
         if Path(candidate).exists():
             try:
                 return ImageFont.truetype(candidate, size=size)
             except Exception:
                 pass
-
     return ImageFont.load_default()
 
 
@@ -83,8 +70,7 @@ def _paste_scaled(base: Image.Image, overlay_path: str | None, box: tuple[int, i
     base.alpha_composite(overlay, (x, y))
 
 
-def _draw_title(draw: ImageDraw.ImageDraw, title: str, width: int, visual_canon: Dict[str, Any]) -> None:
-    gold = _hex_to_rgb(visual_canon.get("color_palette", {}).get("gold_accent", "#D4A73C"))
+def _draw_title(draw: ImageDraw.ImageDraw, title: str, width: int, gold: tuple[int, int, int]) -> None:
     font = _fit_font(title, max_width=width - 180, start_size=88)
     bbox = font.getbbox(title)
     text_w = bbox[2] - bbox[0]
@@ -112,12 +98,16 @@ def build_cover(
     title: str,
     age_range: str,
     illustration_path: str,
+    language: str = "pt-PT",
     producer: str = "Produzido por Baribudos Studio",
     output_name: str | None = None,
 ) -> Dict[str, Any]:
-    visual_canon = _load_visual_canon(saga_id)
-    palette = visual_canon.get("color_palette", {})
-    cream = _hex_to_rgb(palette.get("cream_background", "#F5EED6"))
+    runtime = load_ip_runtime(saga_id)
+    palette = runtime.get("palette", {}) or {}
+    brand_assets = runtime.get("brand_assets", {}) or {}
+
+    cream = _hex_to_rgb(palette.get("background", "#F5EED6"))
+    gold = _hex_to_rgb(palette.get("accent", "#D4A73C"))
 
     width, height = 1600, 1600
     cover = Image.new("RGBA", (width, height), cream + (255,))
@@ -126,33 +116,24 @@ def build_cover(
     illustration = illustration.resize((width, height), Image.LANCZOS)
     cover.alpha_composite(illustration, (0, 0))
 
-    # overlay leve para leitura
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 36))
     cover = Image.alpha_composite(cover, overlay)
 
-    # assets branding
-    brand_root = resolve_project_path("public", "brand")
-    studio_logo = brand_root / "baribudos-studio-logo.png"
-    series_logo = brand_root / "os-baribudos-logo.png"
-    seal_logo = brand_root / "historia-que-protege-selo.png"
-
-    # gerar badge dinâmica
     badge = generate_age_badge(
         saga_id=saga_id,
         age_range=age_range,
-        language="pt-PT",
-        output_name=f"{_safe_name(saga_id)}_{_safe_name(age_range)}_pt_pt.png"
+        language=language,
+        output_name=f"{_safe_name(saga_id)}_{_safe_name(age_range)}_{_safe_name(language)}.png"
     )
     badge_path = badge["file_path"]
 
-    # caixas de composição
-    _paste_scaled(cover, str(series_logo), (220, 40, 1380, 250))
+    _paste_scaled(cover, brand_assets.get("series_logo"), (220, 40, 1380, 250))
     _paste_scaled(cover, badge_path, (40, 30, 360, 360))
-    _paste_scaled(cover, str(seal_logo), (40, 1260, 360, 1540))
-    _paste_scaled(cover, str(studio_logo), (1180, 1320, 1560, 1540))
+    _paste_scaled(cover, brand_assets.get("seal_logo"), (40, 1260, 360, 1540))
+    _paste_scaled(cover, brand_assets.get("studio_logo"), (1180, 1320, 1560, 1540))
 
     draw = ImageDraw.Draw(cover)
-    _draw_title(draw, title, width, visual_canon)
+    _draw_title(draw, title, width, gold)
     _draw_footer(draw, width, producer)
 
     output_dir = resolve_storage_path("exports", project_id, "covers")
@@ -168,6 +149,7 @@ def build_cover(
         "project_id": project_id,
         "title": title,
         "age_range": age_range,
+        "language": language,
         "file_name": file_name,
         "file_path": str(file_path),
         "badge_file_path": badge_path,
