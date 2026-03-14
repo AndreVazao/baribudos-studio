@@ -1,0 +1,64 @@
+{
+  "ip": "Os Baribudos",
+
+  "age_badge_mission": {
+    "purpose": "identificar rapidamente a faixa etária da história",
+    "tone": "friendly_safe_playful",
+    "visibility": "clear_but_not_dominant"
+  },
+
+  "design_rules": {
+    "shape": "flag_pendant",
+    "corner_position_default": "top_left",
+    "rounded_edges": true,
+    "soft_shadow": true,
+    "no_hard_contrast": true,
+    "child_friendly_geometry": true
+  },
+
+  "color_rules": {
+    "primary": "#2F5E2E",
+    "secondary": "#6FA86A",
+    "accent": "#D4A73C",
+    "text_color": "#F5EED6",
+    "shadow_color": "rgba(0,0,0,0.15)"
+  },
+
+  "typography_rules": {
+    "font_style": "rounded_sans",
+    "font_weight": "bold",
+    "alignment": "center",
+    "max_characters": 12
+  },
+
+  "dynamic_content_rules": {
+    "age_range_variable": true,
+    "format": "X–Y anos",
+    "auto_insert_from_project_settings": true
+  },
+
+  "placement_rules": {
+    "ebook_cover": "top_left",
+    "youtube_thumbnail": "top_left",
+    "promo_assets": "top_left",
+    "optional_on_internal_pages": true
+  },
+
+  "size_rules": {
+    "cover_percentage": 12,
+    "min_pixels": 140,
+    "max_pixels": 260
+  },
+
+  "behavior_rules": {
+    "always_visible_on_cover": true,
+    "never_overlap_character_face": true,
+    "never_overlap_title": true
+  },
+
+  "future_scalability": {
+    "multi_language_ready": true,
+    "dynamic_text_translation": true,
+    "supports_other_sagas": true
+  }
+}
