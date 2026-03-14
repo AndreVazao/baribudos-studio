@@ -6,6 +6,7 @@ from uuid import uuid4
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.audiobook_service import build_audiobook
+from studio_core.services.cover_service import build_cover
 from studio_core.services.ebook_service import build_epub
 from studio_core.services.language_service import build_language_versions, get_supported_languages
 from studio_core.services.publishing_service import publish_package
@@ -20,6 +21,7 @@ def get_factory_capabilities() -> Dict[str, Any]:
         "engine": "python-factory-real",
         "story": True,
         "translations": True,
+        "cover": True,
         "epub": True,
         "audiobook": True,
         "video": True,
@@ -47,6 +49,7 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
 
     create_story = bool(payload.get("createStory", True))
     create_translations = bool(payload.get("createTranslations", True))
+    create_cover = bool(payload.get("createCover", True))
     create_epub = bool(payload.get("createEpub", True))
     create_audiobook = bool(payload.get("createAudiobook", True))
     create_series = bool(payload.get("createSeries", True))
@@ -68,6 +71,19 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         story.get("language", project.get("language", "pt-PT")): story
     }
 
+    cover_output = None
+    illustration_path = str(project.get("illustration_path", "")).strip()
+    if create_cover and illustration_path:
+        cover_output = build_cover(
+            saga_id=saga_id,
+            project_id=project_id,
+            title=project.get("title", "Projeto"),
+            age_range=str(payload.get("age_range", "4-10")).strip(),
+            language=str(project.get("language", "pt-PT")).strip(),
+            illustration_path=illustration_path,
+            output_name=f"{project.get('title', 'projeto').lower().replace(' ', '_')}_cover.png"
+        )
+
     epub_outputs: Dict[str, Any] = {}
     if create_epub:
         for language, localized_story in language_versions.items():
@@ -77,7 +93,7 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
                 project_title=project.get("title", "Projeto"),
                 language=language,
                 author="André Vazão",
-                cover_path=project.get("cover_image") or None,
+                cover_path=(cover_output or {}).get("file_path") or project.get("cover_image") or None,
             )
 
     audiobook_outputs = build_audiobook(
@@ -122,6 +138,7 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         "project_id": project_id,
         "saga_id": saga_id,
         "story_created": create_story,
+        "cover_created": cover_output is not None,
         "translation_count": len(language_versions),
         "epub_languages": list(epub_outputs.keys()),
         "audiobook_languages": list(audiobook_outputs.keys()),
@@ -137,17 +154,20 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         return {
             **current,
             "story": story,
+            "cover_image": (cover_output or {}).get("file_path", current.get("cover_image", "")),
             "language_variants": {
                 language: {
                     "language": language,
                     "title": localized_story.get("title", current.get("title", "")),
                     "pages": localized_story.get("pages", []),
-                    "status": "generated"
+                    "status": "generated",
+                    "raw_text": localized_story.get("raw_text", "")
                 }
                 for language, localized_story in language_versions.items()
             },
             "outputs": {
                 **current_outputs,
+                "covers": cover_output or current_outputs.get("covers"),
                 "epub": epub_outputs,
                 "audiobook": audiobook_outputs,
                 "video": series_outputs,
@@ -165,6 +185,7 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "story": story,
+        "cover": cover_output,
         "language_versions": language_versions,
         "epub": epub_outputs,
         "audiobook": audiobook_outputs,
