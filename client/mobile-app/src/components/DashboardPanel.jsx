@@ -132,6 +132,7 @@ export default function DashboardPanel({ user }) {
         project.id === projectId
           ? {
               ...project,
+              cover_image: coverResult?.file_path || project.cover_image,
               outputs: {
                 ...(project.outputs || {}),
                 covers: coverResult
@@ -216,11 +217,13 @@ export default function DashboardPanel({ user }) {
       languages: ["pt-PT", "en"],
       createStory: true,
       createTranslations: true,
+      createCover: true,
       createEpub: true,
       createAudiobook: true,
       createSeries: true,
       createGuide: true,
-      publish: false
+      publish: false,
+      age_range: "4-10"
     })
     alert("Factory concluída.")
     await loadAll()
@@ -384,6 +387,8 @@ export default function DashboardPanel({ user }) {
             <div>Saga: {project.saga_name}</div>
             <div>Língua: {project.language}</div>
             <div>Dono: {project.created_by_name || "-"}</div>
+            <div>Ilustração base: {project.illustration_path || "-"}</div>
+            <div>Capa: {project.cover_image || "-"}</div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton>
@@ -412,4 +417,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-  }
+}
