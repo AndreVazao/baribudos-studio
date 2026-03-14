@@ -24,6 +24,7 @@ import IpCharactersEditorPanel from "./IpCharactersEditorPanel.jsx"
 import IpCoverBuilderPanel from "./IpCoverBuilderPanel.jsx"
 import IpCreatorPanel from "./IpCreatorPanel.jsx"
 import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
+import OutputsPanel from "./OutputsPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -125,6 +126,22 @@ export default function DashboardPanel({ user }) {
     setPublications(publicationsRes?.publications || [])
   }
 
+  function handleCoverBuilt(projectId, coverResult) {
+    setProjects((current) =>
+      current.map((project) =>
+        project.id === projectId
+          ? {
+              ...project,
+              outputs: {
+                ...(project.outputs || {}),
+                covers: coverResult
+              }
+            }
+          : project
+      )
+    )
+  }
+
   async function handleCreateProject() {
     if (!newProjectTitle.trim()) return
 
@@ -216,6 +233,7 @@ export default function DashboardPanel({ user }) {
     }
     await exportEbook(projectId, { language: "pt-PT" })
     alert("EPUB exportado.")
+    await loadAll()
   }
 
   async function handleExportAudio(projectId) {
@@ -225,6 +243,7 @@ export default function DashboardPanel({ user }) {
     }
     await exportAudiobook(projectId, { language: "pt-PT" })
     alert("Audiobook exportado.")
+    await loadAll()
   }
 
   async function handleExportVideo(projectId) {
@@ -234,6 +253,7 @@ export default function DashboardPanel({ user }) {
     }
     await exportVideo(projectId, { language: "pt-PT" })
     alert("Vídeo exportado.")
+    await loadAll()
   }
 
   async function handleSaveSettings() {
@@ -266,7 +286,8 @@ export default function DashboardPanel({ user }) {
       <IpBrandingEditorPanel user={user} />
       <IpCharactersEditorPanel user={user} />
       <IpCanonsEditorPanel user={user} />
-      <IpCoverBuilderPanel user={user} />
+      <IpCoverBuilderPanel user={user} onCoverBuilt={handleCoverBuilt} />
+      <OutputsPanel projects={projects} />
 
       <Card title="Settings">
         <label>Língua default</label>
