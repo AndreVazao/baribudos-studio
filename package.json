@@ -1,0 +1,15 @@
+{
+  "name": "baribudos-studio",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "frontend:install": "cd client/mobile-app && npm install",
+    "frontend:dev": "cd client/mobile-app && npm run dev",
+    "frontend:build": "cd client/mobile-app && npm run build",
+    "backend:dev": "uvicorn studio_core.api.main:app --host 0.0.0.0 --port 8787 --reload",
+    "backend:start": "uvicorn studio_core.api.main:app --host 0.0.0.0 --port 8787",
+    "dev:up": "python scripts/dev_up.py",
+    "build:all": "python scripts/build_frontend.py",
+    "apk:prep": "cd client/mobile-app && npm run build"
+  }
+}
