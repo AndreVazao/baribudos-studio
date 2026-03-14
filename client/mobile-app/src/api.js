@@ -213,6 +213,23 @@ export async function updateProject(projectId, payload, user) {
   }))
 }
 
+export async function getProjectCommercial(projectId) {
+  return handle(fetch(`${getApiBase()}/project-commercial/${projectId}`))
+}
+
+export async function updateProjectCommercial(projectId, commercial, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/project-commercial/${projectId}?${query}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ commercial: commercial || {} })
+  }))
+}
+
 export async function listJobs() {
   return handle(fetch(`${getApiBase()}/jobs`))
 }
