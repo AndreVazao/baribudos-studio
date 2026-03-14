@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { buildCover, listIps, listProjects } from "../api.js"
+import { buildCover, listIps, listProjects, uploadIllustrationForCover } from "../api.js"
 
 const LANGUAGES = [
   { value: "pt-PT", label: "Português (PT-PT)" },
@@ -48,6 +48,7 @@ export default function IpCoverBuilderPanel({ user }) {
   const [ageRange, setAgeRange] = useState("4-10")
   const [illustrationPath, setIllustrationPath] = useState("")
   const [illustrationPreview, setIllustrationPreview] = useState("")
+  const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState(null)
 
   useEffect(() => {
@@ -94,19 +95,34 @@ export default function IpCoverBuilderPanel({ user }) {
     }
   }
 
-  function handleIllustrationFile(file) {
-    if (!file) return
+  async function handleIllustrationFile(file) {
+    if (!file || !selectedIp || !selectedProjectId) {
+      alert("Seleciona primeiro a IP e o projeto.")
+      return
+    }
+
     const preview = readFileAsObjectUrl(file)
     setIllustrationPreview(preview)
 
-    // No telemóvel/browser não temos path local utilizável pelo backend.
-    // Este campo fica pronto para quando a ilustração já existir no PC/backend.
-    // Aqui o user cola o caminho real do ficheiro no PC.
+    try {
+      setUploading(true)
+      const res = await uploadIllustrationForCover({
+        sagaId: selectedIp,
+        projectId: selectedProjectId,
+        file
+      })
+      const uploadedPath = res?.result?.file_path || ""
+      setIllustrationPath(uploadedPath)
+    } catch (error) {
+      alert(error?.message || "Erro no upload da ilustração.")
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function handleBuild() {
     if (!selectedIp || !selectedProjectId || !title.trim() || !illustrationPath.trim()) {
-      alert("Preenche IP, projeto, título e caminho da ilustração no PC.")
+      alert("Preenche IP, projeto, título e ilustração.")
       return
     }
 
@@ -186,12 +202,14 @@ export default function IpCoverBuilderPanel({ user }) {
         style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       />
 
-      <label>Selecionar ilustração para preview local</label>
+      <label>Ilustração base</label>
       <input
         type="file"
         accept=".png,.jpg,.jpeg,.webp"
         onChange={(e) => handleIllustrationFile(e.target.files?.[0])}
       />
+
+      {uploading ? <div>A fazer upload da ilustração...</div> : null}
 
       {illustrationPreview ? (
         <img
@@ -201,11 +219,11 @@ export default function IpCoverBuilderPanel({ user }) {
         />
       ) : null}
 
-      <label>Caminho da ilustração no PC/backend</label>
+      <label>Caminho da ilustração carregada</label>
       <input
         value={illustrationPath}
         onChange={(e) => setIllustrationPath(e.target.value)}
-        placeholder="/caminho/no/pc/para/ilustracao.png"
+        placeholder="Será preenchido após upload"
         style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       />
 
@@ -243,4 +261,4 @@ export default function IpCoverBuilderPanel({ user }) {
       ) : null}
     </Card>
   )
-                  }
+  }
