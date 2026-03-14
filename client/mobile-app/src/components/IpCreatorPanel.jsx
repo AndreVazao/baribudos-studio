@@ -103,6 +103,7 @@ export default function IpCreatorPanel({ user }) {
             <div>Owner: {item.owner_name || "-"}</div>
             <div>Exclusiva: {item.exclusive ? "Sim" : "Não"}</div>
             <div>Privada: {item.visible_to_owner_only ? "Sim" : "Não"}</div>
+            <div>Língua default: {item.default_language || "-"}</div>
           </button>
         ))}
       </Card>
@@ -164,4 +165,4 @@ export default function IpCreatorPanel({ user }) {
       </Card>
     </div>
   )
-      }
+        }
