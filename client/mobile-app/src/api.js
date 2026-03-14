@@ -1,6 +1,7 @@
 const STORAGE_KEY = "baribudos_python_api"
 const USER_KEY = "baribudos_python_user"
-const DEFAULT_API = "http://localhost:8787/api"
+const ENV_API = import.meta.env.VITE_BARIBUDOS_API || ""
+const DEFAULT_API = ENV_API || "http://localhost:8787/api"
 
 function normalizeApiUrl(url) {
   let value = String(url || "").trim()
