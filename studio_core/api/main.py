@@ -14,6 +14,7 @@ from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
 from studio_core.api.routes.ip_branding import router as ip_branding_router
+from studio_core.api.routes.ip_canons import router as ip_canons_router
 from studio_core.api.routes.ip_characters import router as ip_characters_router
 from studio_core.api.routes.ip_creator import router as ip_creator_router
 from studio_core.api.routes.ip_palette import router as ip_palette_router
@@ -75,6 +76,7 @@ app.include_router(ip_creator_router, prefix="/api")
 app.include_router(ip_palette_router, prefix="/api")
 app.include_router(ip_branding_router, prefix="/api")
 app.include_router(ip_characters_router, prefix="/api")
+app.include_router(ip_canons_router, prefix="/api")
 
 
 @app.get("/")
