@@ -344,4 +344,27 @@ export async function uploadIpBrandingAsset(slug, assetType, file, user) {
     method: "POST",
     body: form
   }))
-    }
+}
+
+export async function getIpCharacters(slug, user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-characters/${slug}?${query}`))
+}
+
+export async function updateIpCharacters(slug, mainCharacters, user) {
+  return handle(fetch(`${getApiBase()}/ip-characters/${slug}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      main_characters: mainCharacters,
+      user_id: user?.id || "",
+      user_name: user?.name || "",
+      user_role: user?.role || ""
+    })
+  }))
+                         }
