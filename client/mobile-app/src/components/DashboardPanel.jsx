@@ -19,6 +19,7 @@ import {
   saveSettings
 } from "../api.js"
 import IpBrandingEditorPanel from "./IpBrandingEditorPanel.jsx"
+import IpCanonsEditorPanel from "./IpCanonsEditorPanel.jsx"
 import IpCharactersEditorPanel from "./IpCharactersEditorPanel.jsx"
 import IpCreatorPanel from "./IpCreatorPanel.jsx"
 import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
@@ -263,6 +264,7 @@ export default function DashboardPanel({ user }) {
       <IpPaletteEditorPanel user={user} />
       <IpBrandingEditorPanel user={user} />
       <IpCharactersEditorPanel user={user} />
+      <IpCanonsEditorPanel user={user} />
 
       <Card title="Settings">
         <label>Língua default</label>
@@ -387,4 +389,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-}
+                       }
