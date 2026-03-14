@@ -24,6 +24,7 @@ import IpCanonsEditorPanel from "./IpCanonsEditorPanel.jsx"
 import IpCharactersEditorPanel from "./IpCharactersEditorPanel.jsx"
 import IpCoverBuilderPanel from "./IpCoverBuilderPanel.jsx"
 import IpCreatorPanel from "./IpCreatorPanel.jsx"
+import IpMetadataEditorPanel from "./IpMetadataEditorPanel.jsx"
 import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
 import OutputsPanel from "./OutputsPanel.jsx"
 
@@ -183,8 +184,8 @@ export default function DashboardPanel({ user }) {
       title: newProjectTitle,
       saga_slug: selectedProjectIp.slug,
       saga_name: selectedProjectIp.name,
-      language: newProjectLanguage,
-      output_languages: DEFAULT_LANGUAGES,
+      language: newProjectLanguage || selectedProjectIp.default_language || "pt-PT",
+      output_languages: selectedProjectIp.output_languages || DEFAULT_LANGUAGES,
       created_by: user?.id || "",
       created_by_name: user?.name || "",
       visible_to_owner_only: true
@@ -338,6 +339,7 @@ export default function DashboardPanel({ user }) {
       </Card>
 
       <IpCreatorPanel user={user} />
+      <IpMetadataEditorPanel user={user} />
       <IpPaletteEditorPanel user={user} />
       <IpBrandingEditorPanel user={user} />
       <IpCharactersEditorPanel user={user} />
@@ -475,6 +477,9 @@ export default function DashboardPanel({ user }) {
             <div><strong>Slug:</strong> {selectedProjectIp.slug}</div>
             <div><strong>Privada:</strong> {selectedProjectIp.visible_to_owner_only ? "Sim" : "Não"}</div>
             <div><strong>Língua default da IP:</strong> {selectedProjectIp.default_language || "-"}</div>
+            <div><strong>Idiomas output da IP:</strong> {(selectedProjectIp.output_languages || []).join(", ")}</div>
+            <div><strong>Autor default:</strong> {selectedProjectIp.metadata?.author_default || "-"}</div>
+            <div><strong>Producer:</strong> {selectedProjectIp.metadata?.producer || "-"}</div>
           </div>
         ) : null}
 
@@ -529,4 +534,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-                           }
+    }
