@@ -8,6 +8,7 @@ from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.audiobook_service import build_audiobook
 from studio_core.services.cover_service import build_cover
 from studio_core.services.ebook_service import build_epub
+from studio_core.services.ip_runtime_service import load_ip_runtime
 from studio_core.services.language_service import build_language_versions, get_supported_languages
 from studio_core.services.publishing_service import publish_package
 from studio_core.services.story_service import generate_story, generate_volume_guide
@@ -44,8 +45,17 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if not project:
         raise ValueError("Projeto não encontrado.")
 
-    requested_languages: List[str] = payload.get("languages") or project.get("output_languages") or [project.get("language", "pt-PT")]
     saga_id = str(project.get("saga_slug", "baribudos")).strip()
+    runtime = load_ip_runtime(saga_id)
+    metadata = runtime.get("metadata", {}) or {}
+
+    project_language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip()
+    requested_languages: List[str] = (
+        payload.get("languages")
+        or project.get("output_languages")
+        or runtime.get("output_languages")
+        or [project_language]
+    )
 
     create_story = bool(payload.get("createStory", True))
     create_translations = bool(payload.get("createTranslations", True))
@@ -56,19 +66,25 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     create_guide = bool(payload.get("createGuide", False))
     publish = bool(payload.get("publish", False))
 
+    age_range = str(
+        payload.get("age_range")
+        or metadata.get("target_age")
+        or "4-10"
+    ).strip()
+
     if create_story:
         story = generate_story({
             "title": project.get("title", "Projeto"),
-            "language": project.get("language", "pt-PT"),
+            "language": project_language,
             "saga_id": saga_id,
-            "saga_name": project.get("saga_name", "Baribudos"),
+            "saga_name": project.get("saga_name", runtime.get("name", "Saga")),
             "raw_text": (project.get("story") or {}).get("raw_text", "")
         })
     else:
         story = project.get("story", {}) or {}
 
     language_versions = build_language_versions(story, requested_languages) if create_translations else {
-        story.get("language", project.get("language", "pt-PT")): story
+        story.get("language", project_language): story
     }
 
     cover_output = None
@@ -78,9 +94,10 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             saga_id=saga_id,
             project_id=project_id,
             title=project.get("title", "Projeto"),
-            age_range=str(payload.get("age_range", "4-10")).strip(),
-            language=str(project.get("language", "pt-PT")).strip(),
+            age_range=age_range,
+            language=project_language,
             illustration_path=illustration_path,
+            producer=metadata.get("producer") or None,
             output_name=f"{project.get('title', 'projeto').lower().replace(' ', '_')}_cover.png"
         )
 
@@ -92,8 +109,9 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
                 project_id=project_id,
                 project_title=project.get("title", "Projeto"),
                 language=language,
-                author="André Vazão",
+                author=str(metadata.get("author_default") or "Autor").strip(),
                 cover_path=(cover_output or {}).get("file_path") or project.get("cover_image") or None,
+                saga_id=saga_id,
             )
 
     audiobook_outputs = build_audiobook(
@@ -137,6 +155,10 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     summary = {
         "project_id": project_id,
         "saga_id": saga_id,
+        "series_name": metadata.get("series_name") or runtime.get("name") or "",
+        "author_default": metadata.get("author_default", ""),
+        "producer": metadata.get("producer", ""),
+        "target_age": age_range,
         "story_created": create_story,
         "cover_created": cover_output is not None,
         "translation_count": len(language_versions),
@@ -154,6 +176,8 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         return {
             **current,
             "story": story,
+            "language": project_language,
+            "output_languages": requested_languages,
             "cover_image": (cover_output or {}).get("file_path", current.get("cover_image", "")),
             "language_variants": {
                 language: {
