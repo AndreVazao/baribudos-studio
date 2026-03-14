@@ -25,17 +25,38 @@ function Card({ title, children }) {
   return (
     <div
       style={{
-        border: "1px solid #ddd",
-        borderRadius: 12,
-        background: "#fff",
+        border: "1px solid rgba(255,255,255,0.25)",
+        borderRadius: 16,
+        background: "rgba(255,255,255,0.84)",
+        backdropFilter: "blur(8px)",
         padding: 16,
         display: "grid",
-        gap: 12
+        gap: 12,
+        boxShadow: "0 10px 24px rgba(0,0,0,0.10)"
       }}
     >
-      <h3 style={{ margin: 0 }}>{title}</h3>
+      <h3 style={{ margin: 0, color: "#2F5E2E" }}>{title}</h3>
       {children}
     </div>
+  )
+}
+
+function ActionButton({ children, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "10px 12px",
+        borderRadius: 12,
+        border: "none",
+        background: "#2F5E2E",
+        color: "#fff",
+        fontWeight: 700,
+        cursor: "pointer"
+      }}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -205,6 +226,7 @@ export default function DashboardPanel({ user }) {
               default_language: e.target.value
             }))
           }
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
         />
 
         <label>Autor default</label>
@@ -216,9 +238,10 @@ export default function DashboardPanel({ user }) {
               author_default: e.target.value
             }))
           }
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
         />
 
-        <button onClick={handleSaveSettings}>Guardar settings</button>
+        <ActionButton onClick={handleSaveSettings}>Guardar settings</ActionButton>
       </Card>
 
       <Card title="Utilizadores">
@@ -234,8 +257,9 @@ export default function DashboardPanel({ user }) {
           value={newSagaName}
           onChange={(e) => setNewSagaName(e.target.value)}
           placeholder="Nome da saga"
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
         />
-        <button onClick={handleCreateSaga}>Criar saga</button>
+        <ActionButton onClick={handleCreateSaga}>Criar saga</ActionButton>
 
         {sagas.map((saga, index) => (
           <div key={saga.id || saga.slug || index}>
@@ -249,8 +273,9 @@ export default function DashboardPanel({ user }) {
           value={newSponsorName}
           onChange={(e) => setNewSponsorName(e.target.value)}
           placeholder="Nome do patrocinador"
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
         />
-        <button onClick={handleCreateSponsor}>Criar sponsor</button>
+        <ActionButton onClick={handleCreateSponsor}>Criar sponsor</ActionButton>
 
         {sponsors.map((sponsor, index) => (
           <div key={sponsor.id || index}>
@@ -264,8 +289,9 @@ export default function DashboardPanel({ user }) {
           value={newProjectTitle}
           onChange={(e) => setNewProjectTitle(e.target.value)}
           placeholder="Título do projeto"
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
         />
-        <button onClick={handleCreateProject}>Criar projeto</button>
+        <ActionButton onClick={handleCreateProject}>Criar projeto</ActionButton>
       </Card>
 
       <Card title="Projetos">
@@ -273,11 +299,12 @@ export default function DashboardPanel({ user }) {
           <div
             key={project.id}
             style={{
-              border: "1px solid #eee",
-              borderRadius: 10,
+              border: "1px solid #e5e7eb",
+              borderRadius: 12,
               padding: 12,
               display: "grid",
-              gap: 8
+              gap: 8,
+              background: "rgba(255,255,255,0.55)"
             }}
           >
             <div><strong>{project.title}</strong></div>
@@ -285,10 +312,10 @@ export default function DashboardPanel({ user }) {
             <div>Língua: {project.language}</div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => handleFactory(project.id)}>Factory</button>
-              <button onClick={() => handleExportEpub(project.id)}>EPUB</button>
-              <button onClick={() => handleExportAudio(project.id)}>Audiobook</button>
-              <button onClick={() => handleExportVideo(project.id)}>Vídeo</button>
+              <ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton>
+              <ActionButton onClick={() => handleExportEpub(project.id)}>EPUB</ActionButton>
+              <ActionButton onClick={() => handleExportAudio(project.id)}>Audiobook</ActionButton>
+              <ActionButton onClick={() => handleExportVideo(project.id)}>Vídeo</ActionButton>
             </div>
           </div>
         ))}
