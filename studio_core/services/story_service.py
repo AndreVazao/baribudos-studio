@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 from uuid import uuid4
 
-from studio_core.services.saga_loader_service import load_saga
+from studio_core.services.ip_runtime_service import load_ip_runtime
 
 
 def _normalize_text(text: str) -> str:
@@ -44,8 +44,8 @@ def _split_story_into_pages(text: str, max_words_per_page: int = 35) -> List[Dic
 
 def _default_structure_from_canon(saga_id: str) -> List[str]:
     try:
-        saga = load_saga(saga_id)
-        canon = saga.get("narrative_canon") or {}
+        runtime = load_ip_runtime(saga_id)
+        canon = runtime.get("canons", {}).get("narrative", {}) or {}
         return canon.get("narrative_structure_standard", [])
     except Exception:
         return [
@@ -61,8 +61,8 @@ def _default_structure_from_canon(saga_id: str) -> List[str]:
 
 def _default_final_phrase_from_canon(saga_id: str) -> str:
     try:
-        saga = load_saga(saga_id)
-        canon = saga.get("narrative_canon") or {}
+        runtime = load_ip_runtime(saga_id)
+        canon = runtime.get("canons", {}).get("narrative", {}) or {}
         final_rule = canon.get("final_phrase_rule", {})
         if isinstance(final_rule, dict):
             return str(final_rule.get("default_phrase", "Na dúvida, escolhe o caminho seguro.")).strip()
@@ -75,8 +75,8 @@ def _default_final_phrase_from_canon(saga_id: str) -> str:
 
 def _default_value_from_canon(saga_id: str) -> str:
     try:
-        saga = load_saga(saga_id)
-        canon = saga.get("pedagogical_canon") or {}
+        runtime = load_ip_runtime(saga_id)
+        canon = runtime.get("canons", {}).get("pedagogical", {}) or {}
         values_pool = canon.get("approved_values", [])
         if values_pool:
             first = values_pool[0]
@@ -88,19 +88,31 @@ def _default_value_from_canon(saga_id: str) -> str:
     return "Coragem"
 
 
+def _default_protagonist(saga_id: str) -> str:
+    try:
+        runtime = load_ip_runtime(saga_id)
+        chars = runtime.get("main_characters", []) or []
+        if chars:
+            return str(chars[0].get("name", "Herói")).strip()
+    except Exception:
+        pass
+    return "Tilo"
+
+
 def _default_story_text(payload: Dict[str, Any]) -> str:
+    saga_id = str(payload.get("saga_id", "baribudos")).strip()
     title = str(payload.get("title", "Nova História")).strip()
     saga_name = str(payload.get("saga_name", "Os Baribudos")).strip()
-    protagonist = str(payload.get("protagonist", "Tilo")).strip()
-    value_theme = str(payload.get("value_theme", _default_value_from_canon(payload.get("saga_id", "baribudos")))).strip()
-    final_phrase = _default_final_phrase_from_canon(payload.get("saga_id", "baribudos"))
+    protagonist = str(payload.get("protagonist", _default_protagonist(saga_id))).strip()
+    value_theme = str(payload.get("value_theme", _default_value_from_canon(saga_id))).strip()
+    final_phrase = _default_final_phrase_from_canon(saga_id)
 
     return (
-        f"{protagonist} acordou cedo na floresta encantada de {saga_name}. "
+        f"{protagonist} acordou cedo no universo de {saga_name}. "
         f"Nesse dia, algo estranho chamou a sua atenção. "
-        f"Ele sentiu curiosidade, mas também uma pequena dúvida no coração. "
+        f"Sentiu curiosidade, mas também uma pequena dúvida no coração. "
         f"Com calma, observou melhor, respirou fundo e decidiu não avançar sem pensar. "
-        f"Depois de conversar com a família, compreendeu uma lição sobre {value_theme}. "
+        f"Depois de conversar com quem o ajuda a crescer, compreendeu uma lição sobre {value_theme}. "
         f"No final, voltou para casa mais sereno, mais atento e mais seguro. "
         f"{final_phrase}"
     )
@@ -122,11 +134,13 @@ def generate_story(payload: Dict[str, Any]) -> Dict[str, Any]:
         max_words_per_page=int(payload.get("max_words_per_page", 35))
     )
 
+    runtime = load_ip_runtime(saga_id)
     return {
         "id": str(uuid4()),
         "title": title,
         "language": language,
         "saga_id": saga_id,
+        "main_characters": runtime.get("main_characters", []),
         "raw_text": raw_text,
         "structure": _default_structure_from_canon(saga_id),
         "pages": pages
@@ -156,4 +170,4 @@ def generate_volume_guide(payload: Dict[str, Any]) -> Dict[str, Any]:
         "id": str(uuid4()),
         "title": f"Guia - {story_title}",
         "content": content
-        }
+    }
