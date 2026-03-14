@@ -140,6 +140,7 @@ def build_cover(
     badge = generate_age_badge(
         saga_id=saga_id,
         age_range=age_range,
+        language="pt-PT",
         output_name=f"{_safe_name(saga_id)}_{_safe_name(age_range)}.png"
     )
     badge_path = badge["file_path"]
