@@ -18,6 +18,7 @@ import {
   runFactory,
   saveSettings
 } from "../api.js"
+import IpCreatorPanel from "./IpCreatorPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -60,6 +61,12 @@ function ActionButton({ children, onClick }) {
   )
 }
 
+function canEditorial(user) {
+  const role = String(user?.role || "").toLowerCase()
+  const name = String(user?.name || "").toLowerCase()
+  return ["owner", "creator", "admin"].includes(role) || ["andré", "andre", "esposa", "wife", "mama"].includes(name)
+}
+
 export default function DashboardPanel({ user }) {
   const [settings, setSettings] = useState(null)
   const [diagnostic, setDiagnostic] = useState(null)
@@ -95,7 +102,7 @@ export default function DashboardPanel({ user }) {
       diagnostics(),
       getFactoryCapabilities(),
       listUsers(),
-      listProjects(),
+      listProjects(user),
       listSagas(),
       listSponsors(),
       listJobs(),
@@ -122,7 +129,9 @@ export default function DashboardPanel({ user }) {
       saga_name: "Baribudos",
       language: "pt-PT",
       output_languages: DEFAULT_LANGUAGES,
-      created_by: user?.id || ""
+      created_by: user?.id || "",
+      created_by_name: user?.name || "",
+      visible_to_owner_only: true
     })
 
     setNewProjectTitle("")
@@ -130,12 +139,17 @@ export default function DashboardPanel({ user }) {
   }
 
   async function handleCreateSaga() {
+    if (!canEditorial(user)) {
+      alert("Sem permissão editorial.")
+      return
+    }
+
     if (!newSagaName.trim()) return
 
     await createSaga({
       slug: newSagaName.toLowerCase().replace(/\s+/g, "-"),
       name: newSagaName,
-      exclusive_owner: "andre",
+      exclusive_owner: user?.name || "",
       colors: {
         primary: "#2F5E2E",
         secondary: "#6FA86A",
@@ -152,6 +166,11 @@ export default function DashboardPanel({ user }) {
   }
 
   async function handleCreateSponsor() {
+    if (!canEditorial(user)) {
+      alert("Sem permissão editorial.")
+      return
+    }
+
     if (!newSponsorName.trim()) return
 
     await createSponsor({
@@ -165,6 +184,11 @@ export default function DashboardPanel({ user }) {
   }
 
   async function handleFactory(projectId) {
+    if (!canEditorial(user)) {
+      alert("Sem permissão editorial.")
+      return
+    }
+
     await runFactory(projectId, {
       userName: user?.name || "André",
       languages: ["pt-PT", "en"],
@@ -181,21 +205,37 @@ export default function DashboardPanel({ user }) {
   }
 
   async function handleExportEpub(projectId) {
+    if (!canEditorial(user)) {
+      alert("Sem permissão editorial.")
+      return
+    }
     await exportEbook(projectId, { language: "pt-PT" })
     alert("EPUB exportado.")
   }
 
   async function handleExportAudio(projectId) {
+    if (!canEditorial(user)) {
+      alert("Sem permissão editorial.")
+      return
+    }
     await exportAudiobook(projectId, { language: "pt-PT" })
     alert("Audiobook exportado.")
   }
 
   async function handleExportVideo(projectId) {
+    if (!canEditorial(user)) {
+      alert("Sem permissão editorial.")
+      return
+    }
     await exportVideo(projectId, { language: "pt-PT" })
     alert("Vídeo exportado.")
   }
 
   async function handleSaveSettings() {
+    if (!canEditorial(user)) {
+      alert("Sem permissão editorial.")
+      return
+    }
     await saveSettings(settings || {})
     alert("Settings guardadas.")
     await loadAll()
@@ -215,6 +255,8 @@ export default function DashboardPanel({ user }) {
         <div><strong>Engine:</strong> {factoryCaps?.engine || "-"}</div>
         <div><strong>Línguas:</strong> {(factoryCaps?.supported_languages || []).join(", ")}</div>
       </Card>
+
+      <IpCreatorPanel user={user} />
 
       <Card title="Settings">
         <label>Língua default</label>
@@ -294,7 +336,7 @@ export default function DashboardPanel({ user }) {
         <ActionButton onClick={handleCreateProject}>Criar projeto</ActionButton>
       </Card>
 
-      <Card title="Projetos">
+      <Card title="Projetos visíveis para este user">
         {projects.map((project) => (
           <div
             key={project.id}
@@ -310,6 +352,7 @@ export default function DashboardPanel({ user }) {
             <div><strong>{project.title}</strong></div>
             <div>Saga: {project.saga_name}</div>
             <div>Língua: {project.language}</div>
+            <div>Dono: {project.created_by_name || "-"}</div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton>
@@ -338,4 +381,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-}
+      }
