@@ -84,86 +84,49 @@ def _extract_output_presence(outputs: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _build_readiness(required_checks: List[Dict[str, Any]], output_presence: Dict[str, Any]) -> Dict[str, Any]:
+def _build_readiness(required_checks: List[Dict[str, Any]], recommended_checks: List[Dict[str, Any]], output_presence: Dict[str, Any]) -> Dict[str, Any]:
     required_fields_ok = all(item["ok"] for item in required_checks)
     required_outputs_ok = all(bool(output_presence.get(name)) for name in REQUIRED_OUTPUT_GROUPS)
 
     missing_required_fields = [item["field"] for item in required_checks if not item["ok"]]
     missing_required_outputs = [name for name in REQUIRED_OUTPUT_GROUPS if not output_presence.get(name)]
+    missing_recommended_fields = [item["field"] for item in recommended_checks if not item["ok"]]
 
-    ready = required_fields_ok and required_outputs_ok
+    required_ok = required_fields_ok and required_outputs_ok
+    recommended_ok = len(missing_recommended_fields) == 0
+
+    if required_ok and recommended_ok:
+        status = "green"
+        label = "Pronto para publicar"
+    elif required_ok:
+        status = "yellow"
+        label = "Quase pronto"
+    else:
+        status = "red"
+        label = "Não pronto"
+
+    score = 0
+    total = len(required_checks) + len(recommended_checks) + len(REQUIRED_OUTPUT_GROUPS) + len(OPTIONAL_OUTPUT_GROUPS)
+
+    for item in required_checks:
+        if item["ok"]:
+            score += 1
+    for item in recommended_checks:
+        if item["ok"]:
+            score += 1
+    for name in REQUIRED_OUTPUT_GROUPS:
+        if output_presence.get(name):
+            score += 1
+    for name in OPTIONAL_OUTPUT_GROUPS:
+        if output_presence.get(name):
+            score += 1
+
+    percent = round((score / total) * 100) if total else 0
 
     return {
-        "ready": ready,
+        "ready": status == "green",
+        "status": status,
+        "label": label,
+        "score_percent": percent,
         "required_fields_ok": required_fields_ok,
-        "required_outputs_ok": required_outputs_ok,
-        "missing_required_fields": missing_required_fields,
-        "missing_required_outputs": missing_required_outputs,
-    }
-
-
-def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
-    saga_id = _normalize_str(project.get("saga_slug", "baribudos"))
-    runtime = load_ip_runtime(saga_id)
-    metadata = runtime.get("metadata", {}) or {}
-    commercial = project.get("commercial", {}) or {}
-    outputs = project.get("outputs", {}) or {}
-
-    required_checks = _check_required_fields(commercial)
-    recommended_checks = _check_recommended_fields(commercial)
-    output_presence = _extract_output_presence(outputs)
-    readiness = _build_readiness(required_checks, output_presence)
-
-    return {
-        "generated_at": now_iso(),
-        "project": {
-            "id": project.get("id"),
-            "title": project.get("title"),
-            "language": project.get("language"),
-            "output_languages": project.get("output_languages", []),
-            "saga_slug": project.get("saga_slug"),
-            "saga_name": project.get("saga_name"),
-            "created_by": project.get("created_by"),
-            "created_by_name": project.get("created_by_name"),
-            "status": project.get("status"),
-            "editorial_status": project.get("editorial_status"),
-        },
-        "editorial": {
-            "author_default": metadata.get("author_default", ""),
-            "producer": metadata.get("producer", ""),
-            "tagline": metadata.get("tagline", ""),
-            "mission": metadata.get("mission", ""),
-            "target_age": metadata.get("target_age", ""),
-            "series_name": metadata.get("series_name", ""),
-            "genre": metadata.get("genre", ""),
-            "description": metadata.get("description", ""),
-            "default_language": runtime.get("default_language", "pt-PT"),
-            "output_languages": runtime.get("output_languages", []),
-        },
-        "commercial": {
-            "internal_code": commercial.get("internal_code", ""),
-            "isbn": commercial.get("isbn", ""),
-            "asin": commercial.get("asin", ""),
-            "price": commercial.get("price", ""),
-            "currency": commercial.get("currency", "EUR"),
-            "collection_seal": commercial.get("collection_seal", ""),
-            "marketplaces": commercial.get("marketplaces", []),
-            "commercial_status": commercial.get("commercial_status", "draft"),
-            "channels": commercial.get("channels", []),
-            "keywords": commercial.get("keywords", []),
-            "subtitle": commercial.get("subtitle", ""),
-            "blurb": commercial.get("blurb", ""),
-        },
-        "assets": {
-            "cover_image": project.get("cover_image", ""),
-            "illustration_path": project.get("illustration_path", ""),
-            "brand_assets": runtime.get("brand_assets", {}),
-        },
-        "outputs": outputs,
-        "checks": {
-            "required_fields": required_checks,
-            "recommended_fields": recommended_checks,
-            "output_presence": output_presence,
-            "readiness": readiness,
-        }
-}
+        "required_outputs_ok":
