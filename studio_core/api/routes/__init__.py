@@ -18,4 +18,5 @@ __all__ = [
     "ip_creator",
     "ip_palette",
     "ip_branding",
+    "ip_characters",
 ]
