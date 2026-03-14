@@ -59,6 +59,8 @@ class ProjectPatch(BaseModel):
     editorial_status: Optional[str] = None
     front_matter: Optional[Dict[str, Any]] = None
     story: Optional[Dict[str, Any]] = None
+    cover_image: Optional[str] = None
+    illustration_path: Optional[str] = None
 
 
 class Project(BaseModel):
@@ -73,6 +75,8 @@ class Project(BaseModel):
     created_by: str = ""
     created_by_name: str = ""
     visible_to_owner_only: bool = True
+    cover_image: str = ""
+    illustration_path: str = ""
     front_matter: Dict[str, Any] = Field(default_factory=dict)
     story: Dict[str, Any] = Field(default_factory=lambda: {
         "title": "",
