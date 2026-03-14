@@ -12,6 +12,7 @@ from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
+from studio_core.api.routes.ip_creator import router as ip_creator_router
 from studio_core.api.routes.jobs import router as jobs_router
 from studio_core.api.routes.projects import router as projects_router
 from studio_core.api.routes.publishing import router as publishing_router
@@ -62,6 +63,7 @@ app.include_router(videos_router, prefix="/api")
 app.include_router(saga_loader_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
+app.include_router(ip_creator_router, prefix="/api")
 
 
 @app.get("/")
