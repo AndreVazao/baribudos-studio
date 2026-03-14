@@ -92,6 +92,7 @@ export default function DashboardPanel({ user }) {
 
   const [newSagaName, setNewSagaName] = useState("")
   const [newSponsorName, setNewSponsorName] = useState("")
+  const [newSponsorIpSlug, setNewSponsorIpSlug] = useState("")
 
   useEffect(() => {
     loadAll()
@@ -100,6 +101,11 @@ export default function DashboardPanel({ user }) {
   const selectedProjectIp = useMemo(
     () => ips.find((item) => item.slug === newProjectIpSlug) || null,
     [ips, newProjectIpSlug]
+  )
+
+  const selectedSponsorIp = useMemo(
+    () => ips.find((item) => item.slug === newSponsorIpSlug) || null,
+    [ips, newSponsorIpSlug]
   )
 
   async function loadAll() {
@@ -142,6 +148,10 @@ export default function DashboardPanel({ user }) {
 
     if (!newProjectIpSlug && ipsList.length) {
       setNewProjectIpSlug(ipsList[0].slug)
+    }
+
+    if (!newSponsorIpSlug && ipsList.length) {
+      setNewSponsorIpSlug(ipsList[0].slug)
     }
   }
 
@@ -218,11 +228,15 @@ export default function DashboardPanel({ user }) {
     }
 
     if (!newSponsorName.trim()) return
+    if (!selectedSponsorIp) {
+      alert("Seleciona uma IP para o patrocinador.")
+      return
+    }
 
     await createSponsor({
       id: crypto.randomUUID(),
       name: newSponsorName,
-      saga_slug: "baribudos"
+      saga_slug: selectedSponsorIp.slug
     })
 
     setNewSponsorName("")
@@ -235,9 +249,12 @@ export default function DashboardPanel({ user }) {
       return
     }
 
+    const project = projects.find((item) => item.id === projectId)
+    const projectLanguage = project?.language || "pt-PT"
+
     await runFactory(projectId, {
       userName: user?.name || "André",
-      languages: ["pt-PT", "en"],
+      languages: [projectLanguage, "en"],
       createStory: true,
       createTranslations: true,
       createCover: true,
@@ -248,6 +265,7 @@ export default function DashboardPanel({ user }) {
       publish: false,
       age_range: "4-10"
     })
+
     alert("Factory concluída.")
     await loadAll()
   }
@@ -257,7 +275,9 @@ export default function DashboardPanel({ user }) {
       alert("Sem permissão editorial.")
       return
     }
-    await exportEbook(projectId, { language: "pt-PT" })
+
+    const project = projects.find((item) => item.id === projectId)
+    await exportEbook(projectId, { language: project?.language || "pt-PT" })
     alert("EPUB exportado.")
     await loadAll()
   }
@@ -267,7 +287,9 @@ export default function DashboardPanel({ user }) {
       alert("Sem permissão editorial.")
       return
     }
-    await exportAudiobook(projectId, { language: "pt-PT" })
+
+    const project = projects.find((item) => item.id === projectId)
+    await exportAudiobook(projectId, { language: project?.language || "pt-PT" })
     alert("Audiobook exportado.")
     await loadAll()
   }
@@ -277,7 +299,9 @@ export default function DashboardPanel({ user }) {
       alert("Sem permissão editorial.")
       return
     }
-    await exportVideo(projectId, { language: "pt-PT" })
+
+    const project = projects.find((item) => item.id === projectId)
+    await exportVideo(projectId, { language: project?.language || "pt-PT" })
     alert("Vídeo exportado.")
     await loadAll()
   }
@@ -287,10 +311,16 @@ export default function DashboardPanel({ user }) {
       alert("Sem permissão editorial.")
       return
     }
+
     await saveSettings(settings || {})
     alert("Settings guardadas.")
     await loadAll()
   }
+
+  const visibleSponsors = sponsors.filter((sponsor) => {
+    if (!newSponsorIpSlug) return true
+    return String(sponsor?.saga_slug || "") === String(newSponsorIpSlug)
+  })
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -368,6 +398,20 @@ export default function DashboardPanel({ user }) {
       </Card>
 
       <Card title="Criar Sponsor">
+        <label>IP / Saga do patrocinador</label>
+        <select
+          value={newSponsorIpSlug}
+          onChange={(e) => setNewSponsorIpSlug(e.target.value)}
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+        >
+          <option value="">Selecionar IP</option>
+          {ips.map((ip) => (
+            <option key={ip.id} value={ip.slug}>
+              {ip.name}
+            </option>
+          ))}
+        </select>
+
         <input
           value={newSponsorName}
           onChange={(e) => setNewSponsorName(e.target.value)}
@@ -376,9 +420,9 @@ export default function DashboardPanel({ user }) {
         />
         <ActionButton onClick={handleCreateSponsor}>Criar sponsor</ActionButton>
 
-        {sponsors.map((sponsor, index) => (
+        {visibleSponsors.map((sponsor, index) => (
           <div key={sponsor.id || index}>
-            <strong>{sponsor.name}</strong>
+            <strong>{sponsor.name}</strong> — {sponsor.saga_slug}
           </div>
         ))}
       </Card>
@@ -430,6 +474,7 @@ export default function DashboardPanel({ user }) {
             <div><strong>IP selecionada:</strong> {selectedProjectIp.name}</div>
             <div><strong>Slug:</strong> {selectedProjectIp.slug}</div>
             <div><strong>Privada:</strong> {selectedProjectIp.visible_to_owner_only ? "Sim" : "Não"}</div>
+            <div><strong>Língua default da IP:</strong> {selectedProjectIp.default_language || "-"}</div>
           </div>
         ) : null}
 
@@ -484,4 +529,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-                  }
+                           }
