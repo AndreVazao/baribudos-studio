@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from studio_core.api.routes.age_badges import router as age_badges_router
 from studio_core.api.routes.audiobooks import router as audiobooks_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.ebooks import router as ebooks_router
@@ -58,6 +59,7 @@ app.include_router(ebooks_router, prefix="/api")
 app.include_router(audiobooks_router, prefix="/api")
 app.include_router(videos_router, prefix="/api")
 app.include_router(saga_loader_router, prefix="/api")
+app.include_router(age_badges_router, prefix="/api")
 
 
 @app.get("/")
