@@ -1,0 +1,122 @@
+{
+  "ip": "Os Baribudos",
+
+  "pedagogical_mission": {
+    "goal": "ajudar crianças a desenvolver segurança emocional, pensamento crítico e autonomia protegida",
+    "method": "histórias curtas com metáforas seguras e conversa familiar",
+    "tone": "educational_but_gentle"
+  },
+
+  "target_age_model": {
+    "primary_range": "4-10",
+    "sub_ranges": [
+      {
+        "label": "4-5",
+        "focus": [
+          "basic_safety",
+          "naming_emotions",
+          "asking_for_help"
+        ]
+      },
+      {
+        "label": "6-7",
+        "focus": [
+          "decision_awareness",
+          "safe_boundaries",
+          "recognising_warning_signs"
+        ]
+      },
+      {
+        "label": "8-10",
+        "focus": [
+          "critical_thinking",
+          "social_discernment",
+          "responsibility",
+          "independence_with_guidance"
+        ]
+      }
+    ]
+  },
+
+  "core_learning_domains": [
+    "emotional_intelligence",
+    "self_protection",
+    "family_trust",
+    "safe_decision_making",
+    "nature_connection",
+    "social_responsibility"
+  ],
+
+  "story_learning_rules": {
+    "one_main_value_per_story": true,
+    "one_supporting_value_allowed": true,
+    "confusing_mixed_morals_forbidden": true,
+    "ending_must_reinforce_learning": true,
+    "family_conversation_recommended": true
+  },
+
+  "approved_values": [
+    {
+      "id": "responsibility",
+      "label": "Responsabilidade"
+    },
+    {
+      "id": "sharing",
+      "label": "Partilha"
+    },
+    {
+      "id": "courage",
+      "label": "Coragem"
+    },
+    {
+      "id": "patience",
+      "label": "Paciência"
+    },
+    {
+      "id": "self_protection",
+      "label": "Autoproteção"
+    },
+    {
+      "id": "nature_care",
+      "label": "Cuidado com a Natureza"
+    },
+    {
+      "id": "critical_thinking",
+      "label": "Pensamento Crítico"
+    },
+    {
+      "id": "trust_awareness",
+      "label": "Discernimento de Confiança"
+    }
+  ],
+
+  "discussion_prompts_rules": {
+    "enabled": true,
+    "count_default": 3,
+    "must_be_simple": true,
+    "must_invite_reflection": true,
+    "must_not_create_fear": true
+  },
+
+  "parent_guide_rules": {
+    "enabled": true,
+    "must_include_story_value": true,
+    "must_include_real_world_application": true,
+    "must_include_conversation_prompt": true
+  },
+
+  "forbidden_pedagogical_patterns": [
+    "fear_based_lesson",
+    "shame_based_moral",
+    "humiliation_as_learning",
+    "punishment_as_primary_resolution",
+    "adult_authority_without_explanation"
+  ],
+
+  "success_criteria": {
+    "child_understands_main_value": true,
+    "child_feels_safe_after_story": true,
+    "story_invites_conversation": true,
+    "lesson_is_practical": true
+  }
+  }
