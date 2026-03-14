@@ -13,4 +13,5 @@ __all__ = [
     "audiobooks",
     "videos",
     "saga_loader",
+    "age_badges",
 ]
