@@ -18,6 +18,7 @@ from studio_core.api.routes.ip_branding import router as ip_branding_router
 from studio_core.api.routes.ip_canons import router as ip_canons_router
 from studio_core.api.routes.ip_characters import router as ip_characters_router
 from studio_core.api.routes.ip_creator import router as ip_creator_router
+from studio_core.api.routes.ip_metadata import router as ip_metadata_router
 from studio_core.api.routes.ip_palette import router as ip_palette_router
 from studio_core.api.routes.jobs import router as jobs_router
 from studio_core.api.routes.projects import router as projects_router
@@ -83,6 +84,7 @@ app.include_router(ip_palette_router, prefix="/api")
 app.include_router(ip_branding_router, prefix="/api")
 app.include_router(ip_characters_router, prefix="/api")
 app.include_router(ip_canons_router, prefix="/api")
+app.include_router(ip_metadata_router, prefix="/api")
 app.include_router(illustrations_router, prefix="/api")
 
 
