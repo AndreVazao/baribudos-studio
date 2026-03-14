@@ -13,6 +13,7 @@ from studio_core.api.routes.health import router as health_router
 from studio_core.api.routes.jobs import router as jobs_router
 from studio_core.api.routes.projects import router as projects_router
 from studio_core.api.routes.publishing import router as publishing_router
+from studio_core.api.routes.saga_loader import router as saga_loader_router
 from studio_core.api.routes.sagas import router as sagas_router
 from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
@@ -56,6 +57,7 @@ app.include_router(publishing_router, prefix="/api")
 app.include_router(ebooks_router, prefix="/api")
 app.include_router(audiobooks_router, prefix="/api")
 app.include_router(videos_router, prefix="/api")
+app.include_router(saga_loader_router, prefix="/api")
 
 
 @app.get("/")
@@ -66,4 +68,4 @@ def root() -> dict:
         "version": APP_CONFIG.app_version,
         "docs": "/docs",
         "health": "/api/health"
-    }
+}
