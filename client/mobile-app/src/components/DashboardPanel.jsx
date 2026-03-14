@@ -19,6 +19,7 @@ import {
   saveSettings
 } from "../api.js"
 import IpCreatorPanel from "./IpCreatorPanel.jsx"
+import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -257,6 +258,7 @@ export default function DashboardPanel({ user }) {
       </Card>
 
       <IpCreatorPanel user={user} />
+      <IpPaletteEditorPanel user={user} />
 
       <Card title="Settings">
         <label>Língua default</label>
@@ -381,4 +383,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-      }
+        }
