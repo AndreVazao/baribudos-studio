@@ -11,6 +11,9 @@ from studio_core.core.config import resolve_project_path
 
 IPS_FILE = "data/ip_registry.json"
 
+EDITORIAL_ADMIN_NAMES = {"andré", "andre", "esposa", "wife", "mama"}
+EDITORIAL_ADMIN_ROLES = {"owner", "creator", "admin"}
+
 
 def _studio_sagas_root() -> Path:
     return resolve_project_path("studio", "sagas")
@@ -22,6 +25,10 @@ def _safe_slug(value: str) -> str:
     return slug or "nova-saga"
 
 
+def _normalize_name(value: str) -> str:
+    return str(value or "").strip().lower()
+
+
 def get_ip_schema_template() -> Dict[str, Any]:
     return {
         "id": "",
@@ -30,7 +37,11 @@ def get_ip_schema_template() -> Dict[str, Any]:
         "owner_id": "",
         "owner_name": "",
         "exclusive": False,
+        "visible_to_owner_only": False,
         "editable_by_roles": ["owner", "admin"],
+        "publishable_by_roles": ["owner", "admin"],
+        "allowed_editor_user_ids": [],
+        "allowed_editor_names": [],
         "cloneable": True,
         "status": "draft",
         "default_language": "pt-PT",
@@ -69,7 +80,11 @@ def _default_baribudos_registry_entry() -> Dict[str, Any]:
         "owner_id": "andre-vazao",
         "owner_name": "André Vazão",
         "exclusive": True,
+        "visible_to_owner_only": True,
         "editable_by_roles": ["owner", "creator"],
+        "publishable_by_roles": ["owner", "creator"],
+        "allowed_editor_user_ids": [],
+        "allowed_editor_names": ["André Vazão"],
         "cloneable": False,
         "status": "active",
         "default_language": "pt-PT",
@@ -130,6 +145,36 @@ def get_ip_by_slug(slug: str) -> Dict[str, Any] | None:
     return None
 
 
+def is_editorial_admin(user: Dict[str, Any] | None) -> bool:
+    if not user:
+        return False
+    role = str(user.get("role", "")).strip().lower()
+    name = _normalize_name(user.get("name", ""))
+    return role in EDITORIAL_ADMIN_ROLES or name in EDITORIAL_ADMIN_NAMES
+
+
+def can_view_ip(user: Dict[str, Any] | None, item: Dict[str, Any]) -> bool:
+    if not item:
+        return False
+
+    if not bool(item.get("visible_to_owner_only", False)):
+        return True
+
+    if not user:
+        return False
+
+    user_id = str(user.get("id", "")).strip()
+    user_name = str(user.get("name", "")).strip()
+    owner_id = str(item.get("owner_id", "")).strip()
+    owner_name = str(item.get("owner_name", "")).strip()
+
+    return user_id == owner_id or _normalize_name(user_name) == _normalize_name(owner_name)
+
+
+def list_ips_for_user(user: Dict[str, Any] | None) -> List[Dict[str, Any]]:
+    return [item for item in ensure_ip_registry() if can_view_ip(user, item)]
+
+
 def create_ip(payload: Dict[str, Any]) -> Dict[str, Any]:
     registry = ensure_ip_registry()
     template = get_ip_schema_template()
@@ -142,15 +187,22 @@ def create_ip(payload: Dict[str, Any]) -> Dict[str, Any]:
     if get_ip_by_slug(slug):
         raise ValueError("Já existe uma IP com esse slug.")
 
+    owner_id = str(payload.get("owner_id", "")).strip()
+    owner_name = str(payload.get("owner_name", "")).strip()
+
     item = {
         **template,
         "id": str(uuid4()),
         "slug": slug,
         "name": name,
-        "owner_id": str(payload.get("owner_id", "")).strip(),
-        "owner_name": str(payload.get("owner_name", "")).strip(),
+        "owner_id": owner_id,
+        "owner_name": owner_name,
         "exclusive": bool(payload.get("exclusive", False)),
+        "visible_to_owner_only": bool(payload.get("visible_to_owner_only", False)),
         "editable_by_roles": payload.get("editable_by_roles") or ["owner", "admin"],
+        "publishable_by_roles": payload.get("publishable_by_roles") or ["owner", "admin"],
+        "allowed_editor_user_ids": payload.get("allowed_editor_user_ids") or [],
+        "allowed_editor_names": payload.get("allowed_editor_names") or [],
         "cloneable": bool(payload.get("cloneable", True)),
         "status": str(payload.get("status", "draft")).strip(),
         "default_language": str(payload.get("default_language", "pt-PT")).strip(),
@@ -195,12 +247,61 @@ def update_ip(slug: str, patch: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
-def can_edit_ip(user_role: str, slug: str) -> bool:
+def can_edit_ip(user: Dict[str, Any] | None, slug: str) -> bool:
     item = get_ip_by_slug(slug)
-    if not item:
+    if not item or not user:
         return False
-    roles = item.get("editable_by_roles") or []
-    return user_role in roles
+
+    if not can_view_ip(user, item):
+        return False
+
+    user_id = str(user.get("id", "")).strip()
+    user_name = str(user.get("name", "")).strip()
+    role = str(user.get("role", "")).strip()
+
+    if user_id == str(item.get("owner_id", "")).strip():
+        return True
+
+    if _normalize_name(user_name) == _normalize_name(item.get("owner_name", "")):
+        return True
+
+    if role in set(item.get("editable_by_roles") or []):
+        return True
+
+    if user_id and user_id in set(item.get("allowed_editor_user_ids") or []):
+        return True
+
+    if user_name and _normalize_name(user_name) in {_normalize_name(x) for x in (item.get("allowed_editor_names") or [])}:
+        return True
+
+    return False
+
+
+def can_publish_ip(user: Dict[str, Any] | None, slug: str) -> bool:
+    item = get_ip_by_slug(slug)
+    if not item or not user:
+        return False
+
+    if not can_view_ip(user, item):
+        return False
+
+    if is_editorial_admin(user):
+        return True
+
+    role = str(user.get("role", "")).strip()
+    user_id = str(user.get("id", "")).strip()
+    user_name = str(user.get("name", "")).strip()
+
+    if role in set(item.get("publishable_by_roles") or []):
+        return True
+
+    if user_id == str(item.get("owner_id", "")).strip():
+        return True
+
+    if _normalize_name(user_name) == _normalize_name(item.get("owner_name", "")):
+        return True
+
+    return False
 
 
 def ensure_ip_folder_structure(slug: str) -> str:
@@ -260,4 +361,5 @@ def list_ip_assets_schema() -> Dict[str, Any]:
         "palette_editor": True,
         "character_editor": True,
         "canon_builder": True
-}
+    }
+    
