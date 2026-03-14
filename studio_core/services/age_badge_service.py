@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, Dict
 from uuid import uuid4
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from studio_core.core.config import resolve_project_path, resolve_storage_path
+from studio_core.core.config import resolve_storage_path
+from studio_core.services.ip_runtime_service import load_ip_runtime
 
 
 LANGUAGE_LABELS = {
@@ -23,13 +23,6 @@ LANGUAGE_LABELS = {
     "zh": "岁",
     "ja": "歳"
 }
-
-
-def _load_age_badge_canon(saga_id: str) -> Dict[str, Any]:
-    canon_path = resolve_project_path("studio", "sagas", saga_id, "age-badge-canon.json")
-    if not canon_path.exists():
-        raise FileNotFoundError(f"Age badge canon não encontrado para saga: {saga_id}")
-    return json.loads(canon_path.read_text(encoding="utf-8"))
 
 
 def _hex_to_rgba(value: str, alpha: int = 255) -> tuple[int, int, int, int]:
@@ -54,14 +47,12 @@ def _get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         "C:/Windows/Fonts/verdanab.ttf",
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
     ]
-
     for font_path in candidates:
         if Path(font_path).exists():
             try:
                 return ImageFont.truetype(font_path, size=size)
             except Exception:
                 pass
-
     return ImageFont.load_default()
 
 
@@ -91,12 +82,9 @@ def _draw_wood_badge(draw: ImageDraw.ImageDraw, width: int, height: int, wood_da
 
     draw.ellipse((cx - radius - 20, cy - radius - 20, cx + radius + 20, cy + radius + 20), fill=gold)
     draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=wood_light)
-
-    # wood ring inner
     draw.ellipse((cx - radius + 38, cy - radius + 38, cx + radius - 38, cy + radius - 38), outline=gold, width=10)
     draw.ellipse((cx - radius + 58, cy - radius + 58, cx + radius - 58, cy + radius - 58), fill=wood_dark)
 
-    # top hanger
     draw.ellipse((cx - 52, 24, cx + 52, 128), fill=gold)
     draw.ellipse((cx - 24, 52, cx + 24, 100), fill=(255, 255, 255, 0))
 
@@ -126,9 +114,7 @@ def _draw_star(draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, fill: tup
 
 
 def _build_age_text(age_range: str, language: str) -> tuple[str, str]:
-    age_range = str(age_range).strip()
-    label = LANGUAGE_LABELS.get(language, LANGUAGE_LABELS["en"])
-    return age_range, label
+    return str(age_range).strip(), LANGUAGE_LABELS.get(language, LANGUAGE_LABELS["en"])
 
 
 def generate_age_badge(
@@ -138,17 +124,18 @@ def generate_age_badge(
     language: str = "pt-PT",
     output_name: str | None = None,
 ) -> Dict[str, Any]:
-    canon = _load_age_badge_canon(saga_id)
-    colors = canon.get("color_rules", {})
+    runtime = load_ip_runtime(saga_id)
+    palette = runtime.get("palette", {}) or {}
+    colors = (runtime.get("canons", {}).get("age_badge", {}) or {}).get("color_rules", {}) or {}
 
     width = 720
     height = 720
 
-    wood_dark = _hex_to_rgba("#8B5E3C")
+    wood_dark = _hex_to_rgba(palette.get("character_base", "#8B5E3C"))
     wood_light = _hex_to_rgba("#B8834E")
-    gold = _hex_to_rgba(colors.get("accent", "#D4A73C"))
+    gold = _hex_to_rgba(colors.get("accent") or palette.get("accent", "#D4A73C"))
     text_color = _hex_to_rgba(colors.get("text_color", "#F5EED6"))
-    leaf_green = _hex_to_rgba(colors.get("secondary", "#6FA86A"))
+    leaf_green = _hex_to_rgba(colors.get("secondary") or palette.get("secondary", "#6FA86A"))
 
     img = Image.new("RGBA", (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
@@ -193,4 +180,4 @@ def generate_age_badge(
         "file_name": file_name,
         "file_path": str(file_path),
         "engine": "python-age-badge-generator-multilang"
-            }
+}
