@@ -27,6 +27,7 @@ import IpCreatorPanel from "./IpCreatorPanel.jsx"
 import IpMetadataEditorPanel from "./IpMetadataEditorPanel.jsx"
 import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
 import OutputsPanel from "./OutputsPanel.jsx"
+import ProjectCommercialEditorPanel from "./ProjectCommercialEditorPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -264,7 +265,7 @@ export default function DashboardPanel({ user }) {
       createSeries: true,
       createGuide: true,
       publish: false,
-      age_range: "4-10"
+      age_range: project?.commercial?.target_age || "4-10"
     })
 
     alert("Factory concluída.")
@@ -344,6 +345,7 @@ export default function DashboardPanel({ user }) {
       <IpBrandingEditorPanel user={user} />
       <IpCharactersEditorPanel user={user} />
       <IpCanonsEditorPanel user={user} />
+      <ProjectCommercialEditorPanel user={user} />
       <IpCoverBuilderPanel user={user} onCoverBuilt={handleCoverBuilt} />
       <OutputsPanel projects={projects} />
 
@@ -506,6 +508,10 @@ export default function DashboardPanel({ user }) {
             <div>Dono: {project.created_by_name || "-"}</div>
             <div>Ilustração base: {project.illustration_path || "-"}</div>
             <div>Capa: {project.cover_image || "-"}</div>
+            <div>ISBN: {project.commercial?.isbn || "-"}</div>
+            <div>ASIN: {project.commercial?.asin || "-"}</div>
+            <div>Preço: {project.commercial?.price || "-"} {project.commercial?.currency || ""}</div>
+            <div>Status comercial: {project.commercial?.commercial_status || "-"}</div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton>
@@ -534,4 +540,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-    }
+  }
