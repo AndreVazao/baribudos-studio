@@ -245,6 +245,32 @@ export async function freezePublicationPackage(projectId, user) {
   }))
 }
 
+export async function getPublishReadiness(projectId) {
+  return handle(fetch(`${getApiBase()}/publish-readiness/${projectId}`))
+}
+
+export async function markProjectReady(projectId, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/publish-readiness/${projectId}/mark-ready?${query}`, {
+    method: "POST"
+  }))
+}
+
+export async function unmarkProjectReady(projectId, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/publish-readiness/${projectId}/unmark-ready?${query}`, {
+    method: "POST"
+  }))
+}
+
 export async function listJobs() {
   return handle(fetch(`${getApiBase()}/jobs`))
 }
