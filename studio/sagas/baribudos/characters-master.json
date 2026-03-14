@@ -1,0 +1,94 @@
+{
+  "visual_dna": {
+    "body_shape": "small_rounded",
+    "fur_style": "short_soft",
+    "eyes": "large_expressive",
+    "nose": "small_round",
+    "hands": "4_fingers",
+    "feet": "short",
+    "ears": "small_rounded",
+    "eyebrows": "expressive",
+    "texture": "soft_fuzzy",
+    "realism_level": "low_cartoon"
+  },
+
+  "color_rules": {
+    "fur_base": "#8B5E3C",
+    "eye_color": "#3A7D44",
+    "palette_locked": true
+  },
+
+  "family": [
+    {
+      "id": "magnus",
+      "role": "father",
+      "archetype": "mentor_protector",
+      "personality": [
+        "calm",
+        "rational",
+        "explains",
+        "protective"
+      ],
+      "scarf_color": "#2F5E2E"
+    },
+
+    {
+      "id": "luma",
+      "role": "mother",
+      "archetype": "emotional_intuition",
+      "personality": [
+        "empathetic",
+        "gentle",
+        "emotionally_guiding"
+      ],
+      "scarf_color": "#6FA86A"
+    },
+
+    {
+      "id": "roko",
+      "role": "child",
+      "age": 11,
+      "archetype": "maturity_builder",
+      "personality": [
+        "responsible",
+        "wants_to_prove",
+        "sometimes_impulsive"
+      ],
+      "scarf_color": "#D4A73C"
+    },
+
+    {
+      "id": "mila",
+      "role": "child",
+      "age": 6,
+      "archetype": "intuitive_curiosity",
+      "personality": [
+        "questioning",
+        "curious",
+        "emotionally_perceptive"
+      ],
+      "scarf_color": "#F4A259"
+    },
+
+    {
+      "id": "tilo",
+      "role": "child",
+      "age": 4,
+      "archetype": "pure_innocence",
+      "personality": [
+        "vulnerable",
+        "curious",
+        "learning_by_experience"
+      ],
+      "scarf_color": "#9BD770"
+    }
+  ],
+
+  "design_rules": {
+    "never_change_body_shape": true,
+    "never_change_eye_size": true,
+    "never_realistic_fur": true,
+    "never_animal_specific": true,
+    "always_soft_expression": true
+  }
+}
