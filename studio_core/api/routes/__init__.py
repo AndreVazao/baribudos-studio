@@ -20,5 +20,6 @@ __all__ = [
     "ip_branding",
     "ip_characters",
     "ip_canons",
+    "ip_metadata",
     "illustrations",
 ]
