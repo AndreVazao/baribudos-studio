@@ -16,6 +16,31 @@
     "style_rule": "never_realistic_never_scary"
   },
 
+  "style": {
+    "render_style": "cinematic_storybook_watercolor",
+    "lighting": "warm_soft_sunlight",
+    "atmosphere": "calm_magical_safe",
+    "detail_level": "high_soft_edges",
+    "shadow_style": "gentle_diffused",
+    "realism": "low_cartoon_high_quality"
+  },
+
+  "environment": {
+    "primary_setting": "enchanted_forest",
+    "secondary_elements": [
+      "floating_golden_particles",
+      "soft_light_through_leaves",
+      "peaceful_nature",
+      "subtle_magic"
+    ],
+    "forbidden_elements": [
+      "dark_horror",
+      "realistic_predators",
+      "violent_weather",
+      "urban_aggressive"
+    ]
+  },
+
   "color_palette": {
     "primary_green": "#2F5E2E",
     "secondary_green": "#6FA86A",
@@ -29,13 +54,6 @@
     "temperature": "warm",
     "magic_glow": "subtle",
     "no_dark_scenes": true
-  },
-
-  "environment_rules": {
-    "world": "enchanted_forest",
-    "atmosphere": "peaceful_magical",
-    "particles": "golden_dust",
-    "nature_presence": "constant"
   },
 
   "illustration_rules": {
@@ -56,10 +74,27 @@
     "studio_credit_bottom": true
   },
 
+  "composition_rules": {
+    "single_main_illustration": true,
+    "character_visibility_priority": true,
+    "text_breathing_space": true,
+    "balanced_storybook_layout": true,
+    "no_visual_noise": true
+  },
+
   "emotional_tone": [
     "curiosity",
     "gentle_discovery",
     "emotional_learning",
     "calm_wonder"
-  ]
-}
+  ],
+
+  "visual_references": {
+    "tone": [
+      "pixar_storybook",
+      "totoro_soft_magic",
+      "bluey_emotional_safety"
+    ],
+    "note": "reference tone only, never copy"
+  }
+  }
