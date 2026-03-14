@@ -148,8 +148,14 @@ export async function createSponsor(payload) {
   }))
 }
 
-export async function listProjects() {
-  return handle(fetch(`${getApiBase()}/projects`))
+export async function listProjects(user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/projects?${query}`))
 }
 
 export async function createProject(payload) {
@@ -162,13 +168,20 @@ export async function createProject(payload) {
       saga_name: payload?.saga_name || "Baribudos",
       language: payload?.language || "pt-PT",
       output_languages: payload?.output_languages || ["pt-PT"],
-      created_by: payload?.created_by || ""
+      created_by: payload?.created_by || "",
+      created_by_name: payload?.created_by_name || "",
+      visible_to_owner_only: payload?.visible_to_owner_only ?? true
     })
   }))
 }
 
-export async function updateProject(projectId, payload) {
-  return handle(fetch(`${getApiBase()}/projects/${projectId}`, {
+export async function updateProject(projectId, payload, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/projects/${projectId}?${query}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload || {})
@@ -234,3 +247,41 @@ export async function exportVideo(projectId, payload = {}) {
     body: JSON.stringify(payload)
   }))
 }
+
+export async function listIps(user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-creator?${query}`))
+}
+
+export async function createIp(payload) {
+  return handle(fetch(`${getApiBase()}/ip-creator`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {})
+  }))
+}
+
+export async function getIpBySlug(slug, user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-creator/${slug}?${query}`))
+}
+
+export async function getIpPermissions(slug, user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-creator/${slug}/permissions?${query}`))
+    }
