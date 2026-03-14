@@ -417,6 +417,31 @@ export async function updateIpCanon(slug, canonType, data, user) {
   }))
 }
 
+export async function getIpMetadata(slug, user) {
+  const query = new URLSearchParams({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/ip-metadata/${slug}?${query}`))
+}
+
+export async function updateIpMetadata(slug, payload, user) {
+  return handle(fetch(`${getApiBase()}/ip-metadata/${slug}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      metadata: payload?.metadata || {},
+      default_language: payload?.default_language || "pt-PT",
+      output_languages: payload?.output_languages || ["pt-PT"],
+      user_id: user?.id || "",
+      user_name: user?.name || "",
+      user_role: user?.role || ""
+    })
+  }))
+}
+
 export async function buildCover(payload) {
   return handle(fetch(`${getApiBase()}/covers/build`, {
     method: "POST",
@@ -435,4 +460,4 @@ export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
     method: "POST",
     body: form
   }))
-    }
+}
