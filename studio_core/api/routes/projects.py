@@ -107,6 +107,12 @@ def patch_project(project_id: str, payload: ProjectPatch, user_name: str = "", u
         if payload.illustration_path is not None:
             updated["illustration_path"] = payload.illustration_path
 
+        if payload.commercial is not None:
+            updated["commercial"] = {
+                **(current.get("commercial", {}) or {}),
+                **payload.commercial
+            }
+
         if payload.front_matter is not None:
             updated["front_matter"] = {
                 **current.get("front_matter", {}),
