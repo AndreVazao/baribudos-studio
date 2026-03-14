@@ -43,6 +43,7 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError("Projeto não encontrado.")
 
     requested_languages: List[str] = payload.get("languages") or project.get("output_languages") or [project.get("language", "pt-PT")]
+    saga_id = str(project.get("saga_slug", "baribudos")).strip()
 
     create_story = bool(payload.get("createStory", True))
     create_translations = bool(payload.get("createTranslations", True))
@@ -56,6 +57,7 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         story = generate_story({
             "title": project.get("title", "Projeto"),
             "language": project.get("language", "pt-PT"),
+            "saga_id": saga_id,
             "saga_name": project.get("saga_name", "Baribudos"),
             "raw_text": (project.get("story") or {}).get("raw_text", "")
         })
@@ -112,12 +114,13 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
                     "language": language,
                     "channel": "ebook",
                     "requested_by": str(payload.get("userName", "")).strip(),
-                    "notes": "Factory publication"
+                    "notes": f"Factory publication for {saga_id}"
                 })
             )
 
     summary = {
         "project_id": project_id,
+        "saga_id": saga_id,
         "story_created": create_story,
         "translation_count": len(language_versions),
         "epub_languages": list(epub_outputs.keys()),
@@ -169,4 +172,4 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         "guide": guide_output,
         "publications": publication_outputs,
         "summary": summary
-}
+    }
