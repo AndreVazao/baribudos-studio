@@ -28,14 +28,16 @@ from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
 from studio_core.api.routes.videos import router as videos_router
-from studio_core.core.config import APP_CONFIG, resolve_project_path
+from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
 from studio_core.core.storage import ensure_storage_structure
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_storage_structure()
     ensure_default_owner()
     yield
+
 
 app = FastAPI(
     title=APP_CONFIG.app_name,
@@ -52,8 +54,13 @@ app.add_middleware(
 )
 
 public_dir = resolve_project_path("public")
+storage_dir = resolve_storage_path()
+
 if public_dir.exists():
     app.mount("/public", StaticFiles(directory=str(public_dir)), name="public")
+
+if storage_dir.exists():
+    app.mount("/storage", StaticFiles(directory=str(storage_dir)), name="storage")
 
 app.include_router(health_router, prefix="/api")
 app.include_router(diagnostics_router, prefix="/api")
@@ -77,6 +84,7 @@ app.include_router(ip_branding_router, prefix="/api")
 app.include_router(ip_characters_router, prefix="/api")
 app.include_router(ip_canons_router, prefix="/api")
 app.include_router(illustrations_router, prefix="/api")
+
 
 @app.get("/")
 def root() -> dict:
