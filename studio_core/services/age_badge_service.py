@@ -10,6 +10,21 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from studio_core.core.config import resolve_project_path, resolve_storage_path
 
 
+LANGUAGE_LABELS = {
+    "pt": "anos",
+    "pt-PT": "anos",
+    "pt-BR": "anos",
+    "en": "years",
+    "es": "años",
+    "fr": "ans",
+    "de": "Jahre",
+    "it": "anni",
+    "nl": "jaar",
+    "zh": "岁",
+    "ja": "歳"
+}
+
+
 def _load_age_badge_canon(saga_id: str) -> Dict[str, Any]:
     canon_path = resolve_project_path("studio", "sagas", saga_id, "age-badge-canon.json")
     if not canon_path.exists():
@@ -20,7 +35,7 @@ def _load_age_badge_canon(saga_id: str) -> Dict[str, Any]:
 def _hex_to_rgba(value: str, alpha: int = 255) -> tuple[int, int, int, int]:
     value = str(value).strip().lstrip("#")
     if len(value) != 6:
-        return (47, 94, 46, alpha)
+        return (139, 94, 60, alpha)
     r = int(value[0:2], 16)
     g = int(value[2:4], 16)
     b = int(value[4:6], 16)
@@ -50,50 +65,6 @@ def _get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _draw_pendant_shape(draw: ImageDraw.ImageDraw, width: int, height: int, fill: tuple[int, int, int, int], outline: tuple[int, int, int, int], outline_width: int) -> None:
-    left = 36
-    top = 54
-    right = width - 36
-    bottom = height - 68
-    tip_x = width // 2
-    tip_y = height - 26
-
-    points = [
-        (left + 24, top),
-        (right - 24, top),
-        (right, top + 22),
-        (right, bottom - 18),
-        (tip_x, tip_y),
-        (left, bottom - 18),
-        (left, top + 22),
-    ]
-
-    draw.rounded_rectangle((left, top, right, bottom - 12), radius=26, fill=fill, outline=outline, width=outline_width)
-    draw.polygon(points, fill=fill, outline=outline)
-
-    ring_outer = (width // 2 - 26, 8, width // 2 + 26, 60)
-    ring_inner = (width // 2 - 13, 21, width // 2 + 13, 47)
-    draw.ellipse(ring_outer, fill=outline)
-    draw.ellipse(ring_inner, fill=(255, 255, 255, 0))
-
-
-def _draw_glow(base: Image.Image, color: tuple[int, int, int, int]) -> Image.Image:
-    glow = Image.new("RGBA", base.size, (255, 255, 255, 0))
-    glow_draw = ImageDraw.Draw(glow)
-
-    glow_draw.ellipse((70, 70, base.size[0] - 70, base.size[1] - 40), fill=(color[0], color[1], color[2], 70))
-    glow = glow.filter(ImageFilter.GaussianBlur(26))
-    return Image.alpha_composite(glow, base)
-
-
-def _draw_leaf(draw: ImageDraw.ImageDraw, x: int, y: int, color: tuple[int, int, int, int], flip: bool = False) -> None:
-    if flip:
-        pts = [(x, y), (x - 12, y - 7), (x - 18, y + 4), (x - 4, y + 14)]
-    else:
-        pts = [(x, y), (x + 12, y - 7), (x + 18, y + 4), (x + 4, y + 14)]
-    draw.polygon(pts, fill=color)
-
-
 def _fit_font_for_box(text: str, max_width: int, start_size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     size = start_size
     while size >= 18:
@@ -105,77 +76,112 @@ def _fit_font_for_box(text: str, max_width: int, start_size: int) -> ImageFont.F
     return _get_font(18)
 
 
+def _draw_outer_glow(base: Image.Image, color: tuple[int, int, int, int]) -> Image.Image:
+    glow = Image.new("RGBA", base.size, (255, 255, 255, 0))
+    glow_draw = ImageDraw.Draw(glow)
+    glow_draw.ellipse((40, 40, base.size[0] - 40, base.size[1] - 40), fill=(color[0], color[1], color[2], 70))
+    glow = glow.filter(ImageFilter.GaussianBlur(30))
+    return Image.alpha_composite(glow, base)
+
+
+def _draw_wood_badge(draw: ImageDraw.ImageDraw, width: int, height: int, wood_dark: tuple[int, int, int, int], wood_light: tuple[int, int, int, int], gold: tuple[int, int, int, int]) -> None:
+    cx = width // 2
+    cy = height // 2 + 20
+    radius = 250
+
+    draw.ellipse((cx - radius - 20, cy - radius - 20, cx + radius + 20, cy + radius + 20), fill=gold)
+    draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=wood_light)
+
+    # wood ring inner
+    draw.ellipse((cx - radius + 38, cy - radius + 38, cx + radius - 38, cy + radius - 38), outline=gold, width=10)
+    draw.ellipse((cx - radius + 58, cy - radius + 58, cx + radius - 58, cy + radius - 58), fill=wood_dark)
+
+    # top hanger
+    draw.ellipse((cx - 52, 24, cx + 52, 128), fill=gold)
+    draw.ellipse((cx - 24, 52, cx + 24, 100), fill=(255, 255, 255, 0))
+
+
+def _draw_leaf(draw: ImageDraw.ImageDraw, x: int, y: int, fill: tuple[int, int, int, int], rotate_left: bool = True) -> None:
+    if rotate_left:
+        pts = [(x, y), (x - 24, y - 10), (x - 34, y + 8), (x - 8, y + 24)]
+    else:
+        pts = [(x, y), (x + 24, y - 10), (x + 34, y + 8), (x + 8, y + 24)]
+    draw.polygon(pts, fill=fill)
+
+
+def _draw_star(draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, fill: tuple[int, int, int, int]) -> None:
+    pts = [
+        (cx, cy - size),
+        (cx + int(size * 0.35), cy - int(size * 0.35)),
+        (cx + size, cy - int(size * 0.2)),
+        (cx + int(size * 0.45), cy + int(size * 0.15)),
+        (cx + int(size * 0.6), cy + size),
+        (cx, cy + int(size * 0.45)),
+        (cx - int(size * 0.6), cy + size),
+        (cx - int(size * 0.45), cy + int(size * 0.15)),
+        (cx - size, cy - int(size * 0.2)),
+        (cx - int(size * 0.35), cy - int(size * 0.35)),
+    ]
+    draw.polygon(pts, fill=fill)
+
+
+def _build_age_text(age_range: str, language: str) -> tuple[str, str]:
+    age_range = str(age_range).strip()
+    label = LANGUAGE_LABELS.get(language, LANGUAGE_LABELS["en"])
+    return age_range, label
+
+
 def generate_age_badge(
     *,
     saga_id: str,
     age_range: str,
+    language: str = "pt-PT",
     output_name: str | None = None,
 ) -> Dict[str, Any]:
     canon = _load_age_badge_canon(saga_id)
-    color_rules = canon.get("color_rules", {})
+    colors = canon.get("color_rules", {})
 
-    width = 700
-    height = 860
+    width = 720
+    height = 720
 
-    primary = _hex_to_rgba(color_rules.get("primary", "#2F5E2E"))
-    secondary = _hex_to_rgba(color_rules.get("secondary", "#6FA86A"))
-    accent = _hex_to_rgba(color_rules.get("accent", "#D4A73C"))
-    text_color = _hex_to_rgba(color_rules.get("text_color", "#F5EED6"))
+    wood_dark = _hex_to_rgba("#8B5E3C")
+    wood_light = _hex_to_rgba("#B8834E")
+    gold = _hex_to_rgba(colors.get("accent", "#D4A73C"))
+    text_color = _hex_to_rgba(colors.get("text_color", "#F5EED6"))
+    leaf_green = _hex_to_rgba(colors.get("secondary", "#6FA86A"))
 
     img = Image.new("RGBA", (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
 
-    _draw_pendant_shape(draw, width, height, fill=secondary, outline=accent, outline_width=12)
-    img = _draw_glow(img, accent)
+    _draw_wood_badge(draw, width, height, wood_dark, wood_light, gold)
+    img = _draw_outer_glow(img, gold)
     draw = ImageDraw.Draw(img)
 
-    # inner border
-    draw.line([(70, 96), (630, 96)], fill=accent, width=6)
-    draw.line([(84, 110), (84, 710)], fill=accent, width=5)
-    draw.line([(616, 110), (616, 710)], fill=accent, width=5)
+    line1, line2 = _build_age_text(age_range, language)
 
-    # text
-    parts = str(age_range).strip().split()
-    if len(parts) >= 2:
-        line1 = parts[0]
-        line2 = " ".join(parts[1:])
-    else:
-        line1 = str(age_range).strip()
-        line2 = ""
-
-    font1 = _fit_font_for_box(line1, max_width=440, start_size=120)
-    font2 = _fit_font_for_box(line2 or "anos", max_width=360, start_size=90)
+    font1 = _fit_font_for_box(line1, max_width=360, start_size=112)
+    font2 = _fit_font_for_box(line2, max_width=280, start_size=70)
 
     bbox1 = font1.getbbox(line1)
+    bbox2 = font2.getbbox(line2)
+
     w1 = bbox1[2] - bbox1[0]
-    h1 = bbox1[3] - bbox1[1]
+    w2 = bbox2[2] - bbox2[0]
 
     draw.text(((width - w1) / 2, 250), line1, font=font1, fill=text_color)
+    draw.text(((width - w2) / 2, 390), line2, font=font2, fill=text_color)
 
-    if line2:
-        bbox2 = font2.getbbox(line2)
-        w2 = bbox2[2] - bbox2[0]
-        draw.text(((width - w2) / 2, 400), line2, font=font2, fill=text_color)
+    _draw_leaf(draw, 215, 470, leaf_green, rotate_left=True)
+    _draw_leaf(draw, 185, 505, leaf_green, rotate_left=True)
+    _draw_leaf(draw, 505, 470, leaf_green, rotate_left=False)
+    _draw_leaf(draw, 535, 505, leaf_green, rotate_left=False)
 
-    # leaf ornaments
-    ornament_y = 545
-    leaf_color = accent
-    _draw_leaf(draw, 205, ornament_y, leaf_color, flip=False)
-    _draw_leaf(draw, 170, ornament_y + 10, leaf_color, flip=False)
-    _draw_leaf(draw, 490, ornament_y, leaf_color, flip=True)
-    _draw_leaf(draw, 525, ornament_y + 10, leaf_color, flip=True)
+    _draw_star(draw, 360, 565, 26, gold)
 
-    # small star
-    star_points = [
-        (350, 650), (362, 674), (388, 678), (368, 696), (373, 722),
-        (350, 710), (327, 722), (332, 696), (312, 678), (338, 674)
-    ]
-    draw.polygon(star_points, fill=accent)
-
-    output_dir = resolve_storage_path("exports", "age-badges", saga_id)
+    output_dir = resolve_storage_path("exports", "age-badges", saga_id, language)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    file_name = output_name or f"{_safe_name(saga_id)}_{_safe_name(age_range)}.png"
+    file_name = output_name or f"{_safe_name(saga_id)}_{_safe_name(age_range)}_{_safe_name(language)}.png"
     file_path = output_dir / file_name
     img.save(file_path, format="PNG")
 
@@ -183,7 +189,8 @@ def generate_age_badge(
         "id": str(uuid4()),
         "saga_id": saga_id,
         "age_range": age_range,
+        "language": language,
         "file_name": file_name,
         "file_path": str(file_path),
-        "engine": "python-age-badge-generator"
-  }
+        "engine": "python-age-badge-generator-multilang"
+            }
