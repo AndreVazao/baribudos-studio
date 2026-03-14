@@ -16,4 +16,5 @@ __all__ = [
     "age_badges",
     "covers",
     "ip_creator",
+    "ip_palette",
 ]
