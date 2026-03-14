@@ -398,4 +398,16 @@ export async function buildCover(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload || {})
   }))
-                                     }
+}
+
+export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
+  const form = new FormData()
+  form.append("saga_id", sagaId)
+  form.append("project_id", projectId)
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/illustrations/upload`, {
+    method: "POST",
+    body: form
+  }))
+}
