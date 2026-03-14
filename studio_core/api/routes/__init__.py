@@ -14,4 +14,5 @@ __all__ = [
     "videos",
     "saga_loader",
     "age_badges",
+    "covers",
 ]
