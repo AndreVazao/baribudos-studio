@@ -38,7 +38,7 @@ function readFileAsObjectUrl(file) {
   return URL.createObjectURL(file)
 }
 
-export default function IpCoverBuilderPanel({ user }) {
+export default function IpCoverBuilderPanel({ user, onCoverBuilt }) {
   const [ips, setIps] = useState([])
   const [projects, setProjects] = useState([])
   const [selectedIp, setSelectedIp] = useState("")
@@ -136,7 +136,9 @@ export default function IpCoverBuilderPanel({ user }) {
         illustration_path: illustrationPath,
         output_name: `${title.toLowerCase().replace(/[^a-z0-9]+/gi, "_")}_cover.png`
       })
-      setResult(res?.result || null)
+      const built = res?.result || null
+      setResult(built)
+      onCoverBuilt?.(selectedProjectId, built)
       alert("Capa gerada com sucesso.")
     } catch (error) {
       alert(error?.message || "Erro ao gerar capa.")
