@@ -4,6 +4,7 @@ __all__ = [
     "users",
     "projects",
     "project_commercial",
+    "project_integrity",
     "publication_package",
     "publish_readiness",
     "settings",
