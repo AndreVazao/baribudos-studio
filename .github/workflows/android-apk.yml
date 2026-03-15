@@ -2,19 +2,10 @@ name: Android APK Build
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'client/mobile-app/**'
-      - '.github/workflows/android-apk.yml'
 
 jobs:
   build-android-apk:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: client/mobile-app
 
     steps:
       - name: Checkout
@@ -23,39 +14,32 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: client/mobile-app/package-lock.json
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
+          node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          cd client/mobile-app
+          npm install
 
       - name: Build web app
-        run: npm run build
-        env:
-          VITE_BARIBUDOS_API: http://127.0.0.1:8787/api
-
-      - name: Ensure Android project exists
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          cd client/mobile-app
+          npm run build
 
-      - name: Sync Capacitor Android
-        run: npx cap sync android
+      - name: Install Capacitor Android
+        run: |
+          cd client/mobile-app
+          npx cap add android || true
+          npx cap sync android
 
-      - name: Build Debug APK
-        working-directory: client/mobile-app/android
-        run: ./gradlew assembleDebug
+      - name: Build APK
+        run: |
+          cd client/mobile-app/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: baribudos-android-apk
+          name: baribudos-apk
           path: client/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
