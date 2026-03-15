@@ -573,3 +573,27 @@ export async function runProductionPipeline(projectId, payload = {}) {
   }))
     }
 
+export async function listIllustrationRuns() {
+  return handle(fetch(`${getApiBase()}/illustration-pipeline`))
+}
+
+export async function getIllustrationPipeline(projectId) {
+  return handle(fetch(`${getApiBase()}/illustration-pipeline/${projectId}`))
+}
+
+export async function setupIllustrationPipeline(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/illustration-pipeline/setup/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function updateIllustrationFrame(projectId, frameId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/illustration-pipeline/${projectId}/frame/${frameId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+    }
+
