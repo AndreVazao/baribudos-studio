@@ -56,11 +56,15 @@ def audit_project_integrity(project: Dict[str, Any]) -> Dict[str, Any]:
     missing_files = [item for item in file_checks if item["file_path"] and not item["exists"]]
 
     publication_package = build_publication_package(project)
-    readiness = (publication_package.get("checks") or {}).get("readiness", {}) or {}
+    readiness = ((publication_package.get("checks") or {}).get("readiness", {})) or {}
+    runtime = publication_package.get("runtime", {}) or {}
 
     return {
         "project_id": project.get("id"),
         "title": project.get("title"),
+        "runtime_slug": runtime.get("slug", ""),
+        "runtime_name": runtime.get("name", ""),
+        "runtime_validation": runtime.get("validation", {}),
         "file_checks": file_checks,
         "missing_files": missing_files,
         "missing_files_count": len(missing_files),
@@ -127,7 +131,7 @@ def repair_project_structure(project: Dict[str, Any]) -> Dict[str, Any]:
             "epub": epub,
             "audiobook": audiobook,
             "video": video,
-        }
+        },
     }
 
     return repaired
