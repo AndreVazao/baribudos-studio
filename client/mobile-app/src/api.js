@@ -597,3 +597,19 @@ export async function updateIllustrationFrame(projectId, frameId, payload = {}) 
   }))
     }
 
+export async function uploadIllustrationFrameAsset({ projectId, frameId, file }) {
+  const form = new FormData()
+  form.append("project_id", projectId)
+  form.append("frame_id", frameId)
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/illustration-assets/upload`, {
+    method: "POST",
+    body: form
+  }))
+}
+
+export async function getStoryboardManifest(projectId) {
+  return handle(fetch(`${getApiBase()}/illustration-assets/storyboard/${projectId}`))
+}
+
