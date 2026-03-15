@@ -22,6 +22,7 @@ from studio_core.api.routes.ip_metadata import router as ip_metadata_router
 from studio_core.api.routes.ip_palette import router as ip_palette_router
 from studio_core.api.routes.jobs import router as jobs_router
 from studio_core.api.routes.project_commercial import router as project_commercial_router
+from studio_core.api.routes.project_integrity import router as project_integrity_router
 from studio_core.api.routes.projects import router as projects_router
 from studio_core.api.routes.publication_package import router as publication_package_router
 from studio_core.api.routes.publish_readiness import router as publish_readiness_router
@@ -71,6 +72,7 @@ app.include_router(diagnostics_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(project_commercial_router, prefix="/api")
+app.include_router(project_integrity_router, prefix="/api")
 app.include_router(publication_package_router, prefix="/api")
 app.include_router(publish_readiness_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
