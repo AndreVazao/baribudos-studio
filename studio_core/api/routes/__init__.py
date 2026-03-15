@@ -18,6 +18,7 @@ __all__ = [
     "videos",
     "saga_loader",
     "saga_runtime",
+    "system_smoke",
     "age_badges",
     "covers",
     "ip_creator",
