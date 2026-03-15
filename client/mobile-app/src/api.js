@@ -702,3 +702,23 @@ export async function runIllustrationProvider(projectId, payload = {}) {
   }))
                       }
 
+export async function getLocalAiStatus() {
+  return handle(fetch(`${getApiBase()}/local-ai/status`))
+}
+
+export async function setupLocalAi(payload = {}) {
+  return handle(fetch(`${getApiBase()}/local-ai/setup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function setLocalAiDefaultProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-ai/default-provider`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
