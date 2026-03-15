@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
 import {
   getIllustrationPipeline,
+  getStoryboardManifest,
   listProjects,
   setupIllustrationPipeline,
-  updateIllustrationFrame
+  updateIllustrationFrame,
+  uploadIllustrationFrameAsset
 } from "../api.js"
 
 function Card({ title, children }) {
@@ -31,6 +33,7 @@ export default function IllustrationPipelinePanel({ user }) {
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [mode, setMode] = useState("approval")
   const [pipeline, setPipeline] = useState(null)
+  const [manifest, setManifest] = useState(null)
 
   useEffect(() => {
     loadProjects()
@@ -39,6 +42,7 @@ export default function IllustrationPipelinePanel({ user }) {
   useEffect(() => {
     if (selectedProjectId) {
       loadPipeline(selectedProjectId)
+      loadManifest(selectedProjectId)
     }
   }, [selectedProjectId])
 
@@ -60,6 +64,15 @@ export default function IllustrationPipelinePanel({ user }) {
     }
   }
 
+  async function loadManifest(projectId) {
+    try {
+      const res = await getStoryboardManifest(projectId)
+      setManifest(res?.manifest || null)
+    } catch {
+      setManifest(null)
+    }
+  }
+
   async function handleSetup() {
     if (!selectedProjectId) return
     try {
@@ -67,6 +80,7 @@ export default function IllustrationPipelinePanel({ user }) {
         mode
       })
       setPipeline(res?.pipeline || null)
+      await loadManifest(selectedProjectId)
       alert("Pipeline de ilustração preparada.")
     } catch (error) {
       alert(error?.message || "Erro ao preparar pipeline de ilustração.")
@@ -81,23 +95,25 @@ export default function IllustrationPipelinePanel({ user }) {
         approved: true
       })
       setPipeline(res?.illustration_pipeline || null)
+      await loadManifest(selectedProjectId)
     } catch (error) {
       alert(error?.message || "Erro ao aprovar frame.")
     }
   }
 
-  async function handleManual(frameId) {
-    if (!selectedProjectId || !frameId) return
+  async function handleFileUpload(frameId, file) {
+    if (!selectedProjectId || !frameId || !file) return
     try {
-      const res = await updateIllustrationFrame(selectedProjectId, frameId, {
-        status: "uploaded",
-        approved: true,
-        uploaded_manually: true,
-        image_path: "/manual/upload/pending"
+      await uploadIllustrationFrameAsset({
+        projectId: selectedProjectId,
+        frameId,
+        file
       })
-      setPipeline(res?.illustration_pipeline || null)
+      await loadPipeline(selectedProjectId)
+      await loadManifest(selectedProjectId)
+      alert("Imagem associada ao frame.")
     } catch (error) {
-      alert(error?.message || "Erro ao marcar upload manual.")
+      alert(error?.message || "Erro ao carregar imagem para o frame.")
     }
   }
 
@@ -175,7 +191,9 @@ export default function IllustrationPipelinePanel({ user }) {
               <div><strong>Título:</strong> {frame.page_title}</div>
               <div><strong>Tipo:</strong> {frame.frame_type}</div>
               <div><strong>Status:</strong> {frame.status}</div>
-              <div><strong>Selecionado:</strong> {frame.selected ? "Sim" : "Não"}</div>
+              <div><strong>Aprovado:</strong> {frame.approved ? "Sim" : "Não"}</div>
+              <div><strong>Imagem:</strong> {frame.image_path || "-"}</div>
+
               <textarea
                 readOnly
                 value={frame.prompt || ""}
@@ -190,7 +208,8 @@ export default function IllustrationPipelinePanel({ user }) {
                   resize: "vertical"
                 }}
               />
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 <button
                   onClick={() => handleApprove(frame.id)}
                   style={{
@@ -204,24 +223,59 @@ export default function IllustrationPipelinePanel({ user }) {
                 >
                   Aprovar
                 </button>
-                <button
-                  onClick={() => handleManual(frame.id)}
+
+                <label
                   style={{
                     padding: "8px 10px",
                     borderRadius: 10,
-                    border: "none",
                     background: "#1d4ed8",
                     color: "#fff",
                     cursor: "pointer"
                   }}
                 >
-                  Marcar upload manual
-                </button>
+                  Upload manual
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleFileUpload(frame.id, e.target.files?.[0] || null)}
+                  />
+                </label>
               </div>
             </div>
           ))}
         </div>
       ) : null}
+
+      {manifest ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.55)",
+            display: "grid",
+            gap: 8
+          }}
+        >
+          <div><strong>Storyboard frames aprovados:</strong> {manifest.frames_count}</div>
+          <textarea
+            readOnly
+            value={JSON.stringify(manifest, null, 2)}
+            rows={12}
+            style={{
+              width: "100%",
+              padding: 10,
+              borderRadius: 10,
+              border: "1px solid #d1d5db",
+              outline: "none",
+              fontSize: 12,
+              fontFamily: "monospace",
+              resize: "vertical"
+            }}
+          />
+        </div>
+      ) : null}
     </Card>
   )
-        }
+    }
