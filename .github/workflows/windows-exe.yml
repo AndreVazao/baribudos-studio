@@ -1,20 +1,11 @@
-name: Windows EXE Build
+name: build-windows-exe
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'client/mobile-app/**'
-      - '.github/workflows/windows-exe.yml'
 
 jobs:
-  build-windows-exe:
+  build:
     runs-on: windows-latest
-
-    defaults:
-      run:
-        working-directory: client/mobile-app
 
     steps:
       - name: Checkout
@@ -23,18 +14,25 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: client/mobile-app/package-lock.json
+          node-version: 22
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install frontend dependencies
+        run: |
+          cd client/mobile-app
+          npm install
 
-      - name: Build Tauri app
-        run: npm run tauri:build
+      - name: Ensure Tauri CLI
+        run: |
+          cd client/mobile-app
+          npm install -D @tauri-apps/cli
+
+      - name: Build Windows EXE
+        run: |
+          cd client/mobile-app
+          npm run tauri:build
         env:
           VITE_BARIBUDOS_API: http://127.0.0.1:8787/api
 
