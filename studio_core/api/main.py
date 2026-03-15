@@ -36,12 +36,12 @@ from studio_core.api.routes.system_smoke import router as system_smoke_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
-from studio_core.core.storage import ensure_storage_structure
+from studio_core.services.bootstrap_service import bootstrap_system
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    ensure_storage_structure()
+    bootstrap_system()
     ensure_default_owner()
     yield
 
@@ -108,4 +108,5 @@ def root() -> dict:
         "version": APP_CONFIG.app_version,
         "docs": "/docs",
         "health": "/api/health",
+        "diagnostics": "/api/diagnostics",
 }
