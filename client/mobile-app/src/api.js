@@ -613,3 +613,41 @@ export async function getStoryboardManifest(projectId) {
   return handle(fetch(`${getApiBase()}/illustration-assets/storyboard/${projectId}`))
 }
 
+export async function listIllustrationJobs(projectId = "") {
+  const suffix = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""
+  return handle(fetch(`${getApiBase()}/illustration-generation${suffix}`))
+}
+
+export async function queueIllustrationGeneration(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/illustration-generation/queue/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function getIllustrationPromptPackage(projectId) {
+  return handle(fetch(`${getApiBase()}/illustration-generation/package/${projectId}`))
+}
+
+export async function updateIllustrationJob(jobId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/illustration-generation/job/${jobId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function importGeneratedIllustrationFrame({ projectId, frameId, file, approve = true }) {
+  const form = new FormData()
+  form.append("project_id", projectId)
+  form.append("frame_id", frameId)
+  form.append("approve", String(approve))
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/illustration-generation/import`, {
+    method: "POST",
+    body: form
+  }))
+}
+
