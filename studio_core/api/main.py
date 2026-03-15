@@ -32,6 +32,7 @@ from studio_core.api.routes.saga_runtime import router as saga_runtime_router
 from studio_core.api.routes.sagas import router as sagas_router
 from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
+from studio_core.api.routes.system_smoke import router as system_smoke_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
@@ -87,6 +88,7 @@ app.include_router(audiobooks_router, prefix="/api")
 app.include_router(videos_router, prefix="/api")
 app.include_router(saga_loader_router, prefix="/api")
 app.include_router(saga_runtime_router, prefix="/api")
+app.include_router(system_smoke_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
