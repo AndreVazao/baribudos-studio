@@ -130,7 +130,9 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
                 {
                     "project_id": project_id,
                     "project_title": project.get("title", "Projeto"),
-                    "language": language
+                    "language": language,
+                    "cover_path": (cover_output or {}).get("file_path") or project.get("cover_image") or "",
+                    "audio_path": ((audiobook_outputs.get(language) or {}).get("file_path", ""))
                 }
             )
 
@@ -218,3 +220,4 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         "publications": publication_outputs,
         "summary": summary
     }
+    
