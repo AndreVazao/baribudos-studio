@@ -561,3 +561,15 @@ export async function runSystemSmoke(projectId) {
   }))
       }
 
+export async function listProductionRuns() {
+  return handle(fetch(`${getApiBase()}/production-pipeline`))
+}
+
+export async function runProductionPipeline(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/production-pipeline/run/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+    }
+
