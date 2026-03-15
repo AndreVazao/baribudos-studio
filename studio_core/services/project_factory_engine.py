@@ -15,10 +15,6 @@ def _safe_dict(value: Any) -> Dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _safe_list(value: Any) -> List[Any]:
-    return value if isinstance(value, list) else []
-
-
 def _resolve_languages(runtime: Dict[str, Any], project: Dict[str, Any], payload: Dict[str, Any]) -> List[str]:
     requested = payload.get("languages")
     if isinstance(requested, list) and requested:
@@ -171,7 +167,7 @@ def _build_language_variants(story_variants: Dict[str, Dict[str, Any]], project_
         language: {
             "language": language,
             "title": str(story.get("title", project_title)).strip() or project_title,
-            "pages": _safe_list(story.get("pages", [])),
+            "pages": story.get("pages", []) if isinstance(story.get("pages"), list) else [],
             "status": "generated",
             "raw_text": str(story.get("raw_text", "")).strip(),
             "protagonist": str(story.get("protagonist", "")).strip(),
@@ -206,9 +202,7 @@ def run_project_factory_engine(
         else:
             base_story = _safe_dict(project.get("story", {}))
             language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip() or "pt-PT"
-            story_variants = {
-                language: base_story
-            }
+            story_variants = {language: base_story}
 
     main_language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip() or "pt-PT"
     main_story = _safe_dict(story_variants.get(main_language, {}))
@@ -240,12 +234,14 @@ def run_project_factory_engine(
             "project_id": str(project.get("id", "")).strip(),
             "project_title": project_title,
             "ip_slug": str(runtime.get("slug", "")).strip(),
+            "runtime_name": str(runtime.get("name", "")).strip(),
             "languages": list(story_variants.keys()),
             "cover_created": cover_output is not None,
             "ebook_languages": list(ebook_outputs.keys()),
             "audiobook_languages": list(audiobook_outputs.keys()),
             "video_languages": list(video_outputs.keys()),
             "guide_created": guide_output is not None,
+            "runtime_validation_ok": bool((runtime.get("validation") or {}).get("ok", False)),
         },
     }
 
@@ -273,4 +269,4 @@ def build_factory_context(ip_slug: str, project_payload: Dict[str, Any]) -> Dict
         "validation": runtime.get("validation", {}),
         "main_characters": runtime.get("main_characters", []),
         "project_payload": project_payload,
-}
+    }
