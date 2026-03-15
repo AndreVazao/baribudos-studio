@@ -35,6 +35,7 @@ import PublicationPackagePanel from "./PublicationPackagePanel.jsx"
 import PublishGatePanel from "./PublishGatePanel.jsx"
 import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
 import SagaRuntimePanel from "./SagaRuntimePanel.jsx"
+import StoryLayoutPanel from "./StoryLayoutPanel.jsx"
 import SystemSmokePanel from "./SystemSmokePanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
@@ -349,6 +350,7 @@ export default function DashboardPanel({ user }) {
 
       <IpCreatorPanel user={user} />
       <SagaRuntimePanel user={user} />
+      <StoryLayoutPanel user={user} />
       <ProductionPipelinePanel user={user} />
       <IllustrationPipelinePanel user={user} />
       <IpMetadataEditorPanel user={user} />
@@ -557,4 +559,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-  }
+}
