@@ -14,16 +14,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      - name: Setup Java
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
-
-      - name: Install dependencies (root)
-        run: npm install
+          java-version: 21
 
       - name: Install mobile deps
         run: |
@@ -35,12 +32,14 @@ jobs:
         run: |
           cd client/mobile-app
           npm run build
+        env:
+          VITE_BARIBUDOS_API: http://127.0.0.1:8787/api
 
-      - name: Install Capacitor Android
+      - name: Add and sync Capacitor Android
         run: |
           cd client/mobile-app
-          npx cap add android
-          npx cap sync
+          npx cap add android || true
+          npx cap sync android
 
       - name: Build APK
         run: |
