@@ -519,3 +519,17 @@ export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
     body: form
   }))
 }
+export async function getProjectIntegrity(projectId) {
+  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}`))
+}
+
+export async function repairProject(projectId, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}/repair?${query}`, {
+    method: "POST"
+  }))
+}
