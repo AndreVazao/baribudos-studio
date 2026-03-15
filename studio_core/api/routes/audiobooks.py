@@ -34,13 +34,13 @@ def export_audiobook(project_id: str, payload: dict | None = None) -> dict:
             {
                 language: {
                     **story,
-                    "language": language
+                    "language": language,
                 }
             },
             {
                 "project_id": project_id,
-                "project_title": project.get("title", "Projeto")
-            }
+                "project_title": project.get("title", "Projeto"),
+            },
         )
 
         result = result_map.get(language)
@@ -54,11 +54,11 @@ def export_audiobook(project_id: str, payload: dict | None = None) -> dict:
                     **(current.get("outputs", {}) or {}),
                     "audiobook": {
                         **((current.get("outputs", {}) or {}).get("audiobook", {}) or {}),
-                        language: result
-                    }
+                        language: result,
+                    },
                 },
-                "updated_at": now_iso()
-            }
+                "updated_at": now_iso(),
+            },
         )
 
         return {"ok": True, "result": result}
