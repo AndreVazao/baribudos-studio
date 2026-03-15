@@ -1,34 +1,25 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
-from uuid import uuid4
+from typing import Any, Dict
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
-from studio_core.services.audiobook_service import build_audiobook
-from studio_core.services.cover_service import build_cover
-from studio_core.services.ebook_service import build_epub
-from studio_core.services.ip_runtime_service import load_ip_runtime
-from studio_core.services.language_service import build_language_versions, get_supported_languages
-from studio_core.services.publishing_service import publish_package
-from studio_core.services.story_service import generate_story, generate_volume_guide
-from studio_core.services.video_service import build_series_episode
+from studio_core.services.project_factory_engine import run_project_factory_engine
+from studio_core.services.saga_runtime_service import load_saga_runtime
 
 PROJECTS_FILE = "data/projects.json"
 
 
 def get_factory_capabilities() -> Dict[str, Any]:
     return {
-        "engine": "python-factory-real",
+        "engine": "project-factory-engine-v2",
         "story": True,
-        "translations": True,
         "cover": True,
         "epub": True,
         "audiobook": True,
         "video": True,
         "guide": True,
-        "publishing": True,
-        "supported_languages": get_supported_languages()
+        "runtime_canon_aware": True,
     }
 
 
@@ -45,179 +36,60 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if not project:
         raise ValueError("Projeto não encontrado.")
 
-    saga_id = str(project.get("saga_slug", "baribudos")).strip()
-    runtime = load_ip_runtime(saga_id)
-    metadata = runtime.get("metadata", {}) or {}
+    saga_id = str(project.get("saga_slug", "baribudos")).strip() or "baribudos"
+    runtime = load_saga_runtime(saga_id)
 
-    project_language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip()
-    requested_languages: List[str] = (
-        payload.get("languages")
-        or project.get("output_languages")
-        or runtime.get("output_languages")
-        or [project_language]
+    result = run_project_factory_engine(
+        runtime=runtime,
+        project=project,
+        payload=payload or {},
     )
 
-    create_story = bool(payload.get("createStory", True))
-    create_translations = bool(payload.get("createTranslations", True))
-    create_cover = bool(payload.get("createCover", True))
-    create_epub = bool(payload.get("createEpub", True))
-    create_audiobook = bool(payload.get("createAudiobook", True))
-    create_series = bool(payload.get("createSeries", True))
-    create_guide = bool(payload.get("createGuide", False))
-    publish = bool(payload.get("publish", False))
+    story = result.get("story", {}) or {}
+    language_variants = result.get("language_variants", {}) or {}
+    cover_output = result.get("cover")
+    ebook_outputs = result.get("ebook", {}) or {}
+    audiobook_outputs = result.get("audiobook", {}) or {}
+    video_outputs = result.get("video", {}) or {}
+    guide_output = result.get("guide")
+    summary = result.get("summary", {}) or {}
 
-    age_range = str(
-        payload.get("age_range")
-        or metadata.get("target_age")
-        or "4-10"
-    ).strip()
-
-    if create_story:
-        story = generate_story({
-            "title": project.get("title", "Projeto"),
-            "language": project_language,
-            "saga_id": saga_id,
-            "saga_name": project.get("saga_name", runtime.get("name", "Saga")),
-            "raw_text": (project.get("story") or {}).get("raw_text", "")
-        })
-    else:
-        story = project.get("story", {}) or {}
-
-    language_versions = build_language_versions(story, requested_languages) if create_translations else {
-        story.get("language", project_language): story
-    }
-
-    cover_output = None
-    illustration_path = str(project.get("illustration_path", "")).strip()
-    if create_cover and illustration_path:
-        cover_output = build_cover(
-            saga_id=saga_id,
-            project_id=project_id,
-            title=project.get("title", "Projeto"),
-            age_range=age_range,
-            language=project_language,
-            illustration_path=illustration_path,
-            producer=metadata.get("producer") or None,
-            output_name=f"{project.get('title', 'projeto').lower().replace(' ', '_')}_cover.png"
-        )
-
-    epub_outputs: Dict[str, Any] = {}
-    if create_epub:
-        for language, localized_story in language_versions.items():
-            epub_outputs[language] = build_epub(
-                localized_story,
-                project_id=project_id,
-                project_title=project.get("title", "Projeto"),
-                language=language,
-                author=str(metadata.get("author_default") or "Autor").strip(),
-                cover_path=(cover_output or {}).get("file_path") or project.get("cover_image") or None,
-                saga_id=saga_id,
-            )
-
-    audiobook_outputs = build_audiobook(
-        language_versions,
-        {
-            "project_id": project_id,
-            "project_title": project.get("title", "Projeto")
-        }
-    ) if create_audiobook else {}
-
-    series_outputs: Dict[str, Any] = {}
-    if create_series:
-        for language, localized_story in language_versions.items():
-            series_outputs[language] = build_series_episode(
-                localized_story,
-                {
-                    "project_id": project_id,
-                    "project_title": project.get("title", "Projeto"),
-                    "language": language,
-                    "cover_path": (cover_output or {}).get("file_path") or project.get("cover_image") or "",
-                    "audio_path": ((audiobook_outputs.get(language) or {}).get("file_path", ""))
-                }
-            )
-
-    guide_output = generate_volume_guide({
-        "project_title": project.get("title", "Projeto"),
-        "story": story
-    }) if create_guide else None
-
-    publication_outputs = []
-    if publish:
-        for language in language_versions.keys():
-            publication_outputs.append(
-                publish_package({
-                    "project_id": project_id,
-                    "language": language,
-                    "channel": "ebook",
-                    "requested_by": str(payload.get("userName", "")).strip(),
-                    "notes": f"Factory publication for {saga_id}"
-                })
-            )
-
-    summary = {
-        "project_id": project_id,
-        "saga_id": saga_id,
-        "series_name": metadata.get("series_name") or runtime.get("name") or "",
-        "author_default": metadata.get("author_default", ""),
-        "producer": metadata.get("producer", ""),
-        "target_age": age_range,
-        "story_created": create_story,
-        "cover_created": cover_output is not None,
-        "translation_count": len(language_versions),
-        "epub_languages": list(epub_outputs.keys()),
-        "audiobook_languages": list(audiobook_outputs.keys()),
-        "series_languages": list(series_outputs.keys()),
-        "guide_created": guide_output is not None,
-        "publishing_runs": len(publication_outputs),
-        "completed_at": now_iso()
-    }
-
-    def updater(current: Dict[str, Any]) -> Dict[str, Any]:
-        current_outputs = current.get("outputs", {}) or {}
-
-        return {
+    update_json_item(
+        PROJECTS_FILE,
+        project_id,
+        lambda current: {
             **current,
             "story": story,
-            "language": project_language,
-            "output_languages": requested_languages,
+            "language_variants": language_variants,
             "cover_image": (cover_output or {}).get("file_path", current.get("cover_image", "")),
-            "language_variants": {
-                language: {
-                    "language": language,
-                    "title": localized_story.get("title", current.get("title", "")),
-                    "pages": localized_story.get("pages", []),
-                    "status": "generated",
-                    "raw_text": localized_story.get("raw_text", "")
-                }
-                for language, localized_story in language_versions.items()
-            },
             "outputs": {
-                **current_outputs,
-                "covers": cover_output or current_outputs.get("covers"),
-                "epub": epub_outputs,
+                **(current.get("outputs", {}) or {}),
+                "covers": cover_output or (current.get("outputs", {}) or {}).get("covers"),
+                "epub": ebook_outputs,
                 "audiobook": audiobook_outputs,
-                "video": series_outputs,
+                "video": video_outputs,
                 "guide": guide_output,
-                "publications": publication_outputs
             },
             "factory": {
-                "last_run_id": str(uuid4()),
-                "summary": summary
+                "summary": {
+                    **summary,
+                    "completed_at": now_iso(),
+                }
             },
-            "updated_at": now_iso()
+            "updated_at": now_iso(),
         }
-
-    update_json_item(PROJECTS_FILE, project_id, updater)
+    )
 
     return {
         "story": story,
+        "language_variants": language_variants,
         "cover": cover_output,
-        "language_versions": language_versions,
-        "epub": epub_outputs,
+        "ebook": ebook_outputs,
         "audiobook": audiobook_outputs,
-        "video": series_outputs,
+        "video": video_outputs,
         "guide": guide_output,
-        "publications": publication_outputs,
-        "summary": summary
-    }
-    
+        "summary": {
+            **summary,
+            "completed_at": now_iso(),
+        },
+                }
