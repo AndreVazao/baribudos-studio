@@ -1,10 +1,10 @@
-name: Android APK Build
+name: build-android-apk
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-android-apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,12 +14,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
-      - name: Install dependencies
+      - name: Install dependencies (root)
+        run: npm install
+
+      - name: Install mobile deps
         run: |
           cd client/mobile-app
           npm install
+          npm install -D typescript
 
       - name: Build web app
         run: |
@@ -29,8 +33,8 @@ jobs:
       - name: Install Capacitor Android
         run: |
           cd client/mobile-app
-          npx cap add android || true
-          npx cap sync android
+          npx cap add android
+          npx cap sync
 
       - name: Build APK
         run: |
@@ -41,5 +45,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: baribudos-apk
+          name: baribudos-mobile-apk
           path: client/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
