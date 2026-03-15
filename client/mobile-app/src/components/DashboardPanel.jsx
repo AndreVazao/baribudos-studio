@@ -19,6 +19,7 @@ import {
   runFactory,
   saveSettings
 } from "../api.js"
+import IllustrationPipelinePanel from "./IllustrationPipelinePanel.jsx"
 import IpBrandingEditorPanel from "./IpBrandingEditorPanel.jsx"
 import IpCanonsEditorPanel from "./IpCanonsEditorPanel.jsx"
 import IpCharactersEditorPanel from "./IpCharactersEditorPanel.jsx"
@@ -349,6 +350,7 @@ export default function DashboardPanel({ user }) {
       <IpCreatorPanel user={user} />
       <SagaRuntimePanel user={user} />
       <ProductionPipelinePanel user={user} />
+      <IllustrationPipelinePanel user={user} />
       <IpMetadataEditorPanel user={user} />
       <IpPaletteEditorPanel user={user} />
       <IpBrandingEditorPanel user={user} />
