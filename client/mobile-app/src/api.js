@@ -271,6 +271,21 @@ export async function unmarkProjectReady(projectId, user) {
   }))
 }
 
+export async function getProjectIntegrity(projectId) {
+  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}`))
+}
+
+export async function repairProject(projectId, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}/repair?${query}`, {
+    method: "POST"
+  }))
+}
+
 export async function listJobs() {
   return handle(fetch(`${getApiBase()}/jobs`))
 }
@@ -295,12 +310,24 @@ export async function runFactory(projectId, payload) {
   }))
 }
 
+export async function getFactoryContext(payload) {
+  return handle(fetch(`${getApiBase()}/factory/context`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {})
+  }))
+    }
 export async function listPublications() {
   return handle(fetch(`${getApiBase()}/publishing`))
 }
 
-export async function publishProject(payload) {
-  return handle(fetch(`${getApiBase()}/publishing/publish`, {
+export async function publishProject(payload, user) {
+  const query = new URLSearchParams({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  }).toString()
+
+  return handle(fetch(`${getApiBase()}/publishing/publish?${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload || {})
@@ -500,6 +527,10 @@ export async function updateIpMetadata(slug, payload, user) {
   }))
 }
 
+export async function getSagaRuntime(slug) {
+  return handle(fetch(`${getApiBase()}/saga-runtime/${slug}`))
+}
+
 export async function buildCover(payload) {
   return handle(fetch(`${getApiBase()}/covers/build`, {
     method: "POST",
@@ -518,22 +549,4 @@ export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
     method: "POST",
     body: form
   }))
-}
-export async function getProjectIntegrity(projectId) {
-  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}`))
-}
-
-export async function repairProject(projectId, user) {
-  const query = new URLSearchParams({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}/repair?${query}`, {
-    method: "POST"
-  }))
-}
-
-export async function getSagaRuntime(slug) {
-  return handle(fetch(`${getApiBase()}/saga-runtime/${slug}`))
 }
