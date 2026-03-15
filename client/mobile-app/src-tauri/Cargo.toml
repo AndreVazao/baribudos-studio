@@ -1,0 +1,18 @@
+[package]
+name = "baribudos_studio"
+version = "1.0.0"
+description = "Baribudos Studio Desktop"
+authors = ["Andre Vazao"]
+edition = "2021"
+
+[lib]
+name = "baribudos_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
