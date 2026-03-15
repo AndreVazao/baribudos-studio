@@ -21,6 +21,7 @@ from studio_core.api.routes.ip_creator import router as ip_creator_router
 from studio_core.api.routes.ip_metadata import router as ip_metadata_router
 from studio_core.api.routes.ip_palette import router as ip_palette_router
 from studio_core.api.routes.jobs import router as jobs_router
+from studio_core.api.routes.production_pipeline import router as production_pipeline_router
 from studio_core.api.routes.project_commercial import router as project_commercial_router
 from studio_core.api.routes.project_integrity import router as project_integrity_router
 from studio_core.api.routes.projects import router as projects_router
@@ -82,6 +83,7 @@ app.include_router(sagas_router, prefix="/api")
 app.include_router(sponsors_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
 app.include_router(factory_router, prefix="/api")
+app.include_router(production_pipeline_router, prefix="/api")
 app.include_router(publishing_router, prefix="/api")
 app.include_router(ebooks_router, prefix="/api")
 app.include_router(audiobooks_router, prefix="/api")
