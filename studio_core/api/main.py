@@ -16,6 +16,7 @@ from studio_core.api.routes.health import router as health_router
 from studio_core.api.routes.illustration_assets import router as illustration_assets_router
 from studio_core.api.routes.illustration_generation import router as illustration_generation_router
 from studio_core.api.routes.illustration_pipeline import router as illustration_pipeline_router
+from studio_core.api.routes.illustration_provider import router as illustration_provider_router
 from studio_core.api.routes.illustrations import router as illustrations_router
 from studio_core.api.routes.ip_branding import router as ip_branding_router
 from studio_core.api.routes.ip_canons import router as ip_canons_router
@@ -99,6 +100,7 @@ app.include_router(story_layout_router, prefix="/api")
 app.include_router(illustration_pipeline_router, prefix="/api")
 app.include_router(illustration_assets_router, prefix="/api")
 app.include_router(illustration_generation_router, prefix="/api")
+app.include_router(illustration_provider_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
