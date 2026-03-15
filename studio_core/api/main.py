@@ -28,6 +28,7 @@ from studio_core.api.routes.publication_package import router as publication_pac
 from studio_core.api.routes.publish_readiness import router as publish_readiness_router
 from studio_core.api.routes.publishing import router as publishing_router
 from studio_core.api.routes.saga_loader import router as saga_loader_router
+from studio_core.api.routes.saga_runtime import router as saga_runtime_router
 from studio_core.api.routes.sagas import router as sagas_router
 from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
@@ -85,6 +86,7 @@ app.include_router(ebooks_router, prefix="/api")
 app.include_router(audiobooks_router, prefix="/api")
 app.include_router(videos_router, prefix="/api")
 app.include_router(saga_loader_router, prefix="/api")
+app.include_router(saga_runtime_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
