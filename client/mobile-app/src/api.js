@@ -651,3 +651,46 @@ export async function importGeneratedIllustrationFrame({ projectId, frameId, fil
   }))
 }
 
+export async function getStoryLayout(projectId) {
+  return handle(fetch(`${getApiBase()}/story-layout/${projectId}`))
+}
+
+export async function paginateStoryLayout(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/story-layout/paginate/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function updateStoryLayoutPage(projectId, pageId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function createStoryLayoutPage(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/story-layout/page/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function deleteStoryLayoutPage(projectId, pageId) {
+  return handle(fetch(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`, {
+    method: "DELETE"
+  }))
+}
+
+export async function applyStoryLayout(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/story-layout/apply/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+                      
