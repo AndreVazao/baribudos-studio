@@ -2,25 +2,34 @@ from __future__ import annotations
 
 from typing import Dict, Any
 
-from studio_core.services.ip_runtime_service import load_ip_runtime
+from studio_core.services.saga_runtime_service import load_saga_runtime
 
 
 def load_project_factory_context(
     ip_slug: str,
     project_payload: Dict[str, Any]
 ) -> Dict[str, Any]:
-
-    ip_runtime = load_ip_runtime(ip_slug)
+    runtime = load_saga_runtime(ip_slug)
 
     return {
-        "ip": ip_runtime["ip"],
-        "slug": ip_runtime["slug"],
-        "name": ip_runtime["name"],
-        "default_language": ip_runtime["default_language"],
-        "output_languages": ip_runtime["output_languages"],
-        "palette": ip_runtime["palette"],
-        "brand_assets": ip_runtime["brand_assets"],
-        "canons": ip_runtime["canons"],
-        "main_characters": ip_runtime["main_characters"],
+        "ip": {
+            "id": runtime.get("id", ""),
+            "slug": runtime.get("slug", ""),
+            "name": runtime.get("name", ""),
+            "owner_id": runtime.get("owner_id", ""),
+            "owner_name": runtime.get("owner_name", ""),
+        },
+        "slug": runtime.get("slug", ""),
+        "name": runtime.get("name", ""),
+        "default_language": runtime.get("default_language", "pt-PT"),
+        "output_languages": runtime.get("output_languages", ["pt-PT"]),
+        "metadata": runtime.get("metadata", {}),
+        "palette": runtime.get("palette", {}),
+        "brand_assets": runtime.get("brand_assets", {}),
+        "permissions": runtime.get("permissions", {}),
+        "canons": runtime.get("canons", {}),
+        "resolved": runtime.get("resolved", {}),
+        "validation": runtime.get("validation", {}),
+        "main_characters": runtime.get("main_characters", []),
         "project_payload": project_payload,
-  }
+    }
