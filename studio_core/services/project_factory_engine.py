@@ -5,6 +5,10 @@ from typing import Any, Dict, List
 from studio_core.services.audiobook_service import build_audiobook
 from studio_core.services.cover_service import build_cover
 from studio_core.services.ebook_service import build_epub
+from studio_core.services.illustration_integration_service import (
+    build_video_frame_sequence,
+    enrich_story_pages_with_illustrations,
+)
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.story_generation_engine import generate_canon_story
 from studio_core.services.story_service import generate_volume_guide
@@ -109,8 +113,9 @@ def _build_ebook_outputs(
 
     outputs: Dict[str, Any] = {}
     for language, story in story_variants.items():
+        illustrated_story = enrich_story_pages_with_illustrations(project, story)
         outputs[language] = build_epub(
-            story,
+            illustrated_story,
             project_id=project_id,
             project_title=project_title,
             language=language,
@@ -147,27 +152,38 @@ def _build_video_outputs(
     project_title = str(project.get("title", "Projeto")).strip() or "Projeto"
     cover_path = (cover_output or {}).get("file_path") or project.get("cover_image") or ""
 
+    video_sequence = build_video_frame_sequence(project)
+    approved_frames = _safe_dict(video_sequence).get("frames", [])
+
     for language, story in story_variants.items():
         audio_path = _safe_dict(audiobook_outputs.get(language, {})).get("file_path", "")
+
+        if isinstance(approved_frames, list) and approved_frames:
+            hero_image = str(_safe_dict(approved_frames[0]).get("image_path", "")).strip() or cover_path
+        else:
+            hero_image = cover_path
+
         outputs[language] = build_series_episode(
             story,
             {
                 "project_id": project_id,
                 "project_title": project_title,
                 "language": language,
-                "cover_path": cover_path,
+                "cover_path": hero_image,
                 "audio_path": audio_path,
             },
         )
+        outputs[language]["storyboard_frames_count"] = len(approved_frames) if isinstance(approved_frames, list) else 0
+
     return outputs
 
 
-def _build_language_variants(story_variants: Dict[str, Dict[str, Any]], project_title: str) -> Dict[str, Any]:
+def _build_language_variants(story_variants: Dict[str, Dict[str, Any]], project_title: str, project: Dict[str, Any]) -> Dict[str, Any]:
     return {
         language: {
             "language": language,
             "title": str(story.get("title", project_title)).strip() or project_title,
-            "pages": story.get("pages", []) if isinstance(story.get("pages"), list) else [],
+            "pages": enrich_story_pages_with_illustrations(project, story).get("pages", []),
             "status": "generated",
             "raw_text": str(story.get("raw_text", "")).strip(),
             "protagonist": str(story.get("protagonist", "")).strip(),
@@ -219,10 +235,10 @@ def run_project_factory_engine(
         "story": main_story,
     }) if create_guide else None
 
-    language_variants = _build_language_variants(story_variants, project_title)
+    language_variants = _build_language_variants(story_variants, project_title, project)
 
     return {
-        "story": main_story,
+        "story": enrich_story_pages_with_illustrations(project, main_story),
         "story_variants": story_variants,
         "language_variants": language_variants,
         "cover": cover_output,
