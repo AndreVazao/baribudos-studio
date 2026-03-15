@@ -28,7 +28,9 @@ import IpMetadataEditorPanel from "./IpMetadataEditorPanel.jsx"
 import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
 import OutputsPanel from "./OutputsPanel.jsx"
 import ProjectCommercialEditorPanel from "./ProjectCommercialEditorPanel.jsx"
+import ProjectIntegrityPanel from "./ProjectIntegrityPanel.jsx"
 import PublicationPackagePanel from "./PublicationPackagePanel.jsx"
+import PublishGatePanel from "./PublishGatePanel.jsx"
 import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
@@ -348,7 +350,9 @@ export default function DashboardPanel({ user }) {
       <IpCharactersEditorPanel user={user} />
       <IpCanonsEditorPanel user={user} />
       <ProjectCommercialEditorPanel user={user} />
+      <ProjectIntegrityPanel user={user} />
       <PublishReadinessPanel user={user} />
+      <PublishGatePanel user={user} />
       <PublicationPackagePanel user={user} />
       <IpCoverBuilderPanel user={user} onCoverBuilt={handleCoverBuilt} />
       <OutputsPanel projects={projects} />
@@ -545,4 +549,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-  }
+    }
