@@ -22,6 +22,7 @@ __all__ = [
     "system_smoke",
     "illustration_pipeline",
     "illustration_assets",
+    "illustration_generation",
     "age_badges",
     "covers",
     "ip_creator",
