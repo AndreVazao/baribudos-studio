@@ -32,6 +32,7 @@ import ProjectIntegrityPanel from "./ProjectIntegrityPanel.jsx"
 import PublicationPackagePanel from "./PublicationPackagePanel.jsx"
 import PublishGatePanel from "./PublishGatePanel.jsx"
 import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
+import SagaRuntimePanel from "./SagaRuntimePanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -344,6 +345,7 @@ export default function DashboardPanel({ user }) {
       </Card>
 
       <IpCreatorPanel user={user} />
+      <SagaRuntimePanel user={user} />
       <IpMetadataEditorPanel user={user} />
       <IpPaletteEditorPanel user={user} />
       <IpBrandingEditorPanel user={user} />
@@ -549,4 +551,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-    }
+  }
