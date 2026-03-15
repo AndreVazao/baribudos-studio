@@ -27,6 +27,7 @@ import IpCreatorPanel from "./IpCreatorPanel.jsx"
 import IpMetadataEditorPanel from "./IpMetadataEditorPanel.jsx"
 import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
 import OutputsPanel from "./OutputsPanel.jsx"
+import ProductionPipelinePanel from "./ProductionPipelinePanel.jsx"
 import ProjectCommercialEditorPanel from "./ProjectCommercialEditorPanel.jsx"
 import ProjectIntegrityPanel from "./ProjectIntegrityPanel.jsx"
 import PublicationPackagePanel from "./PublicationPackagePanel.jsx"
@@ -347,6 +348,7 @@ export default function DashboardPanel({ user }) {
 
       <IpCreatorPanel user={user} />
       <SagaRuntimePanel user={user} />
+      <ProductionPipelinePanel user={user} />
       <IpMetadataEditorPanel user={user} />
       <IpPaletteEditorPanel user={user} />
       <IpBrandingEditorPanel user={user} />
@@ -553,4 +555,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-}
+  }
