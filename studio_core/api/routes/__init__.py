@@ -20,6 +20,7 @@ __all__ = [
     "saga_loader",
     "saga_runtime",
     "system_smoke",
+    "story_layout",
     "illustration_pipeline",
     "illustration_assets",
     "illustration_generation",
