@@ -77,7 +77,7 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
                 }
             },
             "updated_at": now_iso(),
-        }
+        },
     )
 
     return {
@@ -92,4 +92,4 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             **summary,
             "completed_at": now_iso(),
         },
-                }
+    }
