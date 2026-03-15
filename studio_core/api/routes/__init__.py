@@ -12,6 +12,7 @@ __all__ = [
     "sponsors",
     "jobs",
     "factory",
+    "production_pipeline",
     "publishing",
     "ebooks",
     "audiobooks",
