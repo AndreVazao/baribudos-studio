@@ -25,6 +25,7 @@ __all__ = [
     "illustration_assets",
     "illustration_generation",
     "illustration_provider",
+    "local_ai_installer",
     "age_badges",
     "covers",
     "ip_creator",
