@@ -550,3 +550,14 @@ export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
     body: form
   }))
 }
+
+export async function listSystemSmokeResults() {
+  return handle(fetch(`${getApiBase()}/system-smoke`))
+}
+
+export async function runSystemSmoke(projectId) {
+  return handle(fetch(`${getApiBase()}/system-smoke/${projectId}`, {
+    method: "POST"
+  }))
+      }
+
