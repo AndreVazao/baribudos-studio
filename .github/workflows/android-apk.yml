@@ -16,6 +16,12 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Install dependencies (root)
         run: npm install
 
