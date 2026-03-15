@@ -54,11 +54,11 @@ def export_ebook(project_id: str, payload: dict | None = None) -> dict:
                     **(current.get("outputs", {}) or {}),
                     "epub": {
                         **((current.get("outputs", {}) or {}).get("epub", {}) or {}),
-                        language: result
-                    }
+                        language: result,
+                    },
                 },
-                "updated_at": now_iso()
-            }
+                "updated_at": now_iso(),
+            },
         )
 
         return {"ok": True, "result": result}
