@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.ebook_service import build_epub
+from studio_core.services.ip_runtime_service import load_ip_runtime
 
 router = APIRouter(prefix="/ebooks", tags=["ebooks"])
 
@@ -27,6 +28,10 @@ def export_ebook(project_id: str, payload: dict | None = None) -> dict:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
     try:
+        saga_id = str(project.get("saga_slug", "baribudos")).strip()
+        runtime = load_ip_runtime(saga_id)
+        metadata = runtime.get("metadata", {}) or {}
+
         language = str(payload.get("language", project.get("language", "pt-PT"))).strip()
         story = (project.get("language_variants", {}) or {}).get(language) or project.get("story", {}) or {}
 
@@ -35,8 +40,9 @@ def export_ebook(project_id: str, payload: dict | None = None) -> dict:
             project_id=project_id,
             project_title=project.get("title", "Projeto"),
             language=language,
-            author="André Vazão",
+            author=str(metadata.get("author_default") or "Autor").strip(),
             cover_path=project.get("cover_image") or None,
+            saga_id=saga_id,
         )
 
         update_json_item(
