@@ -37,15 +37,15 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
         result = build_series_episode(
             {
                 **story,
-                "language": language
+                "language": language,
             },
             {
                 "project_id": project_id,
                 "project_title": project.get("title", "Projeto"),
                 "language": language,
                 "cover_path": cover_output.get("file_path") or project.get("cover_image", ""),
-                "audio_path": audio_output.get("file_path", "")
-            }
+                "audio_path": audio_output.get("file_path", ""),
+            },
         )
 
         update_json_item(
@@ -57,11 +57,11 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
                     **(current.get("outputs", {}) or {}),
                     "video": {
                         **((current.get("outputs", {}) or {}).get("video", {}) or {}),
-                        language: result
-                    }
+                        language: result,
+                    },
                 },
-                "updated_at": now_iso()
-            }
+                "updated_at": now_iso(),
+            },
         )
 
         return {"ok": True, "result": result}
