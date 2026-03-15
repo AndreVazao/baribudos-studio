@@ -49,6 +49,8 @@ def _ensure_pages(story: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "pageNumber": int(page.get("pageNumber") or index),
                 "title": str(page.get("title") or f"Página {index}").strip(),
                 "text": str(page.get("text") or "").strip(),
+                "illustration_path": str(page.get("illustration_path") or "").strip(),
+                "has_illustration": bool(page.get("has_illustration", False)),
             })
         if normalized:
             return normalized
@@ -71,6 +73,8 @@ def _ensure_pages(story: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "pageNumber": page_number,
                 "title": f"Página {page_number}",
                 "text": "\n\n".join(current).strip(),
+                "illustration_path": "",
+                "has_illustration": False,
             })
             current = []
             page_number += 1
@@ -81,6 +85,8 @@ def _ensure_pages(story: Dict[str, Any]) -> List[Dict[str, Any]]:
             "pageNumber": page_number,
             "title": f"Página {page_number}",
             "text": "\n\n".join(current).strip(),
+            "illustration_path": "",
+            "has_illustration": False,
         })
 
     return pages
@@ -114,7 +120,7 @@ def _build_styles_css() -> str:
   margin: 5%;
   line-height: 1.5;
 }
-h1, h2 {
+h1, h2, h3 {
   text-align: center;
 }
 p {
@@ -124,7 +130,8 @@ p {
   text-align: center;
   margin-top: 1em;
 }
-.cover img {
+.cover img,
+.page-image img {
   max-width: 100%;
   height: auto;
 }
@@ -132,8 +139,9 @@ p {
   margin-top: 2em;
   font-size: 0.95em;
 }
-.page-break {
-  page-break-before: always;
+.page-image {
+  text-align: center;
+  margin: 1em 0 1.2em 0;
 }
 """
 def _build_mimetype() -> bytes:
@@ -217,8 +225,12 @@ def _build_cover_xhtml(
 """
 
 
-def _build_page_xhtml(book_title: str, page_title: str, text: str) -> str:
+def _build_page_xhtml(book_title: str, page_title: str, text: str, image_file_name: str = "") -> str:
     paragraphs = "\n".join(f"  <p>{_escape(par)}</p>" for par in _paragraphize(text))
+    image_html = (
+        f'  <div class="page-image"><img src="images/{_escape(image_file_name)}" alt="{_escape(page_title)}"/></div>\n'
+        if image_file_name else ""
+    )
     return f"""<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pt">
@@ -230,7 +242,7 @@ def _build_page_xhtml(book_title: str, page_title: str, text: str) -> str:
 <body>
   <h2>{_escape(book_title)}</h2>
   <h3>{_escape(page_title)}</h3>
-{paragraphs}
+{image_html}{paragraphs}
 </body>
 </html>
 """
@@ -246,6 +258,7 @@ def _build_content_opf(
     cover_file_name: str | None,
     cover_media_type: str | None,
     page_files: List[str],
+    page_image_items: List[Dict[str, str]],
 ) -> str:
     manifest_items = [
         '    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
@@ -256,6 +269,11 @@ def _build_content_opf(
     if cover_file_name and cover_media_type:
         manifest_items.append(
             f'    <item id="coverimage" href="images/{_escape(cover_file_name)}" media-type="{_escape(cover_media_type)}" properties="cover-image"/>'
+        )
+
+    for item in page_image_items:
+        manifest_items.append(
+            f'    <item id="{_escape(item["id"])}" href="images/{_escape(item["file_name"])}" media-type="{_escape(item["media_type"])}"/>'
         )
 
     spine_items = ['    <itemref idref="coverpage"/>']
@@ -368,8 +386,21 @@ def build_epub(
 
     pages = _ensure_pages(story)
     page_files: List[str] = []
+    page_image_items: List[Dict[str, str]] = []
 
     for index, page in enumerate(pages, start=1):
+        image_file_name = ""
+        illustration_path = str(page.get("illustration_path", "")).strip()
+        if illustration_path and Path(illustration_path).exists():
+            ext = _cover_ext(illustration_path)
+            image_file_name = f"page_{index:03d}{ext}"
+            shutil.copy2(illustration_path, images_dir / image_file_name)
+            page_image_items.append({
+                "id": f"pageimg{index}",
+                "file_name": image_file_name,
+                "media_type": _cover_media_type(ext),
+            })
+
         page_file = f"text/page_{index:03d}.xhtml"
         page_files.append(page_file)
         _write_text(
@@ -378,6 +409,7 @@ def build_epub(
                 book_title=project_title,
                 page_title=str(page.get("title") or f"Página {index}"),
                 text=str(page.get("text") or ""),
+                image_file_name=image_file_name,
             ),
         )
 
@@ -397,6 +429,7 @@ def build_epub(
             cover_file_name=cover_file_name,
             cover_media_type=cover_media_type,
             page_files=page_files,
+            page_image_items=page_image_items,
         ),
     )
 
@@ -415,5 +448,6 @@ def build_epub(
         "file_name": file_name,
         "file_path": str(file_path),
         "cover_path": cover_path,
+        "illustrated_pages": len(page_image_items),
         "engine": "python-ebook-builder-real"
-                                                                     }
+}
