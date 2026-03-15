@@ -7,6 +7,7 @@ import {
   listIllustrationJobs,
   listProjects,
   queueIllustrationGeneration,
+  runIllustrationProvider,
   setupIllustrationPipeline,
   updateIllustrationFrame,
   uploadIllustrationFrameAsset
@@ -128,6 +129,17 @@ export default function IllustrationPipelinePanel({ user }) {
     }
   }
 
+  async function handleLocalGenerate() {
+    if (!selectedProjectId) return
+    try {
+      await runIllustrationProvider(selectedProjectId, { provider: "stable_diffusion" })
+      await refreshAll(selectedProjectId)
+      alert("Geração local concluída.")
+    } catch (error) {
+      alert(error?.message || "Erro na geração local.")
+    }
+  }
+
   async function handleApprove(frameId) {
     if (!selectedProjectId || !frameId) return
     try {
@@ -229,7 +241,22 @@ export default function IllustrationPipelinePanel({ user }) {
             cursor: "pointer"
           }}
         >
-          Criar jobs de geração
+          Criar jobs
+        </button>
+
+        <button
+          onClick={handleLocalGenerate}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#b45309",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Geração local
         </button>
       </div>
 
@@ -417,4 +444,4 @@ export default function IllustrationPipelinePanel({ user }) {
       </div>
     </Card>
   )
-    }
+}
