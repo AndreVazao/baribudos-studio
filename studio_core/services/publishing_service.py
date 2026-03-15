@@ -27,19 +27,20 @@ def publish_package(payload: Dict[str, Any]) -> Dict[str, Any]:
         "requested_by": str(payload.get("requested_by", "")).strip(),
         "notes": str(payload.get("notes", "")).strip(),
         "status": "published",
-        "published_at": now_iso()
+        "published_at": now_iso(),
     }
 
 
 def validate_project_publishability(project: Dict[str, Any]) -> Dict[str, Any]:
     package = build_publication_package(project)
-    readiness = (package.get("checks") or {}).get("readiness", {}) or {}
+    readiness = ((package.get("checks") or {}).get("readiness", {})) or {}
+    outputs = package.get("outputs", {}) or {}
 
-    cover_path = str(project.get("cover_image", "")).strip()
+    cover_path = str(project.get("cover_image", "")).strip() or str((outputs.get("covers") or {}).get("file_path", "")).strip()
     cover_ok = _file_exists(cover_path)
 
-    epub_outputs = ((project.get("outputs") or {}).get("epub") or {})
-    epub_ok = any(_file_exists((item or {}).get("file_path", "")) for item in epub_outputs.values())
+    epub_outputs = (outputs.get("epub") or {})
+    epub_ok = any(_file_exists(((item or {}).get("file_path", ""))) for item in epub_outputs.values())
 
     hard_failures = []
     if not readiness.get("ready", False):
@@ -57,5 +58,5 @@ def validate_project_publishability(project: Dict[str, Any]) -> Dict[str, Any]:
         "file_guards": {
             "cover_ok": cover_ok,
             "epub_ok": epub_ok,
-        }
+        },
     }
