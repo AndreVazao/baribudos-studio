@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react"
 import {
   getIllustrationPipeline,
+  getIllustrationPromptPackage,
   getStoryboardManifest,
+  importGeneratedIllustrationFrame,
+  listIllustrationJobs,
   listProjects,
+  queueIllustrationGeneration,
   setupIllustrationPipeline,
   updateIllustrationFrame,
   uploadIllustrationFrameAsset
@@ -34,6 +38,8 @@ export default function IllustrationPipelinePanel({ user }) {
   const [mode, setMode] = useState("approval")
   const [pipeline, setPipeline] = useState(null)
   const [manifest, setManifest] = useState(null)
+  const [jobs, setJobs] = useState([])
+  const [promptPackage, setPromptPackage] = useState(null)
 
   useEffect(() => {
     loadProjects()
@@ -41,8 +47,7 @@ export default function IllustrationPipelinePanel({ user }) {
 
   useEffect(() => {
     if (selectedProjectId) {
-      loadPipeline(selectedProjectId)
-      loadManifest(selectedProjectId)
+      refreshAll(selectedProjectId)
     }
   }, [selectedProjectId])
 
@@ -73,17 +78,53 @@ export default function IllustrationPipelinePanel({ user }) {
     }
   }
 
+  async function loadJobs(projectId) {
+    try {
+      const res = await listIllustrationJobs(projectId)
+      setJobs(res?.jobs || [])
+    } catch {
+      setJobs([])
+    }
+  }
+
+  async function loadPromptPackage(projectId) {
+    try {
+      const res = await getIllustrationPromptPackage(projectId)
+      setPromptPackage(res?.package || null)
+    } catch {
+      setPromptPackage(null)
+    }
+  }
+
+  async function refreshAll(projectId) {
+    await Promise.all([
+      loadPipeline(projectId),
+      loadManifest(projectId),
+      loadJobs(projectId),
+      loadPromptPackage(projectId)
+    ])
+  }
+
   async function handleSetup() {
     if (!selectedProjectId) return
     try {
-      const res = await setupIllustrationPipeline(selectedProjectId, {
-        mode
-      })
+      const res = await setupIllustrationPipeline(selectedProjectId, { mode })
       setPipeline(res?.pipeline || null)
-      await loadManifest(selectedProjectId)
+      await refreshAll(selectedProjectId)
       alert("Pipeline de ilustração preparada.")
     } catch (error) {
       alert(error?.message || "Erro ao preparar pipeline de ilustração.")
+    }
+  }
+
+  async function handleQueue() {
+    if (!selectedProjectId) return
+    try {
+      await queueIllustrationGeneration(selectedProjectId, { provider: "external" })
+      await refreshAll(selectedProjectId)
+      alert("Jobs de ilustração colocados em fila.")
+    } catch (error) {
+      alert(error?.message || "Erro ao criar fila de geração.")
     }
   }
 
@@ -95,7 +136,7 @@ export default function IllustrationPipelinePanel({ user }) {
         approved: true
       })
       setPipeline(res?.illustration_pipeline || null)
-      await loadManifest(selectedProjectId)
+      await refreshAll(selectedProjectId)
     } catch (error) {
       alert(error?.message || "Erro ao aprovar frame.")
     }
@@ -109,11 +150,26 @@ export default function IllustrationPipelinePanel({ user }) {
         frameId,
         file
       })
-      await loadPipeline(selectedProjectId)
-      await loadManifest(selectedProjectId)
+      await refreshAll(selectedProjectId)
       alert("Imagem associada ao frame.")
     } catch (error) {
       alert(error?.message || "Erro ao carregar imagem para o frame.")
+    }
+  }
+
+  async function handleGeneratedImport(frameId, file) {
+    if (!selectedProjectId || !frameId || !file) return
+    try {
+      await importGeneratedIllustrationFrame({
+        projectId: selectedProjectId,
+        frameId,
+        file,
+        approve: true
+      })
+      await refreshAll(selectedProjectId)
+      alert("Imagem gerada importada e aprovada.")
+    } catch (error) {
+      alert(error?.message || "Erro ao importar imagem gerada.")
     }
   }
 
@@ -145,20 +201,37 @@ export default function IllustrationPipelinePanel({ user }) {
         <option value="hybrid">Híbrido livro + série</option>
       </select>
 
-      <button
-        onClick={handleSetup}
-        style={{
-          padding: "10px 12px",
-          borderRadius: 12,
-          border: "none",
-          background: "#2F5E2E",
-          color: "#fff",
-          fontWeight: 700,
-          cursor: "pointer"
-        }}
-      >
-        Preparar pipeline de ilustração
-      </button>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          onClick={handleSetup}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#2F5E2E",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Preparar pipeline
+        </button>
+
+        <button
+          onClick={handleQueue}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#7c3aed",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Criar jobs de geração
+        </button>
+      </div>
 
       {pipeline ? (
         <div
@@ -241,9 +314,57 @@ export default function IllustrationPipelinePanel({ user }) {
                     onChange={(e) => handleFileUpload(frame.id, e.target.files?.[0] || null)}
                   />
                 </label>
+
+                <label
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    background: "#7c3aed",
+                    color: "#fff",
+                    cursor: "pointer"
+                  }}
+                >
+                  Importar gerada
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleGeneratedImport(frame.id, e.target.files?.[0] || null)}
+                  />
+                </label>
               </div>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {promptPackage ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.55)",
+            display: "grid",
+            gap: 8
+          }}
+        >
+          <div><strong>Pacote de prompts:</strong> {promptPackage.frames_count} frames</div>
+          <textarea
+            readOnly
+            value={JSON.stringify(promptPackage, null, 2)}
+            rows={12}
+            style={{
+              width: "100%",
+              padding: 10,
+              borderRadius: 10,
+              border: "1px solid #d1d5db",
+              outline: "none",
+              fontSize: 12,
+              fontFamily: "monospace",
+              resize: "vertical"
+            }}
+          />
         </div>
       ) : null}
 
@@ -276,6 +397,24 @@ export default function IllustrationPipelinePanel({ user }) {
           />
         </div>
       ) : null}
+
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 12,
+          border: "1px solid #e5e7eb",
+          background: "rgba(255,255,255,0.55)",
+          display: "grid",
+          gap: 6
+        }}
+      >
+        <strong>Jobs</strong>
+        {jobs.slice(0, 12).map((job) => (
+          <div key={job.id}>
+            {job.page_number} — {job.frame_type} — {job.state}
+          </div>
+        ))}
+      </div>
     </Card>
   )
     }
