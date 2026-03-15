@@ -13,6 +13,7 @@ from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
+from studio_core.api.routes.illustration_pipeline import router as illustration_pipeline_router
 from studio_core.api.routes.illustrations import router as illustrations_router
 from studio_core.api.routes.ip_branding import router as ip_branding_router
 from studio_core.api.routes.ip_canons import router as ip_canons_router
@@ -91,6 +92,7 @@ app.include_router(videos_router, prefix="/api")
 app.include_router(saga_loader_router, prefix="/api")
 app.include_router(saga_runtime_router, prefix="/api")
 app.include_router(system_smoke_router, prefix="/api")
+app.include_router(illustration_pipeline_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
