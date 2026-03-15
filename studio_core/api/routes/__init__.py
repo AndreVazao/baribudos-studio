@@ -24,6 +24,7 @@ __all__ = [
     "illustration_pipeline",
     "illustration_assets",
     "illustration_generation",
+    "illustration_provider",
     "age_badges",
     "covers",
     "ip_creator",
