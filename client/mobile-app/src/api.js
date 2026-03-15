@@ -533,3 +533,7 @@ export async function repairProject(projectId, user) {
     method: "POST"
   }))
 }
+
+export async function getSagaRuntime(slug) {
+  return handle(fetch(`${getApiBase()}/saga-runtime/${slug}`))
+}
