@@ -1,60 +1,66 @@
 from __future__ import annotations
 
+import platform
 import shutil
-import subprocess
-from typing import Dict
+import sys
+from pathlib import Path
 
 from fastapi import APIRouter
 
-from studio_core.core.config import APP_CONFIG
-from studio_core.core.storage import ensure_storage_structure
+from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
+from studio_core.core.storage import read_json
 
-router = APIRouter()
-
-
-def _check_command(command: str, args: list[str] | None = None) -> Dict[str, str | bool]:
-    args = args or ["--version"]
-
-    if shutil.which(command) is None:
-        return {
-            "ok": False,
-            "error": "not-found"
-        }
-
-    try:
-        result = subprocess.run(
-            [command, *args],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False
-        )
-        output = (result.stdout or result.stderr or "").strip()
-        return {
-            "ok": result.returncode == 0,
-            "output": output
-        }
-    except Exception as exc:
-        return {
-            "ok": False,
-            "error": str(exc)
-        }
+router = APIRouter(prefix="/diagnostics", tags=["diagnostics"])
 
 
-@router.get("/diagnostics")
+def _command_status(command: str) -> dict:
+    path = shutil.which(command)
+    return {
+        "ok": bool(path),
+        "path": path or "",
+    }
+
+
+@router.get("")
 def diagnostics() -> dict:
-    folders = ensure_storage_structure()
+    storage_root = resolve_storage_path()
+    project_root = resolve_project_path()
+    public_root = resolve_project_path("public")
+
+    settings = read_json("data/settings.json", {})
+    projects = read_json("data/projects.json", [])
+    ips = read_json("data/ip_registry.json", [])
 
     return {
         "ok": True,
-        "app_name": APP_CONFIG.app_name,
-        "version": APP_CONFIG.app_version,
-        "system": APP_CONFIG.system_info(),
-        "storage_root": str(APP_CONFIG.storage_root),
-        "folders": folders,
-        "commands": {
-            "python": _check_command("python"),
-            "ffmpeg": _check_command("ffmpeg", ["-version"]),
-            "espeak": _check_command("espeak", ["--version"]),
-        }
-}
+        "diagnostics": {
+            "app_name": APP_CONFIG.app_name,
+            "app_version": APP_CONFIG.app_version,
+            "project_root": str(project_root),
+            "storage_root": str(storage_root),
+            "public_root": str(public_root),
+            "system": {
+                "platform": platform.platform(),
+                "python_version": sys.version,
+                "python_executable": sys.executable,
+            },
+            "paths": {
+                "project_root_exists": Path(project_root).exists(),
+                "storage_root_exists": Path(storage_root).exists(),
+                "public_root_exists": Path(public_root).exists(),
+            },
+            "commands": {
+                "ffmpeg": _command_status("ffmpeg"),
+                "ffprobe": _command_status("ffprobe"),
+                "espeak": _command_status("espeak"),
+                "espeak_ng": _command_status("espeak-ng"),
+                "node": _command_status("node"),
+                "npm": _command_status("npm"),
+            },
+            "data": {
+                "projects_count": len(projects) if isinstance(projects, list) else 0,
+                "ips_count": len(ips) if isinstance(ips, list) else 0,
+                "settings_loaded": isinstance(settings, dict),
+            },
+        },
+    }
