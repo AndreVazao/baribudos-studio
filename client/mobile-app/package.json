@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
-    "android:build": "npm run build && npm run android:sync"
+    "android:build": "npm run build && npm run android:sync",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.1",
@@ -19,6 +21,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.10"
   }
