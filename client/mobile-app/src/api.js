@@ -694,3 +694,11 @@ export async function applyStoryLayout(projectId, payload = {}) {
 }
 
                       
+export async function runIllustrationProvider(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/illustration-provider/run/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+                      }
+
