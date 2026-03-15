@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=APP_CONFIG.app_name,
     version=APP_CONFIG.app_version,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -103,5 +103,5 @@ def root() -> dict:
         "app_name": APP_CONFIG.app_name,
         "version": APP_CONFIG.app_version,
         "docs": "/docs",
-        "health": "/api/health"
+        "health": "/api/health",
 }
