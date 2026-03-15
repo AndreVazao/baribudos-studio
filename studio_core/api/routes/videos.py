@@ -29,6 +29,10 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
     try:
         language = str(payload.get("language", project.get("language", "pt-PT"))).strip()
         story = (project.get("language_variants", {}) or {}).get(language) or project.get("story", {}) or {}
+        outputs = project.get("outputs", {}) or {}
+        audiobook_map = (outputs.get("audiobook", {}) or {})
+        audio_output = audiobook_map.get(language) or {}
+        cover_output = (outputs.get("covers", {}) or {})
 
         result = build_series_episode(
             {
@@ -38,7 +42,9 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
             {
                 "project_id": project_id,
                 "project_title": project.get("title", "Projeto"),
-                "language": language
+                "language": language,
+                "cover_path": cover_output.get("file_path") or project.get("cover_image", ""),
+                "audio_path": audio_output.get("file_path", "")
             }
         )
 
@@ -61,4 +67,3 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
         return {"ok": True, "result": result}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-        
