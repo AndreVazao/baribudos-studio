@@ -817,3 +817,11 @@ export async function uploadVoiceSample({ name, language = "", notes = "", file 
   }))
 }
 
+export async function generateVoicePreview(payload = {}) {
+  return handle(fetch(`${getApiBase()}/voice-preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+              }
+
