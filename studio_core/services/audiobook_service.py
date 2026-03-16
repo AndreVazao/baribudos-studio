@@ -12,6 +12,7 @@ from uuid import uuid4
 from studio_core.core.config import resolve_storage_path
 from studio_core.core.storage import read_json
 from studio_core.services.local_audio_engine_manager_service import ensure_audio_provider_running
+from studio_core.services.voice_profile_service import get_default_voice_sample_path
 
 LOCAL_AUDIO_STATUS_FILE = "data/local_audio_status.json"
 
@@ -78,10 +79,6 @@ def _write_silent_wav(output_path: Path, duration_seconds: float = 2.0, sample_r
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(b"\x00\x00" * frames)
-
-
-def _has_espeak() -> bool:
-    return shutil.which("espeak") is not None or shutil.which("espeak-ng") is not None
 
 
 def _espeak_command() -> str:
@@ -231,6 +228,12 @@ def build_audiobook(
     project_title = _safe_text(payload.get("project_title", "Projeto")) or "Projeto"
     requested_provider = _safe_text(payload.get("provider", ""))
     speaker_wav = _safe_text(payload.get("speaker_wav", ""))
+
+    if not speaker_wav and project_id:
+        try:
+            speaker_wav = get_default_voice_sample_path(project_id)
+        except Exception:
+            speaker_wav = ""
 
     output_dir = resolve_storage_path("exports", project_id, "audiobooks")
     output_dir.mkdir(parents=True, exist_ok=True)
