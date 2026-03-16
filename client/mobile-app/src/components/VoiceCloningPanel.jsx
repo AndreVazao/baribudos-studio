@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import {
   exportAudiobook,
+  generateVoicePreview,
   listProjects,
   listVoiceSamples,
   uploadVoiceSample
@@ -35,6 +36,8 @@ export default function VoiceCloningPanel({ user }) {
   const [voiceName, setVoiceName] = useState("")
   const [voiceLanguage, setVoiceLanguage] = useState("pt-PT")
   const [voiceNotes, setVoiceNotes] = useState("")
+  const [previewText, setPreviewText] = useState("Olá. Este é um teste de voz do Baribudos Studio.")
+  const [previewResult, setPreviewResult] = useState(null)
 
   useEffect(() => {
     loadAll()
@@ -76,6 +79,21 @@ export default function VoiceCloningPanel({ user }) {
       alert("Voice sample carregada.")
     } catch (error) {
       alert(error?.message || "Erro ao carregar voice sample.")
+    }
+  }
+
+  async function handlePreview() {
+    try {
+      const res = await generateVoicePreview({
+        provider,
+        text: previewText,
+        language: voiceLanguage,
+        voice_sample_id: selectedVoiceId || "",
+      })
+      setPreviewResult(res?.preview || null)
+      alert("Preview de voz gerado.")
+    } catch (error) {
+      alert(error?.message || "Erro ao gerar preview.")
     }
   }
 
@@ -195,20 +213,70 @@ export default function VoiceCloningPanel({ user }) {
         </label>
       </div>
 
-      <button
-        onClick={handleGenerateAudiobook}
+      <label>Texto de preview</label>
+      <textarea
+        value={previewText}
+        onChange={(e) => setPreviewText(e.target.value)}
+        rows={4}
         style={{
-          padding: "10px 12px",
-          borderRadius: 12,
-          border: "none",
-          background: "#7c3aed",
-          color: "#fff",
-          fontWeight: 700,
-          cursor: "pointer"
+          width: "100%",
+          padding: 10,
+          borderRadius: 10,
+          border: "1px solid #d1d5db",
+          outline: "none",
+          resize: "vertical"
         }}
-      >
-        Gerar audiobook com voz
-      </button>
+      />
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          onClick={handlePreview}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#0369a1",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Gerar preview de voz
+        </button>
+
+        <button
+          onClick={handleGenerateAudiobook}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#7c3aed",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Gerar audiobook com voz
+        </button>
+      </div>
+
+      {previewResult ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.55)",
+            display: "grid",
+            gap: 8
+          }}
+        >
+          <div><strong>Provider:</strong> {previewResult.provider}</div>
+          <div><strong>Ficheiro:</strong> {previewResult.file_path}</div>
+          <div><strong>Fallback:</strong> {previewResult.fallback_used ? "Sim" : "Não"}</div>
+          <audio controls src={previewResult.file_path} style={{ width: "100%" }} />
+        </div>
+      ) : null}
 
       <div
         style={{
