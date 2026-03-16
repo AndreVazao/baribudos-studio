@@ -82,7 +82,7 @@ if not exist "{coqui}\\venv" (
 
 call "{coqui}\\venv\\Scripts\\activate.bat"
 python -m pip install --upgrade pip
-pip install TTS fastapi uvicorn
+pip install TTS fastapi uvicorn soundfile
 
 if not exist "{xtts}\\venv" (
   python -m venv "{xtts}\\venv"
@@ -90,7 +90,7 @@ if not exist "{xtts}\\venv" (
 
 call "{xtts}\\venv\\Scripts\\activate.bat"
 python -m pip install --upgrade pip
-pip install TTS fastapi uvicorn
+pip install TTS fastapi uvicorn soundfile
 
 echo Setup de audio local concluido.
 exit /b 0
@@ -99,7 +99,6 @@ exit /b 0
 
 def _windows_start_coqui_bat(paths: Dict[str, str]) -> str:
     coqui = paths["coqui_root"]
-
     return f"""@echo off
 setlocal
 cd /d "{coqui}"
@@ -110,7 +109,6 @@ python -m uvicorn server_coqui:app --host 127.0.0.1 --port 8020
 
 def _windows_start_xtts_bat(paths: Dict[str, str]) -> str:
     xtts = paths["xtts_root"]
-
     return f"""@echo off
 setlocal
 cd /d "{xtts}"
@@ -133,7 +131,7 @@ if [ ! -d "{coqui}/venv" ]; then
 fi
 source "{coqui}/venv/bin/activate"
 python -m pip install --upgrade pip
-pip install TTS fastapi uvicorn
+pip install TTS fastapi uvicorn soundfile
 deactivate
 
 if [ ! -d "{xtts}/venv" ]; then
@@ -141,7 +139,7 @@ if [ ! -d "{xtts}/venv" ]; then
 fi
 source "{xtts}/venv/bin/activate"
 python -m pip install --upgrade pip
-pip install TTS fastapi uvicorn
+pip install TTS fastapi uvicorn soundfile
 deactivate
 """
 
@@ -167,25 +165,149 @@ python -m uvicorn server_xtts:app --host 127.0.0.1 --port 8030
 
 
 def _coqui_server_py() -> str:
-    return """from fastapi import FastAPI
+    return r'''from __future__ import annotations
 
-app = FastAPI(title="Baribudos Coqui TTS Stub")
+import tempfile
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+try:
+    from TTS.api import TTS
+except Exception:
+    TTS = None
+
+app = FastAPI(title="Baribudos Coqui TTS")
+
+
+class SynthesizePayload(BaseModel):
+    text: str
+    output_path: str
+    language: str = "pt"
+    speaker_wav: str = ""
+
+
+_tts_cache = {}
+
+
+def _get_model(language: str) -> str:
+    lang = str(language or "pt").lower()
+    if lang.startswith("pt"):
+        return "tts_models/pt/cv/vits"
+    if lang.startswith("es"):
+        return "tts_models/es/css10/vits"
+    if lang.startswith("fr"):
+        return "tts_models/fr/css10/vits"
+    if lang.startswith("de"):
+        return "tts_models/de/thorsten/vits"
+    return "tts_models/en/ljspeech/tacotron2-DDC"
+
+
+def _get_tts(model_name: str):
+    if model_name not in _tts_cache:
+        if TTS is None:
+            raise RuntimeError("Biblioteca TTS nao instalada.")
+        _tts_cache[model_name] = TTS(model_name=model_name)
+    return _tts_cache[model_name]
+
 
 @app.get("/docs")
 def docs_ping():
     return {"ok": True, "engine": "coqui_tts"}
-"""
+
+
+@app.post("/synthesize")
+def synthesize(payload: SynthesizePayload):
+    text = str(payload.text or "").strip()
+    output_path = Path(str(payload.output_path or "")).expanduser().resolve()
+    language = str(payload.language or "pt").strip()
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Texto vazio.")
+    if not output_path:
+        raise HTTPException(status_code=400, detail="Output path inválido.")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        model_name = _get_model(language)
+        tts = _get_tts(model_name)
+        tts.tts_to_file(text=text, file_path=str(output_path))
+        return {"ok": True, "file_path": str(output_path), "engine": "coqui_tts", "model": model_name}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+'''
 
 
 def _xtts_server_py() -> str:
-    return """from fastapi import FastAPI
+    return r'''from __future__ import annotations
 
-app = FastAPI(title="Baribudos XTTS Stub")
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+try:
+    from TTS.api import TTS
+except Exception:
+    TTS = None
+
+app = FastAPI(title="Baribudos XTTS")
+
+
+class SynthesizePayload(BaseModel):
+    text: str
+    output_path: str
+    language: str = "pt"
+    speaker_wav: str = ""
+
+
+_xtts = None
+
+
+def _get_xtts():
+    global _xtts
+    if _xtts is None:
+        if TTS is None:
+            raise RuntimeError("Biblioteca TTS nao instalada.")
+        _xtts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2")
+    return _xtts
+
 
 @app.get("/docs")
 def docs_ping():
     return {"ok": True, "engine": "xtts"}
-"""
+
+
+@app.post("/synthesize")
+def synthesize(payload: SynthesizePayload):
+    text = str(payload.text or "").strip()
+    output_path = Path(str(payload.output_path or "")).expanduser().resolve()
+    language = str(payload.language or "pt").split("-")[0].strip() or "pt"
+    speaker_wav = str(payload.speaker_wav or "").strip()
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Texto vazio.")
+    if not speaker_wav:
+        raise HTTPException(status_code=400, detail="speaker_wav é obrigatório para XTTS.")
+    if not Path(speaker_wav).exists():
+        raise HTTPException(status_code=400, detail="speaker_wav não encontrado.")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        tts = _get_xtts()
+        tts.tts_to_file(
+            text=text,
+            file_path=str(output_path),
+            speaker_wav=speaker_wav,
+            language=language,
+        )
+        return {"ok": True, "file_path": str(output_path), "engine": "xtts", "language": language}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+'''
 
 
 def setup_local_audio_installer(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -269,4 +391,4 @@ def set_local_audio_default_provider(provider: str) -> Dict[str, Any]:
     return {
         "ok": True,
         "status": status,
-    }
+}
