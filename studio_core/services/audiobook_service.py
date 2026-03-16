@@ -10,8 +10,8 @@ from typing import Any, Dict, List
 from uuid import uuid4
 
 from studio_core.core.config import resolve_storage_path
-from studio_core.services.local_audio_engine_manager_service import ensure_audio_provider_running
 from studio_core.core.storage import read_json
+from studio_core.services.local_audio_engine_manager_service import ensure_audio_provider_running
 
 LOCAL_AUDIO_STATUS_FILE = "data/local_audio_status.json"
 
@@ -71,12 +71,17 @@ def _espeak_voice_for_language(language: str) -> str:
 
 def _write_silent_wav(output_path: Path, duration_seconds: float = 2.0, sample_rate: int = 22050) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
     frames = int(sample_rate * max(0.2, duration_seconds))
     with wave.open(str(output_path), "w") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(b"\x00\x00" * frames)
+
+
+def _has_espeak() -> bool:
+    return shutil.which("espeak") is not None or shutil.which("espeak-ng") is not None
 
 
 def _espeak_command() -> str:
@@ -95,21 +100,37 @@ def _synthesize_system_tts(text: str, output_path: Path, language: str) -> Dict[
     if command:
         try:
             subprocess.run(
-                [command, "-v", _espeak_voice_for_language(language), "-w", str(output_path), text or "Texto vazio."],
+                [
+                    command,
+                    "-v",
+                    _espeak_voice_for_language(language),
+                    "-w",
+                    str(output_path),
+                    text or "Texto vazio.",
+                ],
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            return {"ok": True, "provider": "system_tts", "file_path": str(output_path)}
+            return {
+                "ok": True,
+                "provider": "system_tts",
+                "file_path": str(output_path),
+            }
         except Exception:
             pass
 
     approx_seconds = max(1.5, len(text.split()) * 0.45) if text else 2.0
     _write_silent_wav(output_path, duration_seconds=approx_seconds)
-    return {"ok": False, "provider": "system_tts", "fallback_used": True, "file_path": str(output_path)}
+    return {
+        "ok": False,
+        "provider": "system_tts",
+        "fallback_used": True,
+        "file_path": str(output_path),
+    }
 
 
-def _http_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def _http_post_json(url: str, payload: Dict[str, Any], timeout: int = 600) -> Dict[str, Any]:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -117,7 +138,7 @@ def _http_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=600) as res:
+    with urllib.request.urlopen(req, timeout=timeout) as res:
         raw = res.read().decode("utf-8")
         return json.loads(raw) if raw else {}
 
@@ -134,18 +155,22 @@ def _synthesize_http_provider(
         raise RuntimeError(f"API URL não configurada para {provider}.")
 
     payload = {
-        "text": text,
+        "text": _safe_text(text),
+        "language": _safe_text(language) or "en",
         "output_path": str(output_path),
-        "language": language,
-        "speaker_wav": speaker_wav,
     }
 
-    response = _http_json(f"{api_url.rstrip('/')}/synthesize", payload)
+    if provider == "xtts" and _safe_text(speaker_wav):
+        payload["speaker_wav"] = _safe_text(speaker_wav)
+
+    result = _http_post_json(f"{api_url.rstrip('/')}/synthesize", payload)
+    if not bool(result.get("ok", False)):
+        raise RuntimeError(f"Falha no provider {provider}.")
+
     return {
-        "ok": bool(response.get("ok", False)),
+        "ok": True,
         "provider": provider,
-        "file_path": _safe_text(response.get("file_path", str(output_path))),
-        "engine": _safe_text(response.get("engine", provider)),
+        "file_path": _safe_text(result.get("file_path")) or str(output_path),
     }
 
 
@@ -188,7 +213,14 @@ def _story_pages(story: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     chunks = [part.strip() for part in raw_text.split("\n") if part.strip()]
-    return [{"pageNumber": index, "title": f"Página {index}", "text": chunk} for index, chunk in enumerate(chunks, start=1)]
+    return [
+        {
+            "pageNumber": index,
+            "title": f"Página {index}",
+            "text": chunk,
+        }
+        for index, chunk in enumerate(chunks, start=1)
+    ]
 
 
 def build_audiobook(
