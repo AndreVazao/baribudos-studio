@@ -7,6 +7,7 @@ from studio_core.core.storage import read_json, update_json_item, write_json
 from studio_core.services.illustration_provider_service import generate_illustration
 from studio_core.services.illustration_generation_service import list_illustration_jobs
 from studio_core.services.illustration_asset_service import attach_uploaded_frame_image
+from studio_core.services.local_engine_manager_service import ensure_provider_running
 from studio_core.services.saga_runtime_service import load_saga_runtime
 
 PROJECTS_FILE = "data/projects.json"
@@ -49,6 +50,7 @@ def _build_saga_style(runtime: Dict[str, Any]) -> Dict[str, Any]:
 def run_local_illustration_generation(project_id: str, payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
     payload = payload or {}
     provider = str(payload.get("provider", "stable_diffusion")).strip() or "stable_diffusion"
+    auto_start = bool(payload.get("auto_start", True))
 
     project = _get_project(project_id)
     if not project:
@@ -57,11 +59,13 @@ def run_local_illustration_generation(project_id: str, payload: Dict[str, Any] |
     runtime = load_saga_runtime(str(project.get("saga_slug", "baribudos")).strip() or "baribudos")
     saga_style = _build_saga_style(runtime)
 
+    if provider in {"stable_diffusion", "automatic1111"} and auto_start:
+        ensure_provider_running("automatic1111" if provider == "automatic1111" else "stable_diffusion")
+
     jobs = list_illustration_jobs(project_id)
     if not jobs:
         raise ValueError("Projeto sem jobs de ilustração.")
 
-    job_map = {str(_safe_dict(job).get("id", "")).strip(): _safe_dict(job) for job in jobs}
     updated_jobs = []
     generated = []
 
@@ -82,7 +86,7 @@ def run_local_illustration_generation(project_id: str, payload: Dict[str, Any] |
             saga_style=saga_style,
         )
 
-        asset_result = attach_uploaded_frame_image(
+        attach_uploaded_frame_image(
             project_id=project_id,
             frame_id=str(job_dict.get("frame_id", "")).strip(),
             source_path=str(result.get("file_path", "")).strip(),
@@ -118,6 +122,7 @@ def run_local_illustration_generation(project_id: str, payload: Dict[str, Any] |
                 "provider": provider,
                 "state": "generated",
                 "generated_count": len(generated),
+                "auto_start": auto_start,
                 "updated_at": now_iso(),
             },
             "updated_at": now_iso(),
@@ -130,4 +135,4 @@ def run_local_illustration_generation(project_id: str, payload: Dict[str, Any] |
         "generated_count": len(generated),
         "generated": generated,
         "project": updated_project,
-  }
+                           }
