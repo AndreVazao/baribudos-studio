@@ -1,0 +1,23 @@
+{
+  "app_name": "Baribudos Studio",
+  "version": "0.1.1",
+  "channel": "stable",
+  "published_at": "2026-03-16T00:00:00Z",
+  "notes": "Melhorias no motor de ilustração e áudio.",
+  "channels": {
+    "stable": {
+      "platforms": {
+        "windows": "https://github.com/AndreVazao/baribudos-studio/releases/download/v0.1.1/BaribudosStudio.exe",
+        "android": "https://github.com/AndreVazao/baribudos-studio/releases/download/v0.1.1/BaribudosStudio.apk",
+        "linux": "https://github.com/AndreVazao/baribudos-studio/releases/download/v0.1.1/BaribudosStudio-linux.zip",
+        "macos": "https://github.com/AndreVazao/baribudos-studio/releases/download/v0.1.1/BaribudosStudio-macos.zip"
+      }
+    },
+    "beta": {
+      "platforms": {
+        "windows": "https://github.com/AndreVazao/baribudos-studio/releases/download/v0.1.1-beta/BaribudosStudio-beta.exe",
+        "android": "https://github.com/AndreVazao/baribudos-studio/releases/download/v0.1.1-beta/BaribudosStudio-beta.apk"
+      }
+    }
+  }
+}
