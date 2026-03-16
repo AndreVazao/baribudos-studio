@@ -24,6 +24,7 @@ __all__ = [
     "updater",
     "v1_readiness",
     "system_smoke_v1",
+    "editorial_engine",
     "saga_loader",
     "saga_runtime",
     "system_smoke",
