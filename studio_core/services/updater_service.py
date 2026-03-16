@@ -7,7 +7,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from studio_core.core.config import resolve_project_path
+from studio_core.core.config import resolve_project_path, resolve_storage_path
 from studio_core.core.models import now_iso
 
 DEFAULT_UPDATE_URL = os.getenv(
@@ -60,6 +60,12 @@ def _current_platform_key() -> str:
     return "linux"
 
 
+def _downloads_dir() -> Path:
+    path = resolve_storage_path("updates")
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def get_local_version_info() -> Dict[str, Any]:
     path = _version_file()
     if not path.exists():
@@ -67,11 +73,10 @@ def get_local_version_info() -> Dict[str, Any]:
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        merged = {
+        return {
             **_default_local_version(),
             **_safe_dict(data),
         }
-        return merged
     except Exception:
         return _default_local_version()
 
@@ -102,8 +107,8 @@ def _resolve_download_url(remote: Dict[str, Any], channel: str = "") -> str:
 
     channels = _safe_dict(remote.get("channels", {}))
     channel_block = _safe_dict(channels.get(channel, {}))
-
     platform_urls = _safe_dict(channel_block.get("platforms", {}))
+
     if _safe_text(platform_urls.get(platform_key)):
         return _safe_text(platform_urls.get(platform_key))
 
@@ -115,6 +120,12 @@ def _resolve_download_url(remote: Dict[str, Any], channel: str = "") -> str:
         return _safe_text(remote.get("download_url"))
 
     return ""
+
+
+def _file_name_from_url(url: str) -> str:
+    raw = _safe_text(url).split("?")[0].split("#")[0].strip()
+    name = Path(raw).name
+    return name or f"baribudos_update_{_current_platform_key()}"
 
 
 def check_for_updates(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -158,4 +169,43 @@ def check_for_updates(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
             "update_available": False,
             "download_url": "",
             "error": str(exc),
-      }
+        }
+
+
+def download_update(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    payload = payload or {}
+
+    checked = check_for_updates(payload)
+    if not checked.get("ok", False):
+        raise RuntimeError(_safe_text(checked.get("error", "Falha ao verificar updates.")))
+
+    if not checked.get("update_available", False):
+        return {
+            "ok": True,
+            "update_available": False,
+            "downloaded": False,
+            "message": "Sem atualização disponível.",
+            "check": checked,
+        }
+
+    download_url = _safe_text(payload.get("download_url", "")) or _safe_text(checked.get("download_url", ""))
+    if not download_url:
+        raise RuntimeError("Sem URL de download para esta plataforma.")
+
+    file_name = _safe_text(payload.get("file_name", "")) or _file_name_from_url(download_url)
+    target_path = _downloads_dir() / file_name
+
+    req = urllib.request.Request(download_url, method="GET")
+    with urllib.request.urlopen(req, timeout=600) as res:
+        target_path.write_bytes(res.read())
+
+    return {
+        "ok": True,
+        "update_available": True,
+        "downloaded": True,
+        "download_url": download_url,
+        "file_name": target_path.name,
+        "file_path": str(target_path),
+        "storage_url": f"/storage/updates/{target_path.name}",
+        "check": checked,
+    }
