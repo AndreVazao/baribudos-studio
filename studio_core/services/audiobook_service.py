@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import math
+import json
 import shutil
 import subprocess
+import urllib.request
 import wave
 from pathlib import Path
 from typing import Any, Dict, List
@@ -44,9 +45,14 @@ def _resolve_default_provider(requested_provider: str = "") -> str:
     return provider or "system_tts"
 
 
+def _provider_api_url(provider: str) -> str:
+    status = _load_local_audio_status()
+    providers = _safe_dict(status.get("providers", {}))
+    return _safe_text(_safe_dict(providers.get(provider, {})).get("api_url", ""))
+
+
 def _espeak_voice_for_language(language: str) -> str:
     lang = _safe_text(language).lower()
-
     mapping = {
         "pt": "pt",
         "pt-pt": "pt",
@@ -60,23 +66,17 @@ def _espeak_voice_for_language(language: str) -> str:
         "it": "it",
         "nl": "nl",
     }
-
     return mapping.get(lang, "en")
 
 
 def _write_silent_wav(output_path: Path, duration_seconds: float = 2.0, sample_rate: int = 22050) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
     frames = int(sample_rate * max(0.2, duration_seconds))
     with wave.open(str(output_path), "w") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(b"\x00\x00" * frames)
-
-
-def _has_espeak() -> bool:
-    return shutil.which("espeak") is not None or shutil.which("espeak-ng") is not None
 
 
 def _espeak_command() -> str:
@@ -95,41 +95,58 @@ def _synthesize_system_tts(text: str, output_path: Path, language: str) -> Dict[
     if command:
         try:
             subprocess.run(
-                [
-                    command,
-                    "-v",
-                    _espeak_voice_for_language(language),
-                    "-w",
-                    str(output_path),
-                    text or "Texto vazio.",
-                ],
+                [command, "-v", _espeak_voice_for_language(language), "-w", str(output_path), text or "Texto vazio."],
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            return {
-                "ok": True,
-                "provider": "system_tts",
-                "file_path": str(output_path),
-            }
+            return {"ok": True, "provider": "system_tts", "file_path": str(output_path)}
         except Exception:
             pass
 
     approx_seconds = max(1.5, len(text.split()) * 0.45) if text else 2.0
     _write_silent_wav(output_path, duration_seconds=approx_seconds)
-    return {
-        "ok": False,
-        "provider": "system_tts",
-        "fallback_used": True,
-        "file_path": str(output_path),
+    return {"ok": False, "provider": "system_tts", "fallback_used": True, "file_path": str(output_path)}
+
+
+def _http_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=600) as res:
+        raw = res.read().decode("utf-8")
+        return json.loads(raw) if raw else {}
+
+
+def _synthesize_http_provider(
+    provider: str,
+    text: str,
+    output_path: Path,
+    language: str,
+    speaker_wav: str = "",
+) -> Dict[str, Any]:
+    api_url = _provider_api_url(provider)
+    if not api_url:
+        raise RuntimeError(f"API URL não configurada para {provider}.")
+
+    payload = {
+        "text": text,
+        "output_path": str(output_path),
+        "language": language,
+        "speaker_wav": speaker_wav,
     }
 
-
-def _synthesize_stub_http_provider(provider: str, text: str, output_path: Path, language: str) -> Dict[str, Any]:
-    # Neste momento os motores locais de áudio estão preparados como runtime manager,
-    # mas o synthesis endpoint premium ainda não está ligado.
-    # Mantemos o motor pronto e, por enquanto, geramos via fallback técnico.
-    return _synthesize_system_tts(text, output_path, language)
+    response = _http_json(f"{api_url.rstrip('/')}/synthesize", payload)
+    return {
+        "ok": bool(response.get("ok", False)),
+        "provider": provider,
+        "file_path": _safe_text(response.get("file_path", str(output_path))),
+        "engine": _safe_text(response.get("engine", provider)),
+    }
 
 
 def _merge_wavs(inputs: List[Path], output_path: Path) -> None:
@@ -171,14 +188,7 @@ def _story_pages(story: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     chunks = [part.strip() for part in raw_text.split("\n") if part.strip()]
-    return [
-        {
-            "pageNumber": index,
-            "title": f"Página {index}",
-            "text": chunk,
-        }
-        for index, chunk in enumerate(chunks, start=1)
-    ]
+    return [{"pageNumber": index, "title": f"Página {index}", "text": chunk} for index, chunk in enumerate(chunks, start=1)]
 
 
 def build_audiobook(
@@ -188,6 +198,7 @@ def build_audiobook(
     project_id = _safe_text(payload.get("project_id", ""))
     project_title = _safe_text(payload.get("project_title", "Projeto")) or "Projeto"
     requested_provider = _safe_text(payload.get("provider", ""))
+    speaker_wav = _safe_text(payload.get("speaker_wav", ""))
 
     output_dir = resolve_storage_path("exports", project_id, "audiobooks")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -211,11 +222,14 @@ def build_audiobook(
             page_path = output_dir / f"{base_name}_page_{index:03d}.wav"
             text = _page_text(page)
 
-            if provider == "coqui_tts":
-                synth = _synthesize_stub_http_provider("coqui_tts", text, page_path, language)
-            elif provider == "xtts":
-                synth = _synthesize_stub_http_provider("xtts", text, page_path, language)
-            else:
+            try:
+                if provider == "coqui_tts":
+                    synth = _synthesize_http_provider("coqui_tts", text, page_path, language)
+                elif provider == "xtts":
+                    synth = _synthesize_http_provider("xtts", text, page_path, language, speaker_wav=speaker_wav)
+                else:
+                    synth = _synthesize_system_tts(text, page_path, language)
+            except Exception:
                 synth = _synthesize_system_tts(text, page_path, language)
 
             page_paths.append(Path(synth["file_path"]))
@@ -234,6 +248,7 @@ def build_audiobook(
             "file_path": str(final_path),
             "pages_count": len(pages),
             "engine": f"{provider}-runtime",
+            "speaker_wav": speaker_wav if provider == "xtts" else "",
         }
 
     return outputs
