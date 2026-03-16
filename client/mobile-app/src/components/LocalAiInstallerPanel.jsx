@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react"
-import { getLocalAiStatus, setLocalAiDefaultProvider, setupLocalAi } from "../api.js"
+import {
+  ensureLocalProvider,
+  getLocalAiRuntimeStatus,
+  getLocalAiStatus,
+  getLocalEngineManagerStatus,
+  setLocalAiDefaultProvider,
+  setupLocalAi,
+  startLocalProvider,
+  stopLocalProvider
+} from "../api.js"
 
 function Card({ title, children }) {
   return (
@@ -23,22 +32,33 @@ function Card({ title, children }) {
 
 export default function LocalAiInstallerPanel() {
   const [status, setStatus] = useState(null)
+  const [runtime, setRuntime] = useState(null)
+  const [manager, setManager] = useState(null)
   const [installRoot, setInstallRoot] = useState("")
   const [defaultProvider, setDefaultProviderState] = useState("stable_diffusion")
 
   useEffect(() => {
-    loadStatus()
+    loadAll()
   }, [])
 
-  async function loadStatus() {
+  async function loadAll() {
     try {
-      const res = await getLocalAiStatus()
-      const nextStatus = res?.status || null
+      const [statusRes, runtimeRes, managerRes] = await Promise.all([
+        getLocalAiStatus(),
+        getLocalAiRuntimeStatus(),
+        getLocalEngineManagerStatus()
+      ])
+
+      const nextStatus = statusRes?.status || null
       setStatus(nextStatus)
+      setRuntime(runtimeRes?.runtime || null)
+      setManager(managerRes?.status || null)
       setDefaultProviderState(nextStatus?.default_provider || "stable_diffusion")
       setInstallRoot(nextStatus?.paths?.root || "")
     } catch {
       setStatus(null)
+      setRuntime(null)
+      setManager(null)
     }
   }
 
@@ -47,7 +67,7 @@ export default function LocalAiInstallerPanel() {
       await setupLocalAi({
         install_root: installRoot || undefined
       })
-      await loadStatus()
+      await loadAll()
       alert("Local AI configurada. Agora executa o script de setup no PC.")
     } catch (error) {
       alert(error?.message || "Erro ao configurar Local AI.")
@@ -57,10 +77,40 @@ export default function LocalAiInstallerPanel() {
   async function handleSetProvider() {
     try {
       await setLocalAiDefaultProvider(defaultProvider)
-      await loadStatus()
+      await loadAll()
       alert("Provider default atualizada.")
     } catch (error) {
       alert(error?.message || "Erro ao atualizar provider default.")
+    }
+  }
+
+  async function handleEnsure(provider) {
+    try {
+      await ensureLocalProvider(provider)
+      await loadAll()
+      alert(`Provider ${provider} pronta ou já ativa.`)
+    } catch (error) {
+      alert(error?.message || `Erro ao garantir provider ${provider}.`)
+    }
+  }
+
+  async function handleStart(provider) {
+    try {
+      await startLocalProvider(provider)
+      await loadAll()
+      alert(`Provider ${provider} arrancada.`)
+    } catch (error) {
+      alert(error?.message || `Erro ao arrancar provider ${provider}.`)
+    }
+  }
+
+  async function handleStop(provider) {
+    try {
+      await stopLocalProvider(provider)
+      await loadAll()
+      alert(`Provider ${provider} parada.`)
+    } catch (error) {
+      alert(error?.message || `Erro ao parar provider ${provider}.`)
     }
   }
 
@@ -74,22 +124,20 @@ export default function LocalAiInstallerPanel() {
         style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       />
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button
-          onClick={handleSetup}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "none",
-            background: "#2F5E2E",
-            color: "#fff",
-            fontWeight: 700,
-            cursor: "pointer"
-          }}
-        >
-          Preparar instalação local
-        </button>
-      </div>
+      <button
+        onClick={handleSetup}
+        style={{
+          padding: "10px 12px",
+          borderRadius: 12,
+          border: "none",
+          background: "#2F5E2E",
+          color: "#fff",
+          fontWeight: 700,
+          cursor: "pointer"
+        }}
+      >
+        Preparar instalação local
+      </button>
 
       <label>Provider default</label>
       <select
@@ -118,6 +166,68 @@ export default function LocalAiInstallerPanel() {
         Guardar provider default
       </button>
 
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          onClick={() => handleEnsure("stable_diffusion")}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#b45309",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Garantir ComfyUI
+        </button>
+
+        <button
+          onClick={() => handleEnsure("automatic1111")}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#0369a1",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Garantir Automatic1111
+        </button>
+
+        <button
+          onClick={() => handleStop("stable_diffusion")}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#991b1b",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Parar ComfyUI
+        </button>
+
+        <button
+          onClick={() => handleStop("automatic1111")}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#7f1d1d",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Parar Automatic1111
+        </button>
+      </div>
+
       {status ? (
         <div
           style={{
@@ -134,14 +244,44 @@ export default function LocalAiInstallerPanel() {
           <div><strong>Python encontrado:</strong> {status.requirements?.python ? "Sim" : "Não"}</div>
           <div><strong>Git encontrado:</strong> {status.requirements?.git ? "Sim" : "Não"}</div>
           <div><strong>Root:</strong> {status.paths?.root || "-"}</div>
-          <div><strong>ComfyUI:</strong> {status.paths?.comfyui_root || "-"}</div>
-          <div><strong>Automatic1111:</strong> {status.paths?.automatic1111_root || "-"}</div>
-          <div><strong>Models:</strong> {status.paths?.models_root || "-"}</div>
+        </div>
+      ) : null}
+
+      {runtime ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.55)",
+            display: "grid",
+            gap: 8
+          }}
+        >
+          <div><strong>ComfyUI ativo:</strong> {runtime?.comfyui?.ok ? "Sim" : "Não"}</div>
+          <div><strong>Automatic1111 ativo:</strong> {runtime?.automatic1111?.ok ? "Sim" : "Não"}</div>
+        </div>
+      ) : null}
+
+      {manager ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.55)",
+            display: "grid",
+            gap: 8
+          }}
+        >
+          <div><strong>Manager default:</strong> {manager.default_provider || "-"}</div>
+          <div><strong>ComfyUI running:</strong> {manager?.providers?.stable_diffusion?.running ? "Sim" : "Não"}</div>
+          <div><strong>Automatic1111 running:</strong> {manager?.providers?.automatic1111?.running ? "Sim" : "Não"}</div>
 
           <textarea
             readOnly
-            value={JSON.stringify(status, null, 2)}
-            rows={14}
+            value={JSON.stringify(manager, null, 2)}
+            rows={12}
             style={{
               width: "100%",
               padding: 12,
@@ -157,4 +297,4 @@ export default function LocalAiInstallerPanel() {
       ) : null}
     </Card>
   )
-}
+      }
