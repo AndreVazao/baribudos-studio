@@ -27,6 +27,8 @@ from studio_core.api.routes.ip_palette import router as ip_palette_router
 from studio_core.api.routes.jobs import router as jobs_router
 from studio_core.api.routes.local_ai_installer import router as local_ai_installer_router
 from studio_core.api.routes.local_ai_runtime import router as local_ai_runtime_router
+from studio_core.api.routes.local_audio_engine_manager import router as local_audio_engine_manager_router
+from studio_core.api.routes.local_audio_installer import router as local_audio_installer_router
 from studio_core.api.routes.local_engine_manager import router as local_engine_manager_router
 from studio_core.api.routes.production_pipeline import router as production_pipeline_router
 from studio_core.api.routes.project_commercial import router as project_commercial_router
@@ -107,6 +109,8 @@ app.include_router(illustration_provider_router, prefix="/api")
 app.include_router(local_ai_installer_router, prefix="/api")
 app.include_router(local_ai_runtime_router, prefix="/api")
 app.include_router(local_engine_manager_router, prefix="/api")
+app.include_router(local_audio_installer_router, prefix="/api")
+app.include_router(local_audio_engine_manager_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
