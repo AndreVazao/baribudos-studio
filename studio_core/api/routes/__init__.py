@@ -18,6 +18,7 @@ __all__ = [
     "audiobooks",
     "videos",
     "voice_library",
+    "voice_preview",
     "saga_loader",
     "saga_runtime",
     "system_smoke",
