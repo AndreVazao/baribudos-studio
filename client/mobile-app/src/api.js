@@ -885,3 +885,11 @@ export async function getV1Readiness(projectId) {
   return handle(fetch(`${getApiBase()}/v1-readiness/${projectId}`))
     }
 
+export async function downloadUpdate(payload = {}) {
+  return handle(fetch(`${getApiBase()}/updater/download`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+    }
+
