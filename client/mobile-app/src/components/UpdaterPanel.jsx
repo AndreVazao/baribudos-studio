@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { checkForUpdates, getLocalVersionInfo } from "../api.js"
+import { checkForUpdates, downloadUpdate, getLocalVersionInfo } from "../api.js"
+import { normalizeMediaUrl } from "../utils/media.js"
 
 function Card({ title, children }) {
   return (
@@ -26,6 +27,7 @@ export default function UpdaterPanel() {
   const [channel, setChannel] = useState("stable")
   const [updateUrl, setUpdateUrl] = useState("")
   const [result, setResult] = useState(null)
+  const [downloadResult, setDownloadResult] = useState(null)
 
   useEffect(() => {
     loadLocal()
@@ -49,17 +51,32 @@ export default function UpdaterPanel() {
         update_url: updateUrl || undefined
       })
       setResult(res || null)
-      if (res?.update_available) {
-        alert("Nova versão disponível.")
-      } else {
-        alert("Sem atualização disponível.")
-      }
+      setDownloadResult(null)
+      alert(res?.update_available ? "Nova versão disponível." : "Sem atualização disponível.")
     } catch (error) {
       alert(error?.message || "Erro ao verificar updates.")
     }
   }
 
-  function handleOpenDownload() {
+  async function handleDownload() {
+    try {
+      const res = await downloadUpdate({
+        channel,
+        update_url: updateUrl || undefined,
+        download_url: result?.download_url || undefined
+      })
+      setDownloadResult(res || null)
+      if (res?.downloaded) {
+        alert("Update descarregado.")
+      } else {
+        alert(res?.message || "Sem update para descarregar.")
+      }
+    } catch (error) {
+      alert(error?.message || "Erro ao descarregar update.")
+    }
+  }
+
+  function handleOpenDownloadLink() {
     const url = String(result?.download_url || "").trim()
     if (!url) {
       alert("Sem link de download.")
@@ -67,6 +84,8 @@ export default function UpdaterPanel() {
     }
     window.open(url, "_blank", "noopener,noreferrer")
   }
+
+  const downloadedUrl = normalizeMediaUrl(downloadResult?.storage_url || downloadResult?.file_path)
 
   return (
     <Card title="Updater">
@@ -108,7 +127,22 @@ export default function UpdaterPanel() {
         </button>
 
         <button
-          onClick={handleOpenDownload}
+          onClick={handleDownload}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#7c3aed",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Descarregar update
+        </button>
+
+        <button
+          onClick={handleOpenDownloadLink}
           style={{
             padding: "10px 12px",
             borderRadius: 12,
@@ -119,7 +153,7 @@ export default function UpdaterPanel() {
             cursor: "pointer"
           }}
         >
-          Abrir download
+          Abrir link
         </button>
       </div>
 
@@ -141,6 +175,28 @@ export default function UpdaterPanel() {
           <div><strong>Notas:</strong> {result?.remote?.notes || "-"}</div>
         </div>
       ) : null}
+
+      {downloadResult?.downloaded ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.55)",
+            display: "grid",
+            gap: 8
+          }}
+        >
+          <div><strong>Ficheiro:</strong> {downloadResult.file_name}</div>
+          <div><strong>Caminho:</strong> {downloadResult.file_path}</div>
+          <div><strong>Storage URL:</strong> {downloadResult.storage_url}</div>
+          {downloadedUrl ? (
+            <a href={downloadedUrl} target="_blank" rel="noreferrer">
+              Abrir ficheiro descarregado
+            </a>
+          ) : null}
+        </div>
+      ) : null}
     </Card>
   )
-}
+  }
