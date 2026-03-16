@@ -44,6 +44,8 @@ def export_audiobook(project_id: str, payload: dict | None = None) -> dict:
             raise HTTPException(status_code=404, detail="Voice sample não encontrada.")
         speaker_wav = str(voice_sample.get("file_path", "")).strip()
 
+    audio_cast = project.get("audio_cast", {}) or {}
+
     outputs = build_audiobook(
         {language: story},
         {
@@ -51,6 +53,7 @@ def export_audiobook(project_id: str, payload: dict | None = None) -> dict:
             "project_title": project.get("title", "Projeto"),
             "provider": provider,
             "speaker_wav": speaker_wav,
+            "audio_cast": audio_cast,
         },
     )
 
@@ -81,4 +84,5 @@ def export_audiobook(project_id: str, payload: dict | None = None) -> dict:
         "ok": True,
         "audiobook": audiobook_output,
         "voice_sample": voice_sample,
-    }
+        "audio_cast": audio_cast,
+        }
