@@ -37,6 +37,7 @@ export default function IllustrationPipelinePanel({ user }) {
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [mode, setMode] = useState("approval")
+  const [provider, setProvider] = useState("stable_diffusion")
   const [pipeline, setPipeline] = useState(null)
   const [manifest, setManifest] = useState(null)
   const [jobs, setJobs] = useState([])
@@ -132,7 +133,10 @@ export default function IllustrationPipelinePanel({ user }) {
   async function handleLocalGenerate() {
     if (!selectedProjectId) return
     try {
-      await runIllustrationProvider(selectedProjectId, { provider: "stable_diffusion" })
+      await runIllustrationProvider(selectedProjectId, {
+        provider,
+        auto_start: true
+      })
       await refreshAll(selectedProjectId)
       alert("Geração local concluída.")
     } catch (error) {
@@ -211,6 +215,17 @@ export default function IllustrationPipelinePanel({ user }) {
         <option value="approval">Automático + aprovação</option>
         <option value="manual">Manual upload</option>
         <option value="hybrid">Híbrido livro + série</option>
+      </select>
+
+      <label>Provider local</label>
+      <select
+        value={provider}
+        onChange={(e) => setProvider(e.target.value)}
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      >
+        <option value="stable_diffusion">ComfyUI / Stable Diffusion</option>
+        <option value="automatic1111">Automatic1111</option>
+        <option value="local_basic">Local basic</option>
       </select>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -438,7 +453,7 @@ export default function IllustrationPipelinePanel({ user }) {
         <strong>Jobs</strong>
         {jobs.slice(0, 12).map((job) => (
           <div key={job.id}>
-            {job.page_number} — {job.frame_type} — {job.state}
+            {job.page_number} — {job.frame_type} — {job.state} — {job.provider || "-"}
           </div>
         ))}
       </div>
