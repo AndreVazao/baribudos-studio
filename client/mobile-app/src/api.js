@@ -800,3 +800,20 @@ export async function setDefaultVoiceProfile(projectId, profileId) {
   }))
     }
 
+export async function listVoiceSamples() {
+  return handle(fetch(`${getApiBase()}/voice-library`))
+}
+
+export async function uploadVoiceSample({ name, language = "", notes = "", file }) {
+  const form = new FormData()
+  form.append("name", name)
+  form.append("language", language)
+  form.append("notes", notes)
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/voice-library/upload`, {
+    method: "POST",
+    body: form
+  }))
+}
+
