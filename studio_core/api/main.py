@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from studio_core.api.routes.age_badges import router as age_badges_router
+from studio_core.api.routes.audio_cast import router as audio_cast_router
+from studio_core.api.routes.audio_cast_preview import router as audio_cast_preview_router
 from studio_core.api.routes.audiobooks import router as audiobooks_router
 from studio_core.api.routes.covers import router as covers_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
@@ -115,6 +117,8 @@ app.include_router(local_audio_installer_router, prefix="/api")
 app.include_router(local_audio_engine_manager_router, prefix="/api")
 app.include_router(voice_library_router, prefix="/api")
 app.include_router(voice_preview_router, prefix="/api")
+app.include_router(audio_cast_router, prefix="/api")
+app.include_router(audio_cast_preview_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
