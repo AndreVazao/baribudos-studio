@@ -141,6 +141,18 @@ def _chunk_paragraphs(paragraphs: List[str], max_paragraphs_per_page: int) -> Li
     return pages
 
 
+def _renumber_pages(pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    result = []
+    for index, item in enumerate(pages, start=1):
+        page = _safe_dict(item)
+        result.append({
+            **page,
+            "pageNumber": index,
+            "updated_at": now_iso(),
+        })
+    return result
+
+
 def auto_paginate_story(project_id: str, payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
     payload = payload or {}
     project = _get_project(project_id)
@@ -325,14 +337,7 @@ def remove_story_layout_page(project_id: str, page_id: str) -> Dict[str, Any]:
     if len(filtered) == len(pages):
         raise ValueError("Página não encontrada.")
 
-    renumbered = []
-    for index, item in enumerate(filtered, start=1):
-        page = _safe_dict(item)
-        renumbered.append({
-            **page,
-            "pageNumber": index,
-            "updated_at": now_iso(),
-        })
+    renumbered = _renumber_pages([_safe_dict(item) for item in filtered])
 
     updated_project = update_json_item(
         PROJECTS_FILE,
@@ -342,6 +347,186 @@ def remove_story_layout_page(project_id: str, page_id: str) -> Dict[str, Any]:
             "story_layout": {
                 **_safe_dict(current.get("story_layout", {})),
                 "pages": renumbered,
+                "updated_at": now_iso(),
+            },
+            "updated_at": now_iso(),
+        }
+    )
+
+    return {
+        "ok": True,
+        "layout": _safe_dict(updated_project.get("story_layout", {})),
+        "project": updated_project,
+    }
+
+
+def move_story_layout_page(project_id: str, page_id: str, direction: str) -> Dict[str, Any]:
+    project = _get_project(project_id)
+    if not project:
+        raise ValueError("Projeto não encontrado.")
+
+    layout = _safe_dict(project.get("story_layout", {}))
+    pages = [_safe_dict(item) for item in _safe_list(layout.get("pages", []))]
+    if not pages:
+        raise ValueError("Projeto sem story layout.")
+
+    index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(page_id).strip()), -1)
+    if index < 0:
+        raise ValueError("Página não encontrada.")
+
+    target = index - 1 if direction == "up" else index + 1 if direction == "down" else -1
+    if target < 0 or target >= len(pages):
+        return {
+            "ok": True,
+            "layout": layout,
+            "project": project,
+        }
+
+    pages[index], pages[target] = pages[target], pages[index]
+    pages = _renumber_pages(pages)
+
+    updated_project = update_json_item(
+        PROJECTS_FILE,
+        project_id,
+        lambda current: {
+            **current,
+            "story_layout": {
+                **_safe_dict(current.get("story_layout", {})),
+                "pages": pages,
+                "updated_at": now_iso(),
+            },
+            "updated_at": now_iso(),
+        }
+    )
+
+    return {
+        "ok": True,
+        "layout": _safe_dict(updated_project.get("story_layout", {})),
+        "project": updated_project,
+    }
+
+
+def split_story_layout_page(project_id: str, page_id: str, split_mode: str = "half") -> Dict[str, Any]:
+    project = _get_project(project_id)
+    if not project:
+        raise ValueError("Projeto não encontrado.")
+
+    layout = _safe_dict(project.get("story_layout", {}))
+    pages = [_safe_dict(item) for item in _safe_list(layout.get("pages", []))]
+    if not pages:
+        raise ValueError("Projeto sem story layout.")
+
+    index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(page_id).strip()), -1)
+    if index < 0:
+        raise ValueError("Página não encontrada.")
+
+    page = pages[index]
+    paragraphs = _paragraphs(_safe_text(page.get("text", "")))
+    if len(paragraphs) < 2:
+        raise ValueError("A página precisa de pelo menos 2 blocos para dividir.")
+
+    split_at = max(1, len(paragraphs) // 2) if split_mode == "half" else max(1, len(paragraphs) - 1)
+
+    first_text = "\n\n".join(paragraphs[:split_at]).strip()
+    second_text = "\n\n".join(paragraphs[split_at:]).strip()
+
+    first_page = {
+        **page,
+        "text": first_text,
+        "updated_at": now_iso(),
+    }
+    second_page = {
+        "id": str(uuid4()),
+        "pageNumber": page.get("pageNumber", index + 2),
+        "title": f"{_safe_text(page.get('title', 'Página'))} (continuação)",
+        "text": second_text,
+        "layout_mode": "manual",
+        "illustration_requested": bool(page.get("illustration_requested", False)),
+        "scene_requested": bool(page.get("scene_requested", False)),
+        "has_illustration": False,
+        "illustration_path": "",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+
+    pages[index:index + 1] = [first_page, second_page]
+    pages = _renumber_pages(pages)
+
+    updated_project = update_json_item(
+        PROJECTS_FILE,
+        project_id,
+        lambda current: {
+            **current,
+            "story_layout": {
+                **_safe_dict(current.get("story_layout", {})),
+                "pages": pages,
+                "updated_at": now_iso(),
+            },
+            "updated_at": now_iso(),
+        }
+    )
+
+    return {
+        "ok": True,
+        "layout": _safe_dict(updated_project.get("story_layout", {})),
+        "project": updated_project,
+    }
+
+
+def move_text_between_pages(project_id: str, from_page_id: str, to_page_id: str, mode: str = "last_paragraph") -> Dict[str, Any]:
+    project = _get_project(project_id)
+    if not project:
+        raise ValueError("Projeto não encontrado.")
+
+    layout = _safe_dict(project.get("story_layout", {}))
+    pages = [_safe_dict(item) for item in _safe_list(layout.get("pages", []))]
+    if not pages:
+        raise ValueError("Projeto sem story layout.")
+
+    from_index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(from_page_id).strip()), -1)
+    to_index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(to_page_id).strip()), -1)
+
+    if from_index < 0 or to_index < 0:
+        raise ValueError("Página de origem ou destino não encontrada.")
+    if from_index == to_index:
+        raise ValueError("Origem e destino não podem ser a mesma página.")
+
+    from_page = pages[from_index]
+    to_page = pages[to_index]
+
+    from_parts = _paragraphs(_safe_text(from_page.get("text", "")))
+    to_parts = _paragraphs(_safe_text(to_page.get("text", "")))
+
+    if not from_parts:
+        raise ValueError("Página de origem sem texto.")
+
+    moved = from_parts.pop(-1) if mode == "last_paragraph" else from_parts.pop(0)
+
+    if mode == "first_paragraph":
+        to_parts.insert(0, moved)
+    else:
+        to_parts.append(moved)
+
+    pages[from_index] = {
+        **from_page,
+        "text": "\n\n".join(from_parts).strip(),
+        "updated_at": now_iso(),
+    }
+    pages[to_index] = {
+        **to_page,
+        "text": "\n\n".join(to_parts).strip(),
+        "updated_at": now_iso(),
+    }
+    pages = _renumber_pages(pages)
+
+    updated_project = update_json_item(
+        PROJECTS_FILE,
+        project_id,
+        lambda current: {
+            **current,
+            "story_layout": {
+                **_safe_dict(current.get("story_layout", {})),
+                "pages": pages,
                 "updated_at": now_iso(),
             },
             "updated_at": now_iso(),
@@ -396,4 +581,4 @@ def apply_story_layout_to_story(project_id: str, language: str = "") -> Dict[str
         "ok": True,
         "story": story_payload,
         "project": updated_project,
-                                    }
+    }
