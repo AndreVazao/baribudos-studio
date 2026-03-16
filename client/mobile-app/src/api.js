@@ -790,3 +790,13 @@ export async function stopLocalAudioProvider(provider) {
   }))
                          }
 
+export async function listVoiceProfiles(projectId) {
+  return handle(fetch(`${getApiBase()}/voice-profiles/${projectId}`))
+}
+
+export async function setDefaultVoiceProfile(projectId, profileId) {
+  return handle(fetch(`${getApiBase()}/voice-profiles/default/${projectId}/${profileId}`, {
+    method: "POST"
+  }))
+    }
+
