@@ -1,0 +1,15 @@
+{
+  "app_name": "Baribudos Studio",
+  "version": "1.0.0",
+  "channel": "stable",
+  "published_at": "2026-03-16T00:00:00Z",
+  "notes": "Primeira versão oficial do Baribudos Studio. Sistema completo de produção editorial.",
+  "channels": {
+    "stable": {
+      "platforms": {
+        "windows": "https://github.com/AndreVazao/baribudos-studio/releases/latest/download/BaribudosStudio.exe",
+        "android": "https://github.com/AndreVazao/baribudos-studio/releases/latest/download/BaribudosStudio.apk"
+      }
+    }
+  }
+}
