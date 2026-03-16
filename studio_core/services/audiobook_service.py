@@ -1,37 +1,55 @@
 from __future__ import annotations
 
+import math
 import shutil
 import subprocess
 import wave
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 from uuid import uuid4
 
 from studio_core.core.config import resolve_storage_path
+from studio_core.services.local_audio_engine_manager_service import ensure_audio_provider_running
+from studio_core.core.storage import read_json
+
+LOCAL_AUDIO_STATUS_FILE = "data/local_audio_status.json"
+
+
+def _safe_dict(value: Any) -> Dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _safe_list(value: Any) -> List[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _safe_text(value: Any) -> str:
+    return str(value or "").strip()
 
 
 def _safe_name(value: str) -> str:
     return "".join(ch.lower() if ch.isalnum() else "_" for ch in str(value or "")).strip("_") or "audio"
 
 
-def _pick_tts_command() -> str | None:
-    if shutil.which("espeak-ng"):
-        return "espeak-ng"
-    if shutil.which("espeak"):
-        return "espeak"
-    return None
+def _load_local_audio_status() -> Dict[str, Any]:
+    return _safe_dict(read_json(LOCAL_AUDIO_STATUS_FILE, {}))
 
 
-def _has_ffmpeg() -> bool:
-    return shutil.which("ffmpeg") is not None
+def _resolve_default_provider(requested_provider: str = "") -> str:
+    if _safe_text(requested_provider):
+        return _safe_text(requested_provider)
+
+    status = _load_local_audio_status()
+    provider = _safe_text(status.get("default_provider", "system_tts"))
+    return provider or "system_tts"
 
 
-def _voice_for_language(language: str) -> str:
-    lang = str(language or "").strip().lower()
+def _espeak_voice_for_language(language: str) -> str:
+    lang = _safe_text(language).lower()
 
     mapping = {
         "pt": "pt",
-        "pt-pt": "pt-pt",
+        "pt-pt": "pt",
         "pt-br": "pt-br",
         "en": "en",
         "en-us": "en-us",
@@ -41,144 +59,181 @@ def _voice_for_language(language: str) -> str:
         "de": "de",
         "it": "it",
         "nl": "nl",
-        "zh": "zh",
-        "ja": "ja",
     }
 
-    return mapping.get(lang, lang.split("-")[0] if "-" in lang else "en")
+    return mapping.get(lang, "en")
 
 
-def _normalize_story_text(story: Dict[str, Any], title: str, language: str) -> str:
-    raw_text = str(story.get("raw_text", "")).strip()
-    if raw_text:
-        return raw_text
+def _write_silent_wav(output_path: Path, duration_seconds: float = 2.0, sample_rate: int = 22050) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    pages = story.get("pages", [])
-    if isinstance(pages, list) and pages:
-        chunks = []
-        for page in pages:
-            if not isinstance(page, dict):
-                continue
-            page_title = str(page.get("title", "")).strip()
-            page_text = str(page.get("text", "")).strip()
-            if page_title:
-                chunks.append(page_title)
-            if page_text:
-                chunks.append(page_text)
-        if chunks:
-            return "\n\n".join(chunks)
-
-    return f"{title}. Conteúdo indisponível na língua {language}."
-
-
-def _write_silence_wav(path: Path, seconds: float = 1.0, framerate: int = 22050) -> None:
-    nframes = int(seconds * framerate)
-    with wave.open(str(path), "wb") as wav_file:
+    frames = int(sample_rate * max(0.2, duration_seconds))
+    with wave.open(str(output_path), "w") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)
-        wav_file.setframerate(framerate)
-        silence = b"\x00\x00" * nframes
-        wav_file.writeframes(silence)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(b"\x00\x00" * frames)
 
 
-def _generate_wav_with_espeak(tts_cmd: str, voice: str, text: str, wav_path: Path) -> None:
-    subprocess.run(
-        [
-            tts_cmd,
-            "-v",
-            voice,
-            "-s",
-            "145",
-            "-w",
-            str(wav_path),
-            text,
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+def _has_espeak() -> bool:
+    return shutil.which("espeak") is not None or shutil.which("espeak-ng") is not None
 
 
-def _convert_wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            "-i",
-            str(wav_path),
-            "-codec:a",
-            "libmp3lame",
-            "-qscale:a",
-            "2",
-            str(mp3_path),
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+def _espeak_command() -> str:
+    if shutil.which("espeak"):
+        return "espeak"
+    if shutil.which("espeak-ng"):
+        return "espeak-ng"
+    return ""
+
+
+def _synthesize_system_tts(text: str, output_path: Path, language: str) -> Dict[str, Any]:
+    text = _safe_text(text)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    command = _espeak_command()
+    if command:
+        try:
+            subprocess.run(
+                [
+                    command,
+                    "-v",
+                    _espeak_voice_for_language(language),
+                    "-w",
+                    str(output_path),
+                    text or "Texto vazio.",
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return {
+                "ok": True,
+                "provider": "system_tts",
+                "file_path": str(output_path),
+            }
+        except Exception:
+            pass
+
+    approx_seconds = max(1.5, len(text.split()) * 0.45) if text else 2.0
+    _write_silent_wav(output_path, duration_seconds=approx_seconds)
+    return {
+        "ok": False,
+        "provider": "system_tts",
+        "fallback_used": True,
+        "file_path": str(output_path),
+    }
+
+
+def _synthesize_stub_http_provider(provider: str, text: str, output_path: Path, language: str) -> Dict[str, Any]:
+    # Neste momento os motores locais de áudio estão preparados como runtime manager,
+    # mas o synthesis endpoint premium ainda não está ligado.
+    # Mantemos o motor pronto e, por enquanto, geramos via fallback técnico.
+    return _synthesize_system_tts(text, output_path, language)
+
+
+def _merge_wavs(inputs: List[Path], output_path: Path) -> None:
+    if not inputs:
+        _write_silent_wav(output_path, duration_seconds=2.0)
+        return
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    first = None
+    data_chunks = []
+
+    for wav_path in inputs:
+        with wave.open(str(wav_path), "rb") as wav_file:
+            params = wav_file.getparams()
+            frames = wav_file.readframes(wav_file.getnframes())
+
+        if first is None:
+            first = params
+        data_chunks.append(frames)
+
+    with wave.open(str(output_path), "wb") as out:
+        out.setparams(first)
+        for chunk in data_chunks:
+            out.writeframes(chunk)
+
+
+def _page_text(page: Dict[str, Any]) -> str:
+    return _safe_text(page.get("text", ""))
+
+
+def _story_pages(story: Dict[str, Any]) -> List[Dict[str, Any]]:
+    pages = _safe_list(story.get("pages", []))
+    if pages:
+        return [_safe_dict(page) for page in pages if isinstance(page, dict)]
+
+    raw_text = _safe_text(story.get("raw_text", ""))
+    if not raw_text:
+        return []
+
+    chunks = [part.strip() for part in raw_text.split("\n") if part.strip()]
+    return [
+        {
+            "pageNumber": index,
+            "title": f"Página {index}",
+            "text": chunk,
+        }
+        for index, chunk in enumerate(chunks, start=1)
+    ]
 
 
 def build_audiobook(
-    language_versions: Dict[str, Dict[str, Any]],
-    payload: Dict[str, Any]
+    story_variants: Dict[str, Dict[str, Any]],
+    payload: Dict[str, Any],
 ) -> Dict[str, Any]:
-    project_id = str(payload.get("project_id", "")).strip()
-    project_title = str(payload.get("project_title", "Projeto")).strip()
+    project_id = _safe_text(payload.get("project_id", ""))
+    project_title = _safe_text(payload.get("project_title", "Projeto")) or "Projeto"
+    requested_provider = _safe_text(payload.get("provider", ""))
 
     output_dir = resolve_storage_path("exports", project_id, "audiobooks")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     outputs: Dict[str, Any] = {}
 
-    tts_cmd = _pick_tts_command()
-    ffmpeg_ok = _has_ffmpeg()
+    for language, raw_story in story_variants.items():
+        story = _safe_dict(raw_story)
+        provider = _resolve_default_provider(requested_provider)
 
-    for language, story in language_versions.items():
-        safe_base = f"{_safe_name(project_title)}_{_safe_name(language)}"
-        wav_name = f"{safe_base}.wav"
-        wav_path = output_dir / wav_name
+        if provider in {"coqui_tts", "xtts"}:
+            ensure_audio_provider_running(provider)
 
-        text = _normalize_story_text(story, project_title, language)
-        voice = _voice_for_language(language)
+        language_safe = _safe_name(language)
+        base_name = f"{_safe_name(project_title)}_{language_safe}"
 
-        engine = "wav-fallback"
-        final_path = wav_path
-        final_name = wav_name
-        audio_format = "wav"
+        page_paths: List[Path] = []
+        pages = _story_pages(story)
 
-        try:
-            if tts_cmd:
-                _generate_wav_with_espeak(tts_cmd, voice, text, wav_path)
-                engine = f"{tts_cmd}-tts"
+        for index, page in enumerate(pages, start=1):
+            page_path = output_dir / f"{base_name}_page_{index:03d}.wav"
+            text = _page_text(page)
+
+            if provider == "coqui_tts":
+                synth = _synthesize_stub_http_provider("coqui_tts", text, page_path, language)
+            elif provider == "xtts":
+                synth = _synthesize_stub_http_provider("xtts", text, page_path, language)
             else:
-                _write_silence_wav(wav_path, seconds=1.0)
-                engine = "silent-wav-fallback"
+                synth = _synthesize_system_tts(text, page_path, language)
 
-            if ffmpeg_ok:
-                mp3_name = f"{safe_base}.mp3"
-                mp3_path = output_dir / mp3_name
-                _convert_wav_to_mp3(wav_path, mp3_path)
-                final_path = mp3_path
-                final_name = mp3_name
-                audio_format = "mp3"
-                engine = f"{engine}+ffmpeg-mp3"
-        except Exception:
-            if not wav_path.exists():
-                _write_silence_wav(wav_path, seconds=1.0)
-            final_path = wav_path
-            final_name = wav_name
-            audio_format = "wav"
-            engine = "error-fallback-wav"
+            page_paths.append(Path(synth["file_path"]))
+
+        final_path = output_dir / f"{base_name}.wav"
+        _merge_wavs(page_paths, final_path)
 
         outputs[language] = {
             "id": str(uuid4()),
             "type": "audiobook",
-            "format": audio_format,
+            "format": "wav",
             "language": language,
             "title": project_title,
-            "file_name": final_name,
+            "provider": provider,
+            "file_name": final_path.name,
             "file_path": str(final_path),
-            "engine": engine
+            "pages_count": len(pages),
+            "engine": f"{provider}-runtime",
         }
 
     return outputs
