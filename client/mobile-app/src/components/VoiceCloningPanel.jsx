@@ -6,6 +6,7 @@ import {
   listVoiceSamples,
   uploadVoiceSample
 } from "../api.js"
+import { normalizeMediaUrl } from "../utils/media.js"
 
 function Card({ title, children }) {
   return (
@@ -109,6 +110,8 @@ export default function VoiceCloningPanel({ user }) {
       alert(error?.message || "Erro ao gerar audiobook.")
     }
   }
+
+  const previewUrl = normalizeMediaUrl(previewResult?.file_path)
 
   return (
     <Card title="Voice Cloning / Voice Library">
@@ -274,7 +277,7 @@ export default function VoiceCloningPanel({ user }) {
           <div><strong>Provider:</strong> {previewResult.provider}</div>
           <div><strong>Ficheiro:</strong> {previewResult.file_path}</div>
           <div><strong>Fallback:</strong> {previewResult.fallback_used ? "Sim" : "Não"}</div>
-          <audio controls src={previewResult.file_path} style={{ width: "100%" }} />
+          {previewUrl ? <audio controls src={previewUrl} style={{ width: "100%" }} /> : null}
         </div>
       ) : null}
 
@@ -297,4 +300,4 @@ export default function VoiceCloningPanel({ user }) {
       </div>
     </Card>
   )
-}
+    }
