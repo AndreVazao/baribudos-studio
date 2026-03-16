@@ -3,8 +3,10 @@ import {
   getAudioCast,
   listProjects,
   listVoiceSamples,
+  previewAudioCast,
   saveAudioCast
 } from "../api.js"
+import { normalizeMediaUrl } from "../utils/media.js"
 
 function Card({ title, children }) {
   return (
@@ -33,6 +35,9 @@ export default function AudioCastPanel({ user }) {
   const [characterNames, setCharacterNames] = useState([])
   const [narratorVoiceId, setNarratorVoiceId] = useState("")
   const [rows, setRows] = useState([])
+  const [previewText, setPreviewText] = useState("Olá. Este é um teste de personagem.")
+  const [previewProvider, setPreviewProvider] = useState("xtts")
+  const [previewResult, setPreviewResult] = useState(null)
 
   useEffect(() => {
     loadProjectsAndVoices()
@@ -109,6 +114,23 @@ export default function AudioCastPanel({ user }) {
     }
   }
 
+  async function handlePreview(characterName) {
+    if (!selectedProjectId) return
+    try {
+      const res = await previewAudioCast(selectedProjectId, {
+        character_name: characterName,
+        provider: previewProvider,
+        text: previewText || `Olá. Este é um teste da personagem ${characterName}.`
+      })
+      setPreviewResult(res?.preview || null)
+      alert(`Preview de ${characterName} gerado.`)
+    } catch (error) {
+      alert(error?.message || "Erro ao gerar preview da personagem.")
+    }
+  }
+
+  const previewUrl = normalizeMediaUrl(previewResult?.file_path)
+
   return (
     <Card title="Audio Cast por Personagem">
       <label>Projeto</label>
@@ -124,6 +146,32 @@ export default function AudioCastPanel({ user }) {
           </option>
         ))}
       </select>
+
+      <label>Provider preview</label>
+      <select
+        value={previewProvider}
+        onChange={(e) => setPreviewProvider(e.target.value)}
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      >
+        <option value="system_tts">System TTS</option>
+        <option value="coqui_tts">Coqui TTS</option>
+        <option value="xtts">XTTS</option>
+      </select>
+
+      <label>Texto de preview</label>
+      <textarea
+        value={previewText}
+        onChange={(e) => setPreviewText(e.target.value)}
+        rows={3}
+        style={{
+          width: "100%",
+          padding: 10,
+          borderRadius: 10,
+          border: "1px solid #d1d5db",
+          outline: "none",
+          resize: "vertical"
+        }}
+      />
 
       <label>Voz do narrador</label>
       <select
@@ -192,26 +240,74 @@ export default function AudioCastPanel({ user }) {
                 resize: "vertical"
               }}
             />
+
+            <button
+              onClick={() => handlePreview(row.name)}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 10,
+                border: "none",
+                background: "#0369a1",
+                color: "#fff",
+                cursor: "pointer"
+              }}
+            >
+              Ouvir preview
+            </button>
           </div>
         ))}
 
         {!rows.length ? <div>Sem personagens detetadas ainda.</div> : null}
       </div>
 
-      <button
-        onClick={handleSave}
-        style={{
-          padding: "10px 12px",
-          borderRadius: 12,
-          border: "none",
-          background: "#7c3aed",
-          color: "#fff",
-          fontWeight: 700,
-          cursor: "pointer"
-        }}
-      >
-        Guardar casting
-      </button>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          onClick={() => handlePreview("Narrador")}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#0f766e",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Ouvir narrador
+        </button>
+
+        <button
+          onClick={handleSave}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "#7c3aed",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          Guardar casting
+        </button>
+      </div>
+
+      {previewResult ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.55)",
+            display: "grid",
+            gap: 8
+          }}
+        >
+          <div><strong>Preview:</strong> {previewResult.provider}</div>
+          <div><strong>Ficheiro:</strong> {previewResult.file_path}</div>
+          {previewUrl ? <audio controls src={previewUrl} style={{ width: "100%" }} /> : null}
+        </div>
+      ) : null}
     </Card>
   )
-    }
+}
