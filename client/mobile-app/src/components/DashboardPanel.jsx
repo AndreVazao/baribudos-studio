@@ -39,6 +39,7 @@ import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
 import SagaRuntimePanel from "./SagaRuntimePanel.jsx"
 import StoryLayoutPanel from "./StoryLayoutPanel.jsx"
 import SystemSmokePanel from "./SystemSmokePanel.jsx"
+import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -354,6 +355,7 @@ export default function DashboardPanel({ user }) {
       <SagaRuntimePanel user={user} />
       <LocalAiInstallerPanel />
       <LocalAudioInstallerPanel />
+      <VoiceCloningPanel user={user} />
       <StoryLayoutPanel user={user} />
       <ProductionPipelinePanel user={user} />
       <IllustrationPipelinePanel user={user} />
