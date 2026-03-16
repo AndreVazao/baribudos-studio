@@ -28,6 +28,8 @@ __all__ = [
     "local_ai_installer",
     "local_ai_runtime",
     "local_engine_manager",
+    "local_audio_installer",
+    "local_audio_engine_manager",
     "age_badges",
     "covers",
     "ip_creator",
