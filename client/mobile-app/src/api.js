@@ -881,3 +881,7 @@ export async function moveStoryLayoutText(projectId, payload = {}) {
   }))
   }
 
+export async function getV1Readiness(projectId) {
+  return handle(fetch(`${getApiBase()}/v1-readiness/${projectId}`))
+    }
+
