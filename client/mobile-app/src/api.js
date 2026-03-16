@@ -893,3 +893,8 @@ export async function downloadUpdate(payload = {}) {
   }))
     }
 
+export async function runSystemSmokeV1() {
+  return handle(fetch(`${getApiBase()}/system-smoke-v1`))
+}
+
+    
