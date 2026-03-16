@@ -6,13 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from studio_core.services.ai_runtime_bootstrap import start_all
 from studio_core.api.routes.age_badges import router as age_badges_router
 from studio_core.api.routes.audio_cast import router as audio_cast_router
 from studio_core.api.routes.audio_cast_preview import router as audio_cast_preview_router
 from studio_core.api.routes.audiobooks import router as audiobooks_router
 from studio_core.api.routes.covers import router as covers_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
+from studio_core.api.routes.editorial_engine import router as editorial_engine_router
 from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
@@ -55,6 +55,7 @@ from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
 from studio_core.api.routes.voice_preview import router as voice_preview_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
+from studio_core.services.ai_runtime_bootstrap import start_all
 from studio_core.services.bootstrap_service import bootstrap_system
 
 
@@ -112,6 +113,7 @@ app.include_router(saga_runtime_router, prefix="/api")
 app.include_router(system_smoke_router, prefix="/api")
 app.include_router(system_smoke_v1_router, prefix="/api")
 app.include_router(story_layout_router, prefix="/api")
+app.include_router(editorial_engine_router, prefix="/api")
 app.include_router(illustration_pipeline_router, prefix="/api")
 app.include_router(illustration_assets_router, prefix="/api")
 app.include_router(illustration_generation_router, prefix="/api")
