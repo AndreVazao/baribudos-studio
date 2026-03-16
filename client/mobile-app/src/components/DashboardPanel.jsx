@@ -565,4 +565,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-  }
+        }
