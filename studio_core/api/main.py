@@ -62,6 +62,7 @@ from studio_core.services.bootstrap_service import bootstrap_system
 async def lifespan(app: FastAPI):
     bootstrap_system()
     ensure_default_owner()
+    start_all()
     yield
 
 
