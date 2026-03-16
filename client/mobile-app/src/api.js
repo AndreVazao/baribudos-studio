@@ -897,4 +897,44 @@ export async function runSystemSmokeV1() {
   return handle(fetch(`${getApiBase()}/system-smoke-v1`))
 }
 
-    
+export async function buildEditorialEngine(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/editorial-engine/build/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function previewEditorialEngine(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/editorial-engine/preview/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function repaginateEditorialEngine(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/editorial-engine/repaginate/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function mergeEditorialPages(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/editorial-engine/merge-pages/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function splitEditorialPage(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/editorial-engine/split-page/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+    }
+
+
