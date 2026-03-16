@@ -48,6 +48,7 @@ from studio_core.api.routes.story_layout import router as story_layout_router
 from studio_core.api.routes.system_smoke import router as system_smoke_router
 from studio_core.api.routes.updater import router as updater_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
+from studio_core.api.routes.v1_readiness import router as v1_readiness_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
 from studio_core.api.routes.voice_preview import router as voice_preview_router
@@ -121,6 +122,7 @@ app.include_router(voice_preview_router, prefix="/api")
 app.include_router(audio_cast_router, prefix="/api")
 app.include_router(audio_cast_preview_router, prefix="/api")
 app.include_router(updater_router, prefix="/api")
+app.include_router(v1_readiness_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
