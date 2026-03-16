@@ -60,7 +60,7 @@ def run_local_illustration_generation(project_id: str, payload: Dict[str, Any] |
     saga_style = _build_saga_style(runtime)
 
     if provider in {"stable_diffusion", "automatic1111"} and auto_start:
-        ensure_provider_running("automatic1111" if provider == "automatic1111" else "stable_diffusion")
+        ensure_provider_running(provider)
 
     jobs = list_illustration_jobs(project_id)
     if not jobs:
@@ -135,4 +135,4 @@ def run_local_illustration_generation(project_id: str, payload: Dict[str, Any] |
         "generated_count": len(generated),
         "generated": generated,
         "project": updated_project,
-                           }
+}
