@@ -26,6 +26,8 @@ __all__ = [
     "illustration_generation",
     "illustration_provider",
     "local_ai_installer",
+    "local_ai_runtime",
+    "local_engine_manager",
     "age_badges",
     "covers",
     "ip_creator",
