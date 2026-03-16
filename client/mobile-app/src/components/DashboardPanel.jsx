@@ -41,6 +41,7 @@ import SagaRuntimePanel from "./SagaRuntimePanel.jsx"
 import StoryLayoutPanel from "./StoryLayoutPanel.jsx"
 import SystemSmokePanel from "./SystemSmokePanel.jsx"
 import UpdaterPanel from "./UpdaterPanel.jsx"
+import V1ReadinessPanel from "./V1ReadinessPanel.jsx"
 import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
@@ -354,6 +355,7 @@ export default function DashboardPanel({ user }) {
       </Card>
 
       <UpdaterPanel />
+      <V1ReadinessPanel user={user} />
       <IpCreatorPanel user={user} />
       <SagaRuntimePanel user={user} />
       <LocalAiInstallerPanel />
@@ -569,4 +571,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-  }
+    }
