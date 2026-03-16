@@ -7,7 +7,10 @@ from studio_core.services.story_layout_service import (
     apply_story_layout_to_story,
     auto_paginate_story,
     get_story_layout,
+    move_story_layout_page,
+    move_text_between_pages,
     remove_story_layout_page,
+    split_story_layout_page,
     update_story_layout_page,
 )
 
@@ -64,6 +67,44 @@ def create_page(project_id: str, payload: dict | None = None) -> dict:
 def delete_page(project_id: str, page_id: str) -> dict:
     try:
         return remove_story_layout_page(project_id, page_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/move-page/{project_id}/{page_id}")
+def move_page(project_id: str, page_id: str, payload: dict | None = None) -> dict:
+    payload = payload or {}
+    try:
+        return move_story_layout_page(project_id, page_id, str(payload.get("direction", "up")).strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/split-page/{project_id}/{page_id}")
+def split_page(project_id: str, page_id: str, payload: dict | None = None) -> dict:
+    payload = payload or {}
+    try:
+        return split_story_layout_page(project_id, page_id, str(payload.get("split_mode", "half")).strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/move-text/{project_id}")
+def move_text(project_id: str, payload: dict | None = None) -> dict:
+    payload = payload or {}
+    try:
+        return move_text_between_pages(
+            project_id,
+            str(payload.get("from_page_id", "")).strip(),
+            str(payload.get("to_page_id", "")).strip(),
+            str(payload.get("mode", "last_paragraph")).strip(),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
