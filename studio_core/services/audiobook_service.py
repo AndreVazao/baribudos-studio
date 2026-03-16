@@ -6,13 +6,13 @@ import subprocess
 import urllib.request
 import wave
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
 from studio_core.core.config import resolve_storage_path
 from studio_core.core.storage import read_json
 from studio_core.services.local_audio_engine_manager_service import ensure_audio_provider_running
-from studio_core.services.voice_profile_service import get_default_voice_sample_path
+from studio_core.services.voice_library_service import get_voice_sample
 
 LOCAL_AUDIO_STATUS_FILE = "data/local_audio_status.json"
 
@@ -220,6 +220,58 @@ def _story_pages(story: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
+def _build_voice_map(audio_cast: Dict[str, Any]) -> Dict[str, str]:
+    voice_map: Dict[str, str] = {}
+
+    narrator = _safe_dict(audio_cast.get("narrator", {}))
+    narrator_voice_id = _safe_text(narrator.get("voice_sample_id"))
+    if narrator_voice_id:
+        voice_map["__narrator__"] = narrator_voice_id
+
+    for item in _safe_list(audio_cast.get("characters", [])):
+        row = _safe_dict(item)
+        name = _safe_text(row.get("name"))
+        voice_id = _safe_text(row.get("voice_sample_id"))
+        if name and voice_id:
+            voice_map[name.lower()] = voice_id
+
+    return voice_map
+
+
+def _resolve_speaker_wav(voice_sample_id: str) -> str:
+    if not voice_sample_id:
+        return ""
+    voice = get_voice_sample(voice_sample_id)
+    if not voice:
+        return ""
+    return _safe_text(voice.get("file_path"))
+
+
+def _split_segments(text: str) -> List[Tuple[str, str]]:
+    text = _safe_text(text)
+    if not text:
+        return []
+
+    segments: List[Tuple[str, str]] = []
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        if ":" in line:
+            left, right = line.split(":", 1)
+            speaker = _safe_text(left)
+            speech = _safe_text(right)
+            if speaker and speech and len(speaker) <= 40:
+                segments.append((speaker, speech))
+                continue
+
+        segments.append(("Narrador", line))
+
+    return segments
+
+
 def build_audiobook(
     story_variants: Dict[str, Dict[str, Any]],
     payload: Dict[str, Any],
@@ -228,17 +280,13 @@ def build_audiobook(
     project_title = _safe_text(payload.get("project_title", "Projeto")) or "Projeto"
     requested_provider = _safe_text(payload.get("provider", ""))
     speaker_wav = _safe_text(payload.get("speaker_wav", ""))
-
-    if not speaker_wav and project_id:
-        try:
-            speaker_wav = get_default_voice_sample_path(project_id)
-        except Exception:
-            speaker_wav = ""
+    audio_cast = _safe_dict(payload.get("audio_cast", {}))
 
     output_dir = resolve_storage_path("exports", project_id, "audiobooks")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     outputs: Dict[str, Any] = {}
+    voice_map = _build_voice_map(audio_cast)
 
     for language, raw_story in story_variants.items():
         story = _safe_dict(raw_story)
@@ -250,27 +298,39 @@ def build_audiobook(
         language_safe = _safe_name(language)
         base_name = f"{_safe_name(project_title)}_{language_safe}"
 
-        page_paths: List[Path] = []
+        part_paths: List[Path] = []
         pages = _story_pages(story)
+        segment_counter = 0
 
-        for index, page in enumerate(pages, start=1):
-            page_path = output_dir / f"{base_name}_page_{index:03d}.wav"
+        for page in pages:
             text = _page_text(page)
+            segments = _split_segments(text)
 
-            try:
-                if provider == "coqui_tts":
-                    synth = _synthesize_http_provider("coqui_tts", text, page_path, language)
-                elif provider == "xtts":
-                    synth = _synthesize_http_provider("xtts", text, page_path, language, speaker_wav=speaker_wav)
-                else:
-                    synth = _synthesize_system_tts(text, page_path, language)
-            except Exception:
-                synth = _synthesize_system_tts(text, page_path, language)
+            for speaker_name, segment_text in segments:
+                segment_counter += 1
+                segment_path = output_dir / f"{base_name}_seg_{segment_counter:04d}.wav"
 
-            page_paths.append(Path(synth["file_path"]))
+                resolved_speaker_wav = speaker_wav
+                if provider == "xtts":
+                    character_voice_id = voice_map.get(speaker_name.lower()) or voice_map.get("__narrator__", "")
+                    character_wav = _resolve_speaker_wav(character_voice_id)
+                    if character_wav:
+                        resolved_speaker_wav = character_wav
+
+                try:
+                    if provider == "coqui_tts":
+                        synth = _synthesize_http_provider("coqui_tts", segment_text, segment_path, language)
+                    elif provider == "xtts":
+                        synth = _synthesize_http_provider("xtts", segment_text, segment_path, language, speaker_wav=resolved_speaker_wav)
+                    else:
+                        synth = _synthesize_system_tts(segment_text, segment_path, language)
+                except Exception:
+                    synth = _synthesize_system_tts(segment_text, segment_path, language)
+
+                part_paths.append(Path(synth["file_path"]))
 
         final_path = output_dir / f"{base_name}.wav"
-        _merge_wavs(page_paths, final_path)
+        _merge_wavs(part_paths, final_path)
 
         outputs[language] = {
             "id": str(uuid4()),
@@ -282,8 +342,10 @@ def build_audiobook(
             "file_name": final_path.name,
             "file_path": str(final_path),
             "pages_count": len(pages),
+            "segments_count": len(part_paths),
             "engine": f"{provider}-runtime",
             "speaker_wav": speaker_wav if provider == "xtts" else "",
+            "multi_voice": bool(audio_cast),
         }
 
     return outputs
