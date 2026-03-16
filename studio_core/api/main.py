@@ -46,6 +46,7 @@ from studio_core.api.routes.story_layout import router as story_layout_router
 from studio_core.api.routes.system_smoke import router as system_smoke_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
 from studio_core.api.routes.videos import router as videos_router
+from studio_core.api.routes.voice_profiles import router as voice_profiles_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
 from studio_core.services.bootstrap_service import bootstrap_system
 
@@ -111,6 +112,7 @@ app.include_router(local_ai_runtime_router, prefix="/api")
 app.include_router(local_engine_manager_router, prefix="/api")
 app.include_router(local_audio_installer_router, prefix="/api")
 app.include_router(local_audio_engine_manager_router, prefix="/api")
+app.include_router(voice_profiles_router, prefix="/api")
 app.include_router(age_badges_router, prefix="/api")
 app.include_router(covers_router, prefix="/api")
 app.include_router(ip_creator_router, prefix="/api")
