@@ -40,6 +40,7 @@ import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
 import SagaRuntimePanel from "./SagaRuntimePanel.jsx"
 import StoryLayoutPanel from "./StoryLayoutPanel.jsx"
 import SystemSmokePanel from "./SystemSmokePanel.jsx"
+import SystemSmokeV1Panel from "./SystemSmokeV1Panel.jsx"
 import UpdaterPanel from "./UpdaterPanel.jsx"
 import V1ReadinessPanel from "./V1ReadinessPanel.jsx"
 import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
@@ -356,6 +357,7 @@ export default function DashboardPanel({ user }) {
 
       <UpdaterPanel />
       <V1ReadinessPanel user={user} />
+      <SystemSmokeV1Panel />
       <IpCreatorPanel user={user} />
       <SagaRuntimePanel user={user} />
       <LocalAiInstallerPanel />
