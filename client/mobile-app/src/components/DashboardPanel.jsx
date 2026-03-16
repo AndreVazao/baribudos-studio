@@ -20,6 +20,7 @@ import {
   saveSettings
 } from "../api.js"
 import AudioCastPanel from "./AudioCastPanel.jsx"
+import EditorialStudioPanel from "./EditorialStudioPanel.jsx"
 import IllustrationPipelinePanel from "./IllustrationPipelinePanel.jsx"
 import IpBrandingEditorPanel from "./IpBrandingEditorPanel.jsx"
 import IpCanonsEditorPanel from "./IpCanonsEditorPanel.jsx"
@@ -362,6 +363,7 @@ export default function DashboardPanel({ user }) {
       <SagaRuntimePanel user={user} />
       <LocalAiInstallerPanel />
       <LocalAudioInstallerPanel />
+      <EditorialStudioPanel user={user} />
       <VoiceCloningPanel user={user} />
       <AudioCastPanel user={user} />
       <StoryLayoutPanel user={user} />
@@ -573,4 +575,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-    }
+}
