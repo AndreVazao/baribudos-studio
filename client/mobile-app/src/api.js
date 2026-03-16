@@ -845,3 +845,15 @@ export async function previewAudioCast(projectId, payload = {}) {
   }))
     }
 
+export async function getLocalVersionInfo() {
+  return handle(fetch(`${getApiBase()}/updater/local-version`))
+}
+
+export async function checkForUpdates(payload = {}) {
+  return handle(fetch(`${getApiBase()}/updater/check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+    }
+
