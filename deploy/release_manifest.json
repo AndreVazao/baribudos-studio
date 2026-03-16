@@ -1,0 +1,20 @@
+{
+  "app_name": "Baribudos Studio",
+  "release_channel": "stable",
+  "target_version": "0.1.0",
+  "minimum_checks_passed": 8,
+  "required_outputs": [
+    "story_layout",
+    "story_applied",
+    "illustration_pipeline",
+    "cover_or_cover_builder_ready",
+    "audiobook_or_audio_pipeline_ready",
+    "updater_ready",
+    "v1_readiness_ready",
+    "system_smoke_v1_ready"
+  ],
+  "artifacts": {
+    "windows": "BaribudosStudio.exe",
+    "android": "BaribudosStudio.apk"
+  }
+}
