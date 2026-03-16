@@ -21,6 +21,7 @@ __all__ = [
     "voice_preview",
     "audio_cast",
     "audio_cast_preview",
+    "updater",
     "saga_loader",
     "saga_runtime",
     "system_smoke",
