@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from studio_core.services.ai_runtime_bootstrap import start_all
 from studio_core.api.routes.age_badges import router as age_badges_router
 from studio_core.api.routes.audio_cast import router as audio_cast_router
 from studio_core.api.routes.audio_cast_preview import router as audio_cast_preview_router
