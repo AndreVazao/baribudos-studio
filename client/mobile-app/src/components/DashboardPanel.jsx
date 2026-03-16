@@ -19,6 +19,7 @@ import {
   runFactory,
   saveSettings
 } from "../api.js"
+import AudioCastPanel from "./AudioCastPanel.jsx"
 import IllustrationPipelinePanel from "./IllustrationPipelinePanel.jsx"
 import IpBrandingEditorPanel from "./IpBrandingEditorPanel.jsx"
 import IpCanonsEditorPanel from "./IpCanonsEditorPanel.jsx"
@@ -356,6 +357,7 @@ export default function DashboardPanel({ user }) {
       <LocalAiInstallerPanel />
       <LocalAudioInstallerPanel />
       <VoiceCloningPanel user={user} />
+      <AudioCastPanel user={user} />
       <StoryLayoutPanel user={user} />
       <ProductionPipelinePanel user={user} />
       <IllustrationPipelinePanel user={user} />
@@ -565,4 +567,4 @@ export default function DashboardPanel({ user }) {
       </Card>
     </div>
   )
-        }
+    }
