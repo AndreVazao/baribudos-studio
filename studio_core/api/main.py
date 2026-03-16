@@ -46,6 +46,7 @@ from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
 from studio_core.api.routes.story_layout import router as story_layout_router
 from studio_core.api.routes.system_smoke import router as system_smoke_router
+from studio_core.api.routes.system_smoke_v1 import router as system_smoke_v1_router
 from studio_core.api.routes.updater import router as updater_router
 from studio_core.api.routes.users import ensure_default_owner, router as users_router
 from studio_core.api.routes.v1_readiness import router as v1_readiness_router
@@ -107,6 +108,7 @@ app.include_router(videos_router, prefix="/api")
 app.include_router(saga_loader_router, prefix="/api")
 app.include_router(saga_runtime_router, prefix="/api")
 app.include_router(system_smoke_router, prefix="/api")
+app.include_router(system_smoke_v1_router, prefix="/api")
 app.include_router(story_layout_router, prefix="/api")
 app.include_router(illustration_pipeline_router, prefix="/api")
 app.include_router(illustration_assets_router, prefix="/api")
