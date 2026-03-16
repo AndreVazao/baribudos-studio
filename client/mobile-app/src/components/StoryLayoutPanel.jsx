@@ -5,7 +5,10 @@ import {
   deleteStoryLayoutPage,
   getStoryLayout,
   listProjects,
+  moveStoryLayoutPage,
+  moveStoryLayoutText,
   paginateStoryLayout,
+  splitStoryLayoutPage,
   updateStoryLayoutPage
 } from "../api.js"
 
@@ -118,6 +121,47 @@ export default function StoryLayoutPanel({ user }) {
       setLayout(res?.layout || null)
     } catch (error) {
       alert(error?.message || "Erro ao apagar página.")
+    }
+  }
+
+  async function handleMovePage(pageId, direction) {
+    if (!selectedProjectId || !pageId) return
+    try {
+      const res = await moveStoryLayoutPage(selectedProjectId, pageId, direction)
+      setLayout(res?.layout || null)
+    } catch (error) {
+      alert(error?.message || "Erro ao mover página.")
+    }
+  }
+
+  async function handleSplitPage(pageId) {
+    if (!selectedProjectId || !pageId) return
+    try {
+      const res = await splitStoryLayoutPage(selectedProjectId, pageId, "half")
+      setLayout(res?.layout || null)
+    } catch (error) {
+      alert(error?.message || "Erro ao dividir página.")
+    }
+  }
+
+  async function handleMoveParagraph(pageId, direction) {
+    if (!selectedProjectId || !pageId || !layout?.pages?.length) return
+    const pages = layout.pages || []
+    const index = pages.findIndex((page) => page.id === pageId)
+    if (index < 0) return
+
+    const targetIndex = direction === "prev" ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= pages.length) return
+
+    try {
+      const res = await moveStoryLayoutText(selectedProjectId, {
+        from_page_id: pageId,
+        to_page_id: pages[targetIndex].id,
+        mode: direction === "prev" ? "first_paragraph" : "last_paragraph"
+      })
+      setLayout(res?.layout || null)
+    } catch (error) {
+      alert(error?.message || "Erro ao mover texto.")
     }
   }
 
@@ -265,19 +309,49 @@ export default function StoryLayoutPanel({ user }) {
                 /> Cena para série
               </label>
 
-              <button
-                onClick={() => handleDeletePage(page.id)}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: "#b91c1c",
-                  color: "#fff",
-                  cursor: "pointer"
-                }}
-              >
-                Apagar página
-              </button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => handleMovePage(page.id, "up")}
+                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}
+                >
+                  Subir
+                </button>
+
+                <button
+                  onClick={() => handleMovePage(page.id, "down")}
+                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}
+                >
+                  Descer
+                </button>
+
+                <button
+                  onClick={() => handleSplitPage(page.id)}
+                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#92400e", color: "#fff", cursor: "pointer" }}
+                >
+                  Dividir página
+                </button>
+
+                <button
+                  onClick={() => handleMoveParagraph(page.id, "prev")}
+                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#1d4ed8", color: "#fff", cursor: "pointer" }}
+                >
+                  Enviar texto para anterior
+                </button>
+
+                <button
+                  onClick={() => handleMoveParagraph(page.id, "next")}
+                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#1d4ed8", color: "#fff", cursor: "pointer" }}
+                >
+                  Enviar texto para seguinte
+                </button>
+
+                <button
+                  onClick={() => handleDeletePage(page.id)}
+                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#b91c1c", color: "#fff", cursor: "pointer" }}
+                >
+                  Apagar página
+                </button>
+              </div>
             </div>
           ))}
         </div>
