@@ -750,3 +750,43 @@ export async function stopLocalProvider(provider) {
   }))
       }
 
+export async function getLocalAudioStatus() {
+  return handle(fetch(`${getApiBase()}/local-audio/status`))
+}
+
+export async function setupLocalAudio(payload = {}) {
+  return handle(fetch(`${getApiBase()}/local-audio/setup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function setLocalAudioDefaultProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-audio/default-provider`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
+export async function getLocalAudioEngineManagerStatus() {
+  return handle(fetch(`${getApiBase()}/local-audio-engine-manager/status`))
+}
+
+export async function ensureLocalAudioProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-audio-engine-manager/ensure`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
+export async function stopLocalAudioProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-audio-engine-manager/stop`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+                         }
+
