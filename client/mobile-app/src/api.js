@@ -825,3 +825,15 @@ export async function generateVoicePreview(payload = {}) {
   }))
               }
 
+export async function getAudioCast(projectId) {
+  return handle(fetch(`${getApiBase()}/audio-cast/${projectId}`))
+}
+
+export async function saveAudioCast(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/audio-cast/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+    }
+
