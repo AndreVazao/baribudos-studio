@@ -857,3 +857,27 @@ export async function checkForUpdates(payload = {}) {
   }))
     }
 
+export async function moveStoryLayoutPage(projectId, pageId, direction) {
+  return handle(fetch(`${getApiBase()}/story-layout/move-page/${projectId}/${pageId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ direction })
+  }))
+}
+
+export async function splitStoryLayoutPage(projectId, pageId, splitMode = "half") {
+  return handle(fetch(`${getApiBase()}/story-layout/split-page/${projectId}/${pageId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ split_mode: splitMode })
+  }))
+}
+
+export async function moveStoryLayoutText(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/story-layout/move-text/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+  }
+
