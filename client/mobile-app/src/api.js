@@ -837,3 +837,11 @@ export async function saveAudioCast(projectId, payload = {}) {
   }))
     }
 
+export async function previewAudioCast(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/audio-cast-preview/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+    }
+
