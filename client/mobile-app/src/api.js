@@ -722,3 +722,31 @@ export async function setLocalAiDefaultProvider(provider) {
   }))
 }
 
+export async function getLocalEngineManagerStatus() {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/status`))
+}
+
+export async function startLocalProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
+export async function ensureLocalProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/ensure`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
+export async function stopLocalProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/stop`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+      }
+
