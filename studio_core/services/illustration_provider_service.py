@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import base64
 import json
 import os
 import time
-import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any, Dict
@@ -13,9 +12,12 @@ from uuid import uuid4
 from PIL import Image, ImageDraw
 
 from studio_core.core.config import resolve_storage_path
+from studio_core.core.storage import read_json
 
 DEFAULT_PROVIDER = "local_basic"
 DEFAULT_COMFYUI_URL = os.getenv("BARIBUDOS_COMFYUI_URL", "http://127.0.0.1:8188").strip()
+DEFAULT_A1111_URL = os.getenv("BARIBUDOS_A1111_URL", "http://127.0.0.1:7860").strip()
+LOCAL_AI_STATUS_FILE = "data/local_ai_status.json"
 
 
 def _safe_dict(value: Any) -> Dict[str, Any]:
@@ -26,7 +28,13 @@ def _safe_text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _http_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def _generated_dir() -> Path:
+    path = resolve_storage_path("illustrations", "generated")
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _http_json(url: str, payload: Dict[str, Any], timeout: int = 300) -> Dict[str, Any]:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -34,26 +42,39 @@ def _http_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=180) as res:
-        return json.loads(res.read().decode("utf-8"))
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        raw = res.read().decode("utf-8")
+        return json.loads(raw) if raw else {}
 
 
-def _http_get_json(url: str) -> Dict[str, Any]:
+def _http_get_json(url: str, timeout: int = 180) -> Dict[str, Any]:
     req = urllib.request.Request(url, method="GET")
-    with urllib.request.urlopen(req, timeout=180) as res:
-        return json.loads(res.read().decode("utf-8"))
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        raw = res.read().decode("utf-8")
+        return json.loads(raw) if raw else {}
 
 
-def _download_file(url: str, output_path: Path) -> None:
+def _download_file(url: str, output_path: Path, timeout: int = 300) -> None:
     req = urllib.request.Request(url, method="GET")
-    with urllib.request.urlopen(req, timeout=300) as res:
+    with urllib.request.urlopen(req, timeout=timeout) as res:
         output_path.write_bytes(res.read())
 
 
-def _generated_dir() -> Path:
-    path = resolve_storage_path("illustrations", "generated")
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+def _load_local_ai_status() -> Dict[str, Any]:
+    return _safe_dict(read_json(LOCAL_AI_STATUS_FILE, {}))
+
+
+def _provider_url_from_status(provider: str) -> str:
+    status = _load_local_ai_status()
+    providers = _safe_dict(status.get("providers", {}))
+
+    if provider == "automatic1111":
+        return _safe_text(_safe_dict(providers.get("automatic1111", {})).get("api_url")) or DEFAULT_A1111_URL
+
+    if provider == "stable_diffusion":
+        return _safe_text(_safe_dict(providers.get("comfyui", {})).get("api_url")) or DEFAULT_COMFYUI_URL
+
+    return ""
 
 
 def generate_placeholder_image(prompt: str, output_path: Path) -> None:
@@ -106,7 +127,7 @@ def _style_to_prompt_suffix(saga_style: Dict[str, Any] | None) -> str:
     return ", ".join(bit for bit in bits if bit).strip()
 
 
-def _build_comfyui_prompt(prompt: str, saga_style: Dict[str, Any] | None = None) -> str:
+def _build_final_prompt(prompt: str, saga_style: Dict[str, Any] | None = None) -> str:
     suffix = _style_to_prompt_suffix(saga_style)
     final_prompt = _safe_text(prompt)
     if suffix:
@@ -199,11 +220,12 @@ def _comfyui_history_image_url(base_url: str, history: Dict[str, Any], prompt_id
     return ""
 
 
-def generate_comfyui(prompt: str, saga_style: Dict[str, Any] | None = None, base_url: str = DEFAULT_COMFYUI_URL) -> str:
-    final_prompt = _build_comfyui_prompt(prompt, saga_style=saga_style)
+def generate_comfyui(prompt: str, saga_style: Dict[str, Any] | None = None, base_url: str | None = None) -> str:
+    final_prompt = _build_final_prompt(prompt, saga_style=saga_style)
     workflow = _comfyui_basic_workflow(final_prompt)
+    comfy_url = _safe_text(base_url) or _provider_url_from_status("stable_diffusion") or DEFAULT_COMFYUI_URL
 
-    response = _http_json(f"{base_url}/prompt", {"prompt": workflow})
+    response = _http_json(f"{comfy_url}/prompt", {"prompt": workflow})
     prompt_id = _safe_text(response.get("prompt_id"))
     if not prompt_id:
         raise RuntimeError("ComfyUI não devolveu prompt_id.")
@@ -211,14 +233,44 @@ def generate_comfyui(prompt: str, saga_style: Dict[str, Any] | None = None, base
     started = time.time()
     while time.time() - started < 600:
         time.sleep(2)
-        history = _http_get_json(f"{base_url}/history/{prompt_id}")
-        image_url = _comfyui_history_image_url(base_url, history, prompt_id)
+        history = _http_get_json(f"{comfy_url}/history/{prompt_id}")
+        image_url = _comfyui_history_image_url(comfy_url, history, prompt_id)
         if image_url:
             output_path = _generated_dir() / f"illustration_{uuid4()}.png"
             _download_file(image_url, output_path)
             return str(output_path)
 
     raise RuntimeError("Timeout à espera da geração ComfyUI.")
+
+
+def generate_automatic1111(prompt: str, saga_style: Dict[str, Any] | None = None, base_url: str | None = None) -> str:
+    final_prompt = _build_final_prompt(prompt, saga_style=saga_style)
+    a1111_url = _safe_text(base_url) or _provider_url_from_status("automatic1111") or DEFAULT_A1111_URL
+
+    payload = {
+        "prompt": final_prompt,
+        "negative_prompt": "low quality, blurry, distorted, deformed, extra limbs, bad anatomy, text, watermark",
+        "steps": 22,
+        "cfg_scale": 7,
+        "width": 1024,
+        "height": 1024,
+        "sampler_name": "Euler",
+        "batch_size": 1,
+        "n_iter": 1,
+    }
+
+    response = _http_json(f"{a1111_url}/sdapi/v1/txt2img", payload, timeout=600)
+    images = response.get("images", [])
+    if not isinstance(images, list) or not images:
+        raise RuntimeError("Automatic1111 não devolveu imagens.")
+
+    image_b64 = _safe_text(images[0])
+    if not image_b64:
+        raise RuntimeError("Automatic1111 devolveu imagem vazia.")
+
+    output_path = _generated_dir() / f"illustration_{uuid4()}.png"
+    output_path.write_bytes(__import__("base64").b64decode(image_b64))
+    return str(output_path)
 
 
 def generate_stable_diffusion(prompt: str, saga_style: Dict[str, Any] | None = None) -> str:
@@ -239,6 +291,8 @@ def generate_illustration(
     try:
         if provider == "stable_diffusion":
             path = generate_stable_diffusion(prompt, saga_style=saga_style)
+        elif provider == "automatic1111":
+            path = generate_automatic1111(prompt, saga_style=saga_style)
         elif provider == "openai":
             path = generate_cloud_openai(prompt, saga_style=saga_style)
         else:
@@ -262,4 +316,4 @@ def generate_illustration(
             "ok": False,
             "fallback_used": True,
             "error": str(exc),
-    }
+}
