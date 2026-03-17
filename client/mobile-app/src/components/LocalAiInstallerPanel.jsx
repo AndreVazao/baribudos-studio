@@ -2,11 +2,9 @@ import { useEffect, useState } from "react"
 import {
   ensureLocalProvider,
   getLocalAiRuntimeStatus,
-  getLocalAiStatus,
   getLocalEngineManagerStatus,
   setLocalAiDefaultProvider,
   setupLocalAi,
-  startLocalProvider,
   stopLocalProvider
 } from "../api.js"
 
@@ -43,18 +41,29 @@ export default function LocalAiInstallerPanel() {
 
   async function loadAll() {
     try {
-      const [statusRes, runtimeRes, managerRes] = await Promise.all([
-        getLocalAiStatus(),
+      const [runtimeRes, managerRes] = await Promise.all([
         getLocalAiRuntimeStatus(),
         getLocalEngineManagerStatus()
       ])
 
-      const nextStatus = statusRes?.status || null
-      setStatus(nextStatus)
-      setRuntime(runtimeRes?.runtime || null)
-      setManager(managerRes?.status || null)
-      setDefaultProviderState(nextStatus?.default_provider || "stable_diffusion")
-      setInstallRoot(nextStatus?.paths?.root || "")
+      const nextRuntime = runtimeRes?.runtime || runtimeRes || null
+      const nextManager = managerRes?.status || managerRes || null
+
+      setRuntime(nextRuntime)
+      setManager(nextManager)
+      setStatus({
+        os: nextManager?.os || runtimeRes?.os || "-",
+        default_provider: nextManager?.default_provider || "stable_diffusion",
+        requirements: {
+          python: true,
+          git: true
+        },
+        paths: {
+          root: nextManager?.root_path || ""
+        }
+      })
+      setDefaultProviderState(nextManager?.default_provider || "stable_diffusion")
+      setInstallRoot(nextManager?.root_path || "")
     } catch {
       setStatus(null)
       setRuntime(null)
@@ -68,7 +77,7 @@ export default function LocalAiInstallerPanel() {
         install_root: installRoot || undefined
       })
       await loadAll()
-      alert("Local AI configurada. Agora executa o script de setup no PC.")
+      alert("Local AI configurada.")
     } catch (error) {
       alert(error?.message || "Erro ao configurar Local AI.")
     }
@@ -91,16 +100,6 @@ export default function LocalAiInstallerPanel() {
       alert(`Provider ${provider} pronta ou já ativa.`)
     } catch (error) {
       alert(error?.message || `Erro ao garantir provider ${provider}.`)
-    }
-  }
-
-  async function handleStart(provider) {
-    try {
-      await startLocalProvider(provider)
-      await loadAll()
-      alert(`Provider ${provider} arrancada.`)
-    } catch (error) {
-      alert(error?.message || `Erro ao arrancar provider ${provider}.`)
     }
   }
 
@@ -297,4 +296,4 @@ export default function LocalAiInstallerPanel() {
       ) : null}
     </Card>
   )
-      }
+        }
