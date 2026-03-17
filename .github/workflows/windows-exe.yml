@@ -15,15 +15,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: client/mobile-app/package-lock.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
         working-directory: client/mobile-app
-        run: npm ci
+        run: npm install
 
       - name: Build Windows EXE
         working-directory: client/mobile-app
@@ -35,5 +33,4 @@ jobs:
           name: BaribudosStudio-windows
           path: |
             client/mobile-app/src-tauri/target/release/*.exe
-            client/mobile-app/src-tauri/target/release/bundle/**/*.msi
-            client/mobile-app/src-tauri/target/release/bundle/**/*.exe
+            client/mobile-app/src-tauri/target/release/bundle/**
