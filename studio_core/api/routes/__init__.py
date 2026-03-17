@@ -27,6 +27,7 @@ __all__ = [
     "editorial_engine",
     "editorial_production",
     "editorial_media_pipeline",
+    "final_media_render",
     "saga_loader",
     "saga_runtime",
     "system_smoke",
