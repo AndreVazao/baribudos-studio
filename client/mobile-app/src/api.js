@@ -661,3 +661,20 @@ export async function downloadUpdate(payload = {}) {
   return post(`${getApiBase()}/updater/download`, payload)
                  }
 
+export async function uploadVoiceSample({ name, language = "", notes = "", file }) {
+  const form = new FormData()
+  form.append("name", name || "Nova voz")
+  form.append("language", language || "")
+  form.append("notes", notes || "")
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/voice-library/upload`, {
+    method: "POST",
+    body: form
+  }))
+}
+
+export async function generateVoicePreview(payload = {}) {
+  return post(`${getApiBase()}/voice-preview`, payload)
+              }
+
