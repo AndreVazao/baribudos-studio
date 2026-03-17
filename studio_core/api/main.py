@@ -17,6 +17,7 @@ from studio_core.api.routes.editorial_media_pipeline import router as editorial_
 from studio_core.api.routes.editorial_production import router as editorial_production_router
 from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
+from studio_core.api.routes.final_media_render import router as final_media_render_router
 from studio_core.api.routes.health import router as health_router
 from studio_core.api.routes.illustration_assets import router as illustration_assets_router
 from studio_core.api.routes.illustration_generation import router as illustration_generation_router
@@ -118,6 +119,7 @@ app.include_router(story_layout_router, prefix="/api")
 app.include_router(editorial_engine_router, prefix="/api")
 app.include_router(editorial_production_router, prefix="/api")
 app.include_router(editorial_media_pipeline_router, prefix="/api")
+app.include_router(final_media_render_router, prefix="/api")
 app.include_router(illustration_pipeline_router, prefix="/api")
 app.include_router(illustration_assets_router, prefix="/api")
 app.include_router(illustration_generation_router, prefix="/api")
