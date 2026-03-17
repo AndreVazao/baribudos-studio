@@ -957,4 +957,17 @@ export async function editorialToStoryboard(projectId) {
   }))
   }
 
+export async function generateEditorialIllustrations(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/editorial-media/generate-illustrations/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function buildEditorialVideoPackage(projectId) {
+  return handle(fetch(`${getApiBase()}/editorial-media/build-video-package/${projectId}`, {
+    method: "POST"
+  }))
+}
 
