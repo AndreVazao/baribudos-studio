@@ -5,10 +5,12 @@ import {
   editorialToIllustrations,
   editorialToStoryboard,
   editorialToStory,
+  exportEditorialEpub,
   generateEditorialIllustrations,
   listProjects,
   mergeEditorialPages,
   previewEditorialEngine,
+  renderFinalVideo,
   repaginateEditorialEngine,
   splitEditorialPage
 } from "../api.js"
@@ -214,6 +216,26 @@ export default function EditorialStudioPanel({ user }) {
     }
   }
 
+  async function handleRenderVideo() {
+    if (!selectedProjectId) return
+    try {
+      await renderFinalVideo(selectedProjectId)
+      alert("Vídeo final renderizado.")
+    } catch (error) {
+      alert(error?.message || "Erro ao renderizar vídeo.")
+    }
+  }
+
+  async function handleExportEpub() {
+    if (!selectedProjectId) return
+    try {
+      await exportEditorialEpub(selectedProjectId, {})
+      alert("EPUB exportado.")
+    } catch (error) {
+      alert(error?.message || "Erro ao exportar EPUB.")
+    }
+  }
+
   const visiblePages = preview?.pages || editorial?.pages || []
 
   return (
@@ -315,6 +337,10 @@ export default function EditorialStudioPanel({ user }) {
           Aplicar à story
         </button>
 
+        <button onClick={handleExportEpub} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#6d28d9", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Exportar EPUB
+        </button>
+
         <button onClick={handleIllustrationQueue} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
           Criar fila ilustração
         </button>
@@ -329,6 +355,10 @@ export default function EditorialStudioPanel({ user }) {
 
         <button onClick={handleVideoPackage} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#374151", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
           Criar pacote vídeo
+        </button>
+
+        <button onClick={handleRenderVideo} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#111827", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Render vídeo final
         </button>
       </div>
 
@@ -388,4 +418,4 @@ export default function EditorialStudioPanel({ user }) {
       ) : null}
     </Card>
   )
-    }
+        }
