@@ -937,4 +937,24 @@ export async function splitEditorialPage(projectId, payload = {}) {
   }))
     }
 
+export async function editorialToStory(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/editorial-production/story/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function editorialToIllustrations(projectId) {
+  return handle(fetch(`${getApiBase()}/editorial-production/illustrations/${projectId}`, {
+    method: "POST"
+  }))
+}
+
+export async function editorialToStoryboard(projectId) {
+  return handle(fetch(`${getApiBase()}/editorial-production/storyboard/${projectId}`, {
+    method: "POST"
+  }))
+  }
+
 
