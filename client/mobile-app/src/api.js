@@ -127,16 +127,22 @@ export function resolveBackendFileUrl(filePath) {
 
 export const normalizeMediaUrl = resolveBackendFileUrl
 
-export async function healthCheck() {
-  return get(`${getApiBase()}/health`)
+export async function healthCheck(customBase = "") {
+  const base = customBase ? normalizeApiUrl(customBase) : getApiBase()
+  return get(`${base}/health`)
 }
 
-export async function diagnostics() {
-  return get(`${getApiBase()}/diagnostics`)
+export async function diagnostics(customBase = "") {
+  const base = customBase ? normalizeApiUrl(customBase) : getApiBase()
+  return get(`${base}/diagnostics`)
 }
 
 export async function listUsers() {
   return get(`${getApiBase()}/users`)
+}
+
+export async function login(name, pin) {
+  return post(`${getApiBase()}/users/login`, { name, pin })
 }
 
 export async function getSettings() {
@@ -175,6 +181,13 @@ export async function createProject(payload = {}) {
   return post(`${getApiBase()}/projects`, payload)
 }
 
+export async function updateProject(projectId, payload = {}, user = {}) {
+  return patch(`${getApiBase()}/projects/${projectId}${qs({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`, payload)
+}
+
 export async function listJobs() {
   return get(`${getApiBase()}/jobs`)
 }
@@ -209,7 +222,223 @@ export async function listIps(user = {}) {
     user_name: user?.name || "",
     user_role: user?.role || ""
   })}`)
-    }
+}
+
+export async function createIp(payload = {}) {
+  return post(`${getApiBase()}/ip-creator`, payload)
+}
+
+export async function getIpBySlug(slug, user = {}) {
+  return get(`${getApiBase()}/ip-creator/${slug}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function getIpPermissions(slug, user = {}) {
+  return get(`${getApiBase()}/ip-creator/${slug}/permissions${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+                       }
+
+export async function getIpBranding(slug, user = {}) {
+  return get(`${getApiBase()}/ip-branding/${slug}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function updateIpBranding(slug, brandAssets = {}, user = {}) {
+  return patch(`${getApiBase()}/ip-branding/${slug}`, {
+    brand_assets: brandAssets,
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
+}
+
+export async function uploadIpBrandingAsset(slug, assetType, file, user = {}) {
+  const form = new FormData()
+  form.append("asset_type", assetType)
+  form.append("user_id", user?.id || "")
+  form.append("user_name", user?.name || "")
+  form.append("user_role", user?.role || "")
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/ip-branding/${slug}/upload`, {
+    method: "POST",
+    body: form
+  }))
+}
+
+export async function getIpPalette(slug, user = {}) {
+  return get(`${getApiBase()}/ip-palette/${slug}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function updateIpPalette(slug, palette = {}, user = {}) {
+  return patch(`${getApiBase()}/ip-palette/${slug}`, {
+    palette,
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
+}
+
+export async function getIpCharacters(slug, user = {}) {
+  return get(`${getApiBase()}/ip-characters/${slug}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function updateIpCharacters(slug, mainCharacters = [], user = {}) {
+  return patch(`${getApiBase()}/ip-characters/${slug}`, {
+    main_characters: mainCharacters,
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
+}
+
+export async function getIpCanon(slug, canonType, user = {}) {
+  return get(`${getApiBase()}/ip-canons/${slug}/${canonType}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function updateIpCanon(slug, canonType, data = {}, user = {}) {
+  return patch(`${getApiBase()}/ip-canons/${slug}/${canonType}`, {
+    data,
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
+}
+
+export async function getIpMetadata(slug, user = {}) {
+  return get(`${getApiBase()}/ip-metadata/${slug}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function updateIpMetadata(slug, payload = {}, user = {}) {
+  return patch(`${getApiBase()}/ip-metadata/${slug}`, {
+    metadata: payload?.metadata || {},
+    default_language: payload?.default_language || "pt-PT",
+    output_languages: payload?.output_languages || ["pt-PT"],
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
+}
+
+export async function getSagaRuntime(slug) {
+  return get(`${getApiBase()}/saga-runtime/${slug}`)
+}
+
+export async function buildCover(payload = {}) {
+  return post(`${getApiBase()}/covers/build`, payload)
+}
+
+export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
+  const form = new FormData()
+  form.append("saga_id", sagaId)
+  form.append("project_id", projectId)
+  form.append("file", file)
+
+  return handle(fetch(`${getApiBase()}/illustrations/upload`, {
+    method: "POST",
+    body: form
+  }))
+}
+
+export async function getProjectCommercial(projectId) {
+  return get(`${getApiBase()}/project-commercial/${projectId}`)
+}
+
+export async function updateProjectCommercial(projectId, commercial = {}, user = {}) {
+  return patch(`${getApiBase()}/project-commercial/${projectId}${qs({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`, { commercial })
+}
+
+export async function getPublicationPackage(projectId) {
+  return get(`${getApiBase()}/publication-package/${projectId}`)
+}
+
+export async function freezePublicationPackage(projectId, user = {}) {
+  return post(`${getApiBase()}/publication-package/${projectId}/freeze${qs({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function getPublishReadiness(projectId) {
+  return get(`${getApiBase()}/publish-readiness/${projectId}`)
+}
+
+export async function markProjectReady(projectId, user = {}) {
+  return post(`${getApiBase()}/publish-readiness/${projectId}/mark-ready${qs({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function unmarkProjectReady(projectId, user = {}) {
+  return post(`${getApiBase()}/publish-readiness/${projectId}/unmark-ready${qs({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function getProjectIntegrity(projectId) {
+  return get(`${getApiBase()}/project-integrity/${projectId}`)
+}
+
+export async function repairProject(projectId, user = {}) {
+  return post(`${getApiBase()}/project-integrity/${projectId}/repair${qs({
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function listProductionRuns() {
+  return get(`${getApiBase()}/production-pipeline`)
+}
+
+export async function runProductionPipeline(projectId, payload = {}) {
+  return post(`${getApiBase()}/production-pipeline/run/${projectId}`, payload)
+}
+
+export async function listSystemSmokeResults() {
+  return get(`${getApiBase()}/system-smoke`)
+}
+
+export async function runSystemSmoke(projectId) {
+  return post(`${getApiBase()}/system-smoke/${projectId}`)
+}
+
+export async function runSystemSmokeV1() {
+  return get(`${getApiBase()}/system-smoke-v1`)
+}
+
+export async function getV1Readiness(projectId) {
+  return get(`${getApiBase()}/v1-readiness/${projectId}`)
+}
 
 export async function getStoryLayout(projectId) {
   return get(`${getApiBase()}/story-layout/${projectId}`)
@@ -251,6 +480,38 @@ export async function listVoiceSamples() {
   return get(`${getApiBase()}/voice-library/samples`)
 }
 
+export async function setupLocalAi(payload = {}) {
+  return post(`${getApiBase()}/local-ai-installer/setup`, payload)
+}
+
+export async function ensureLocalProvider(provider) {
+  return post(`${getApiBase()}/local-engine-manager/ensure`, { provider })
+}
+
+export async function stopLocalProvider(provider) {
+  return post(`${getApiBase()}/local-engine-manager/stop`, { provider })
+}
+
+export async function setLocalAiDefaultProvider(provider) {
+  return post(`${getApiBase()}/local-engine-manager/default-provider`, { provider })
+}
+
+export async function getLocalAiRuntimeStatus() {
+  return get(`${getApiBase()}/local-ai-runtime/status`)
+}
+
+export async function getLocalEngineManagerStatus() {
+  return get(`${getApiBase()}/local-engine-manager/status`)
+}
+
+export async function setupLocalAudio(payload = {}) {
+  return post(`${getApiBase()}/local-audio-installer/setup`, payload)
+}
+
+export async function getLocalAudioEngineManagerStatus() {
+  return get(`${getApiBase()}/local-audio-engine-manager/status`)
+}
+
 export async function getIllustrationPipeline(projectId) {
   return get(`${getApiBase()}/illustration-pipeline/${projectId}`)
 }
@@ -261,6 +522,10 @@ export async function getIllustrationPromptPackage(projectId) {
 
 export async function getStoryboardManifest(projectId) {
   return get(`${getApiBase()}/illustration-assets/storyboard/${projectId}`)
+}
+
+export async function listIllustrationRuns() {
+  return get(`${getApiBase()}/illustration-pipeline`)
 }
 
 export async function listIllustrationJobs(projectId = "") {
@@ -306,30 +571,6 @@ export async function importGeneratedIllustrationFrame({ projectId, frameId, fil
     method: "POST",
     body: form
   }))
-}
-
-export async function setupLocalAi(payload = {}) {
-  return post(`${getApiBase()}/local-ai-installer/setup`, payload)
-}
-
-export async function ensureLocalProvider(provider) {
-  return post(`${getApiBase()}/local-engine-manager/ensure`, { provider })
-}
-
-export async function stopLocalProvider(provider) {
-  return post(`${getApiBase()}/local-engine-manager/stop`, { provider })
-}
-
-export async function setLocalAiDefaultProvider(provider) {
-  return post(`${getApiBase()}/local-engine-manager/default-provider`, { provider })
-}
-
-export async function getLocalAiRuntimeStatus() {
-  return get(`${getApiBase()}/local-ai-runtime/status`)
-}
-
-export async function getLocalEngineManagerStatus() {
-  return get(`${getApiBase()}/local-engine-manager/status`)
 }
 
 export async function buildEditorialEngine(projectId, payload = {}) {
@@ -390,284 +631,5 @@ export async function checkForUpdates(payload = {}) {
 
 export async function downloadUpdate(payload = {}) {
   return post(`${getApiBase()}/updater/download`, payload)
-}
-
-export async function runSystemSmokeV1() {
-  return get(`${getApiBase()}/system-smoke-v1`)
-}
-
-export async function getV1Readiness(projectId) {
-  return get(`${getApiBase()}/v1-readiness/${projectId}`)
-    }
-
-// ================= IP BRANDING =================
-
-export async function getIpBranding(slug, user = {}) {
-  return get(`${getApiBase()}/ip-branding/${slug}${qs({
-    user_id: user?.id,
-    user_name: user?.name,
-    user_role: user?.role
-  })}`)
-}
-
-export async function updateIpBranding(slug, brandAssets = {}, user = {}) {
-  return patch(`${getApiBase()}/ip-branding/${slug}`, {
-    brand_assets: brandAssets,
-    user_id: user?.id,
-    user_name: user?.name,
-    user_role: user?.role
-  })
-    }
-
-// ================= IP CREATOR / LOOKUPS =================
-
-export async function getIpBySlug(slug, user = {}) {
-  return get(`${getApiBase()}/ip-creator/${slug}${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function getIpPermissions(slug, user = {}) {
-  return get(`${getApiBase()}/ip-creator/${slug}/permissions${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function createIp(payload = {}) {
-  return post(`${getApiBase()}/ip-creator`, payload)
-}
-
-// ================= IP BRANDING =================
-
-export async function getIpBranding(slug, user = {}) {
-  return get(`${getApiBase()}/ip-branding/${slug}${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function updateIpBranding(slug, brandAssets = {}, user = {}) {
-  return patch(`${getApiBase()}/ip-branding/${slug}`, {
-    brand_assets: brandAssets,
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })
-}
-
-export async function uploadIpBrandingAsset(slug, assetType, file, user = {}) {
-  const form = new FormData()
-  form.append("asset_type", assetType)
-  form.append("user_id", user?.id || "")
-  form.append("user_name", user?.name || "")
-  form.append("user_role", user?.role || "")
-  form.append("file", file)
-
-  return handle(fetch(`${getApiBase()}/ip-branding/${slug}/upload`, {
-    method: "POST",
-    body: form
-  }))
-}
-
-// ================= IP PALETTE =================
-
-export async function getIpPalette(slug, user = {}) {
-  return get(`${getApiBase()}/ip-palette/${slug}${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function updateIpPalette(slug, palette = {}, user = {}) {
-  return patch(`${getApiBase()}/ip-palette/${slug}`, {
-    palette,
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })
-}
-
-// ================= IP CHARACTERS =================
-
-export async function getIpCharacters(slug, user = {}) {
-  return get(`${getApiBase()}/ip-characters/${slug}${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function updateIpCharacters(slug, mainCharacters = [], user = {}) {
-  return patch(`${getApiBase()}/ip-characters/${slug}`, {
-    main_characters: mainCharacters,
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })
-}
-
-// ================= IP CANONS =================
-
-export async function getIpCanon(slug, canonType, user = {}) {
-  return get(`${getApiBase()}/ip-canons/${slug}/${canonType}${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function updateIpCanon(slug, canonType, data = {}, user = {}) {
-  return patch(`${getApiBase()}/ip-canons/${slug}/${canonType}`, {
-    data,
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })
-}
-
-// ================= IP METADATA =================
-
-export async function getIpMetadata(slug, user = {}) {
-  return get(`${getApiBase()}/ip-metadata/${slug}${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function updateIpMetadata(slug, payload = {}, user = {}) {
-  return patch(`${getApiBase()}/ip-metadata/${slug}`, {
-    metadata: payload?.metadata || {},
-    default_language: payload?.default_language || "pt-PT",
-    output_languages: payload?.output_languages || ["pt-PT"],
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })
-}
-
-// ================= COVER BUILDER =================
-
-export async function buildCover(payload = {}) {
-  return post(`${getApiBase()}/covers/build`, payload)
-}
-
-export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
-  const form = new FormData()
-  form.append("saga_id", sagaId)
-  form.append("project_id", projectId)
-  form.append("file", file)
-
-  return handle(fetch(`${getApiBase()}/illustrations/upload`, {
-    method: "POST",
-    body: form
-  }))
-                                                   }
-
-// ================= PROJECT / PUBLISH / READINESS =================
-
-export async function getProjectCommercial(projectId) {
-  return get(`${getApiBase()}/project-commercial/${projectId}`)
-}
-
-export async function updateProjectCommercial(projectId, commercial = {}, user = {}) {
-  return patch(`${getApiBase()}/project-commercial/${projectId}${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`, { commercial })
-}
-
-export async function getPublicationPackage(projectId) {
-  return get(`${getApiBase()}/publication-package/${projectId}`)
-}
-
-export async function freezePublicationPackage(projectId, user = {}) {
-  return post(`${getApiBase()}/publication-package/${projectId}/freeze${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function getPublishReadiness(projectId) {
-  return get(`${getApiBase()}/publish-readiness/${projectId}`)
-}
-
-export async function markProjectReady(projectId, user = {}) {
-  return post(`${getApiBase()}/publish-readiness/${projectId}/mark-ready${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function unmarkProjectReady(projectId, user = {}) {
-  return post(`${getApiBase()}/publish-readiness/${projectId}/unmark-ready${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function getProjectIntegrity(projectId) {
-  return get(`${getApiBase()}/project-integrity/${projectId}`)
-}
-
-export async function repairProject(projectId, user = {}) {
-  return post(`${getApiBase()}/project-integrity/${projectId}/repair${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
-}
-
-export async function getSagaRuntime(slug) {
-  return get(`${getApiBase()}/saga-runtime/${slug}`)
-}
-
-export async function runSystemSmoke(projectId) {
-  return post(`${getApiBase()}/system-smoke/${projectId}`)
-}
-
-export async function listSystemSmokeResults() {
-  return get(`${getApiBase()}/system-smoke`)
-}
-
-export async function runProductionPipeline(projectId, payload = {}) {
-  return post(`${getApiBase()}/production-pipeline/run/${projectId}`, payload)
-}
-
-export async function listProductionRuns() {
-  return get(`${getApiBase()}/production-pipeline`)
-}
-
-export async function setupLocalAudio(payload = {}) {
-  return post(`${getApiBase()}/local-audio-installer/setup`, payload)
-}
-
-export async function getLocalAudioEngineManagerStatus() {
-  return get(`${getApiBase()}/local-audio-engine-manager/status`)
-}
-
-export async function getLocalVersionInfo() {
-  return get(`${getApiBase()}/updater/local-version`)
-}
-
-export async function checkForUpdates(payload = {}) {
-  return post(`${getApiBase()}/updater/check`, payload)
-}
-
-export async function downloadUpdate(payload = {}) {
-  return post(`${getApiBase()}/updater/download`, payload)
-}
-
-export async function runSystemSmokeV1() {
-  return get(`${getApiBase()}/system-smoke-v1`)
-}
-
-export async function getV1Readiness(projectId) {
-  return get(`${getApiBase()}/v1-readiness/${projectId}`)
-}
+  }
 
