@@ -13,6 +13,8 @@ from studio_core.api.routes.audiobooks import router as audiobooks_router
 from studio_core.api.routes.covers import router as covers_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.editorial_engine import router as editorial_engine_router
+from studio_core.api.routes.editorial_media_pipeline import router as editorial_media_pipeline_router
+from studio_core.api.routes.editorial_production import router as editorial_production_router
 from studio_core.api.routes.ebooks import router as ebooks_router
 from studio_core.api.routes.factory import router as factory_router
 from studio_core.api.routes.health import router as health_router
@@ -114,6 +116,8 @@ app.include_router(system_smoke_router, prefix="/api")
 app.include_router(system_smoke_v1_router, prefix="/api")
 app.include_router(story_layout_router, prefix="/api")
 app.include_router(editorial_engine_router, prefix="/api")
+app.include_router(editorial_production_router, prefix="/api")
+app.include_router(editorial_media_pipeline_router, prefix="/api")
 app.include_router(illustration_pipeline_router, prefix="/api")
 app.include_router(illustration_assets_router, prefix="/api")
 app.include_router(illustration_generation_router, prefix="/api")
