@@ -142,3 +142,15 @@ export async function runIllustrationProvider(projectId, payload = {}) {
   return post(`${getApiBase()}/illustration-provider/run/${projectId}`, payload)
   }
 
+export async function buildEditorialEngine(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/engine/${projectId}`, payload)
+}
+
+export async function buildEditorialVideoPackage(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/video-package/${projectId}`, payload)
+}
+
+export async function editorialToIllustrations(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/to-illustrations/${projectId}`, payload)
+}
+
