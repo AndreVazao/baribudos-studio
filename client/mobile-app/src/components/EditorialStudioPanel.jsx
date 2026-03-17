@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   buildEditorialEngine,
+  buildEditorialVideoPackage,
   editorialToIllustrations,
   editorialToStoryboard,
   editorialToStory,
+  generateEditorialIllustrations,
   listProjects,
   mergeEditorialPages,
   previewEditorialEngine,
@@ -182,6 +184,16 @@ export default function EditorialStudioPanel({ user }) {
     }
   }
 
+  async function handleGenerateIllustrations() {
+    if (!selectedProjectId) return
+    try {
+      await generateEditorialIllustrations(selectedProjectId, {})
+      alert("Ilustrações geradas.")
+    } catch (error) {
+      alert(error?.message || "Erro ao gerar ilustrações.")
+    }
+  }
+
   async function handleStoryboard() {
     if (!selectedProjectId) return
     try {
@@ -189,6 +201,16 @@ export default function EditorialStudioPanel({ user }) {
       alert("Storyboard criada.")
     } catch (error) {
       alert(error?.message || "Erro ao criar storyboard.")
+    }
+  }
+
+  async function handleVideoPackage() {
+    if (!selectedProjectId) return
+    try {
+      await buildEditorialVideoPackage(selectedProjectId)
+      alert("Pacote de vídeo criado.")
+    } catch (error) {
+      alert(error?.message || "Erro ao criar pacote de vídeo.")
     }
   }
 
@@ -297,8 +319,16 @@ export default function EditorialStudioPanel({ user }) {
           Criar fila ilustração
         </button>
 
+        <button onClick={handleGenerateIllustrations} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#15803d", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Gerar ilustrações
+        </button>
+
         <button onClick={handleStoryboard} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#be185d", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
           Criar storyboard
+        </button>
+
+        <button onClick={handleVideoPackage} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#374151", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Criar pacote vídeo
         </button>
       </div>
 
@@ -358,4 +388,4 @@ export default function EditorialStudioPanel({ user }) {
       ) : null}
     </Card>
   )
-        }
+    }
