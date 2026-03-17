@@ -154,3 +154,21 @@ export async function editorialToIllustrations(projectId, payload = {}) {
   return post(`${getApiBase()}/editorial/to-illustrations/${projectId}`, payload)
 }
 
+// ================= EDITORIAL ENGINE =================
+
+export async function previewEditorialEngine(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/preview/${projectId}`, payload)
+}
+
+export async function mergeEditorialPages(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/merge-pages/${projectId}`, payload)
+}
+
+export async function repaginateEditorialEngine(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/repaginate/${projectId}`, payload)
+}
+
+export async function renderFinalVideo(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/render-video/${projectId}`, payload)
+  }
+
