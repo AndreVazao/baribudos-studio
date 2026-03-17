@@ -649,3 +649,11 @@ export async function setLocalAudioDefaultProvider(provider) {
   return post(`${getApiBase()}/local-audio-engine-manager/default-provider`, { provider })
     }
 
+export async function moveStoryLayoutPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/move-page/${projectId}`, payload)
+}
+
+export async function moveStoryLayoutText(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/move-text/${projectId}`, payload)
+}
+
