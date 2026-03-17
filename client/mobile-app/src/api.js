@@ -47,6 +47,31 @@ export function clearSavedUser() {
   localStorage.removeItem(USER_KEY)
 }
 
+function getApiOrigin() {
+  return getApiBase().replace(/\/api$/, "")
+}
+
+export function resolveBackendFileUrl(filePath) {
+  const path = String(filePath || "").trim()
+  if (!path) return ""
+
+  if (/^https?:\/\//i.test(path)) {
+    return path
+  }
+
+  const marker = "/storage/"
+  const normalized = path.replace(/\\/g, "/")
+  const index = normalized.indexOf(marker)
+
+  if (index >= 0) {
+    return `${getApiOrigin()}${normalized.slice(index)}`
+  }
+
+  return ""
+}
+
+export const normalizeMediaUrl = resolveBackendFileUrl
+
 async function handle(resPromise) {
   const res = await resPromise
   let data = null
@@ -101,31 +126,6 @@ function qs(params = {}) {
   const built = search.toString()
   return built ? `?${built}` : ""
 }
-
-function getApiOrigin() {
-  return getApiBase().replace(/\/api$/, "")
-}
-
-export function resolveBackendFileUrl(filePath) {
-  const path = String(filePath || "").trim()
-  if (!path) return ""
-
-  if (/^https?:\/\//i.test(path)) {
-    return path
-  }
-
-  const marker = "/storage/"
-  const normalized = path.replace(/\\/g, "/")
-  const index = normalized.indexOf(marker)
-
-  if (index >= 0) {
-    return `${getApiOrigin()}${normalized.slice(index)}`
-  }
-
-  return ""
-}
-
-export const normalizeMediaUrl = resolveBackendFileUrl
 
 export async function healthCheck(customBase = "") {
   const base = customBase ? normalizeApiUrl(customBase) : getApiBase()
@@ -242,7 +242,7 @@ export async function getIpPermissions(slug, user = {}) {
     user_name: user?.name || "",
     user_role: user?.role || ""
   })}`)
-                       }
+}
 
 export async function getIpBranding(slug, user = {}) {
   return get(`${getApiBase()}/ip-branding/${slug}${qs({
@@ -464,6 +464,18 @@ export async function applyStoryLayout(projectId, payload = {}) {
   return post(`${getApiBase()}/story-layout/apply/${projectId}`, payload)
 }
 
+export async function moveStoryLayoutPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/move-page/${projectId}`, payload)
+}
+
+export async function moveStoryLayoutText(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/move-text/${projectId}`, payload)
+}
+
+export async function splitStoryLayoutPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/split-page/${projectId}`, payload)
+}
+
 export async function getAudioCast(projectId) {
   return get(`${getApiBase()}/audio-cast/${projectId}`)
 }
@@ -506,6 +518,22 @@ export async function getLocalEngineManagerStatus() {
 
 export async function setupLocalAudio(payload = {}) {
   return post(`${getApiBase()}/local-audio-installer/setup`, payload)
+}
+
+export async function getLocalAudioStatus() {
+  return get(`${getApiBase()}/local-audio-installer/status`)
+}
+
+export async function ensureLocalAudioProvider(provider) {
+  return post(`${getApiBase()}/local-audio-engine-manager/ensure`, { provider })
+}
+
+export async function stopLocalAudioProvider(provider) {
+  return post(`${getApiBase()}/local-audio-engine-manager/stop`, { provider })
+}
+
+export async function setLocalAudioDefaultProvider(provider) {
+  return post(`${getApiBase()}/local-audio-engine-manager/default-provider`, { provider })
 }
 
 export async function getLocalAudioEngineManagerStatus() {
@@ -631,69 +659,5 @@ export async function checkForUpdates(payload = {}) {
 
 export async function downloadUpdate(payload = {}) {
   return post(`${getApiBase()}/updater/download`, payload)
-  }
-
-export async function getLocalAudioStatus() {
-  return get(`${getApiBase()}/local-audio-installer/status`)
-}
-
-export async function ensureLocalAudioProvider(provider) {
-  return post(`${getApiBase()}/local-audio-engine-manager/ensure`, { provider })
-}
-
-export async function stopLocalAudioProvider(provider) {
-  return post(`${getApiBase()}/local-audio-engine-manager/stop`, { provider })
-}
-
-export async function setLocalAudioDefaultProvider(provider) {
-  return post(`${getApiBase()}/local-audio-engine-manager/default-provider`, { provider })
-    }
-
-export async function moveStoryLayoutPage(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/move-page/${projectId}`, payload)
-}
-
-export async function moveStoryLayoutText(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/move-text/${projectId}`, payload)
-}
-
-export async function splitStoryLayoutPage(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/split-page/${projectId}`, payload)
-    }
-
-export async function getStoryLayout(projectId) {
-  return get(`${getApiBase()}/story-layout/${projectId}`)
-}
-
-export async function paginateStoryLayout(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/paginate/${projectId}`, payload)
-}
-
-export async function updateStoryLayoutPage(projectId, pageId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`, payload)
-}
-
-export async function createStoryLayoutPage(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/page/${projectId}`, payload)
-}
-
-export async function deleteStoryLayoutPage(projectId, pageId) {
-  return del(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`)
-}
-
-export async function applyStoryLayout(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/apply/${projectId}`, payload)
-}
-
-export async function moveStoryLayoutPage(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/move-page/${projectId}`, payload)
-}
-
-export async function moveStoryLayoutText(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/move-text/${projectId}`, payload)
-}
-
-export async function splitStoryLayoutPage(projectId, payload = {}) {
-  return post(`${getApiBase()}/story-layout/split-page/${projectId}`, payload)
-                                       }
+                 }
 
