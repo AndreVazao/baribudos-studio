@@ -172,3 +172,7 @@ export async function renderFinalVideo(projectId, payload = {}) {
   return post(`${getApiBase()}/editorial/render-video/${projectId}`, payload)
   }
 
+export async function splitEditorialPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial/split-page/${projectId}`, payload)
+ }
+
