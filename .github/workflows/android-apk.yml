@@ -1,0 +1,67 @@
+name: build-android-apk
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      JAVA_VERSION: "17"
+      ANDROID_API_LEVEL: "34"
+      ANDROID_BUILD_TOOLS: "34.0.0"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/mobile-app/package-lock.json
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" \
+                     "platforms;android-${ANDROID_API_LEVEL}" \
+                     "build-tools;${ANDROID_BUILD_TOOLS}"
+
+      - name: Install frontend dependencies
+        working-directory: client/mobile-app
+        run: npm ci
+
+      - name: Build web app
+        working-directory: client/mobile-app
+        run: npm run build
+
+      - name: Install Capacitor Android dependencies
+        working-directory: client/mobile-app
+        run: |
+          npm install
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Build APK
+        working-directory: client/mobile-app/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BaribudosStudio-android
+          path: client/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
