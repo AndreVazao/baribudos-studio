@@ -985,3 +985,42 @@ export async function exportEditorialEpub(projectId, payload = {}) {
   }))
 }
 
+export async function setupLocalAi(payload = {}) {
+  return handle(fetch(`${getApiBase()}/local-ai-installer/setup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
+export async function ensureLocalProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/ensure`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
+export async function stopLocalProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/stop`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
+export async function setLocalAiDefaultProvider(provider) {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/default-provider`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider })
+  }))
+}
+
+export async function getLocalAiRuntimeStatus() {
+  return handle(fetch(`${getApiBase()}/local-ai-runtime/status`))
+}
+
+export async function getLocalEngineManagerStatus() {
+  return handle(fetch(`${getApiBase()}/local-engine-manager/status`))
+    }
