@@ -400,3 +400,22 @@ export async function getV1Readiness(projectId) {
   return get(`${getApiBase()}/v1-readiness/${projectId}`)
     }
 
+// ================= IP BRANDING =================
+
+export async function getIpBranding(slug, user = {}) {
+  return get(`${getApiBase()}/ip-branding/${slug}${qs({
+    user_id: user?.id,
+    user_name: user?.name,
+    user_role: user?.role
+  })}`)
+}
+
+export async function updateIpBranding(slug, brandAssets = {}, user = {}) {
+  return patch(`${getApiBase()}/ip-branding/${slug}`, {
+    brand_assets: brandAssets,
+    user_id: user?.id,
+    user_name: user?.name,
+    user_role: user?.role
+  })
+    }
+
