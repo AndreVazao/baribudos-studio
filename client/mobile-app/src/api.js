@@ -657,3 +657,43 @@ export async function moveStoryLayoutText(projectId, payload = {}) {
   return post(`${getApiBase()}/story-layout/move-text/${projectId}`, payload)
 }
 
+export async function splitStoryLayoutPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/split-page/${projectId}`, payload)
+    }
+
+export async function getStoryLayout(projectId) {
+  return get(`${getApiBase()}/story-layout/${projectId}`)
+}
+
+export async function paginateStoryLayout(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/paginate/${projectId}`, payload)
+}
+
+export async function updateStoryLayoutPage(projectId, pageId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`, payload)
+}
+
+export async function createStoryLayoutPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/page/${projectId}`, payload)
+}
+
+export async function deleteStoryLayoutPage(projectId, pageId) {
+  return del(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`)
+}
+
+export async function applyStoryLayout(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/apply/${projectId}`, payload)
+}
+
+export async function moveStoryLayoutPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/move-page/${projectId}`, payload)
+}
+
+export async function moveStoryLayoutText(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/move-text/${projectId}`, payload)
+}
+
+export async function splitStoryLayoutPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/story-layout/split-page/${projectId}`, payload)
+                                       }
+
