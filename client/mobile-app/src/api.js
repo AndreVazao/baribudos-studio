@@ -692,3 +692,8 @@ export async function exportEditorialEpub(projectId, payload = {}) {
 
 /* Compatibilidade */
 export const normalizeMediaUrl = resolveBackendFileUrl
+
+export async function listVoiceSamples() {
+  return handle(fetch(`${getApiBase()}/voice-library/samples`))
+}
+
