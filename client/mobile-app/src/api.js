@@ -782,14 +782,6 @@ export async function ensureLocalAudioProvider(provider) {
   }))
 }
 
-export async function stopLocalAudioProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-audio-engine-manager/stop`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
-                         }
-
 export async function listVoiceProfiles(projectId) {
   return handle(fetch(`${getApiBase()}/voice-profiles/${projectId}`))
 }
