@@ -633,3 +633,19 @@ export async function downloadUpdate(payload = {}) {
   return post(`${getApiBase()}/updater/download`, payload)
   }
 
+export async function getLocalAudioStatus() {
+  return get(`${getApiBase()}/local-audio-installer/status`)
+}
+
+export async function ensureLocalAudioProvider(provider) {
+  return post(`${getApiBase()}/local-audio-engine-manager/ensure`, { provider })
+}
+
+export async function stopLocalAudioProvider(provider) {
+  return post(`${getApiBase()}/local-audio-engine-manager/stop`, { provider })
+}
+
+export async function setLocalAudioDefaultProvider(provider) {
+  return post(`${getApiBase()}/local-audio-engine-manager/default-provider`, { provider })
+    }
+
