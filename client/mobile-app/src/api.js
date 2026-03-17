@@ -697,3 +697,11 @@ export async function listVoiceSamples() {
   return handle(fetch(`${getApiBase()}/voice-library/samples`))
 }
 
+export async function listVoiceSamples() {
+  return get(`${getApiBase()}/voice-library/samples`)
+}
+
+export async function runIllustrationProvider(projectId, payload = {}) {
+  return post(`${getApiBase()}/illustration-provider/run/${projectId}`, payload)
+}
+
