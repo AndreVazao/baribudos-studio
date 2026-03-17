@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   buildEditorialEngine,
+  editorialToIllustrations,
+  editorialToStoryboard,
+  editorialToStory,
   listProjects,
   mergeEditorialPages,
   previewEditorialEngine,
@@ -44,11 +47,7 @@ function BookPage({ page }) {
       }}
     >
       <div style={{ fontWeight: 700 }}>Página {page.page_number}</div>
-
-      <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.65, fontSize: 15 }}>
-        {page.text || ""}
-      </div>
-
+      <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.65, fontSize: 15 }}>{page.text || ""}</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#6b7280" }}>
         <span>{page.layout?.show_illustration_slot ? "Ilustração" : "Texto"}</span>
         <span>{page.title || ""}</span>
@@ -163,6 +162,36 @@ export default function EditorialStudioPanel({ user }) {
     }
   }
 
+  async function handleApplyStory() {
+    if (!selectedProjectId) return
+    try {
+      await editorialToStory(selectedProjectId, {})
+      alert("Editorial aplicada à story.")
+    } catch (error) {
+      alert(error?.message || "Erro ao aplicar à story.")
+    }
+  }
+
+  async function handleIllustrationQueue() {
+    if (!selectedProjectId) return
+    try {
+      await editorialToIllustrations(selectedProjectId)
+      alert("Fila de ilustrações criada.")
+    } catch (error) {
+      alert(error?.message || "Erro ao criar fila de ilustrações.")
+    }
+  }
+
+  async function handleStoryboard() {
+    if (!selectedProjectId) return
+    try {
+      await editorialToStoryboard(selectedProjectId)
+      alert("Storyboard criada.")
+    } catch (error) {
+      alert(error?.message || "Erro ao criar storyboard.")
+    }
+  }
+
   const visiblePages = preview?.pages || editorial?.pages || []
 
   return (
@@ -183,22 +212,14 @@ export default function EditorialStudioPanel({ user }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 180px 180px", gap: 10 }}>
         <div />
-        <select
-          value={ageGroup}
-          onChange={(e) => setAgeGroup(e.target.value)}
-          style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
-        >
+        <select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}>
           <option value="3-5">3-5</option>
           <option value="4-10">4-10</option>
           <option value="8-12">8-12</option>
           <option value="adult">adult</option>
         </select>
 
-        <select
-          value={genre}
-          onChange={(e) => setGenre(e.target.value)}
-          style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
-        >
+        <select value={genre} onChange={(e) => setGenre(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}>
           <option value="children">children</option>
           <option value="adult">adult</option>
           <option value="poetry">poetry</option>
@@ -256,25 +277,28 @@ export default function EditorialStudioPanel({ user }) {
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button
-          onClick={handleBuild}
-          style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#2F5E2E", color: "#fff", fontWeight: 700, cursor: "pointer" }}
-        >
+        <button onClick={handleBuild} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#2F5E2E", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
           Construir editorial
         </button>
 
-        <button
-          onClick={handlePreview}
-          style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#1d4ed8", color: "#fff", fontWeight: 700, cursor: "pointer" }}
-        >
+        <button onClick={handlePreview} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#1d4ed8", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
           Gerar preview
         </button>
 
-        <button
-          onClick={handleRepaginate}
-          style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, cursor: "pointer" }}
-        >
+        <button onClick={handleRepaginate} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
           Repaginar
+        </button>
+
+        <button onClick={handleApplyStory} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#92400e", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Aplicar à story
+        </button>
+
+        <button onClick={handleIllustrationQueue} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Criar fila ilustração
+        </button>
+
+        <button onClick={handleStoryboard} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#be185d", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Criar storyboard
         </button>
       </div>
 
@@ -292,28 +316,17 @@ export default function EditorialStudioPanel({ user }) {
           <div><strong>Páginas:</strong> {editorial.pages_count || editorial.pages.length}</div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <select
-              value={mergeA}
-              onChange={(e) => setMergeA(e.target.value)}
-              style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
-            >
+            <select value={mergeA} onChange={(e) => setMergeA(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}>
               <option value="">Página A</option>
               {pageOptions.map((number) => <option key={`a-${number}`} value={number}>{number}</option>)}
             </select>
 
-            <select
-              value={mergeB}
-              onChange={(e) => setMergeB(e.target.value)}
-              style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
-            >
+            <select value={mergeB} onChange={(e) => setMergeB(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}>
               <option value="">Página B</option>
               {pageOptions.map((number) => <option key={`b-${number}`} value={number}>{number}</option>)}
             </select>
 
-            <button
-              onClick={handleMerge}
-              style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#92400e", color: "#fff", fontWeight: 700, cursor: "pointer" }}
-            >
+            <button onClick={handleMerge} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#92400e", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
               Unir páginas
             </button>
           </div>
@@ -334,10 +347,7 @@ export default function EditorialStudioPanel({ user }) {
                 <div><strong>Página {page.page_number}</strong></div>
                 <div style={{ whiteSpace: "pre-wrap" }}>{page.text}</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button
-                    onClick={() => handleSplit(page.page_number)}
-                    style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}
-                  >
+                  <button onClick={() => handleSplit(page.page_number)} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}>
                     Dividir
                   </button>
                 </div>
