@@ -25,6 +25,8 @@ __all__ = [
     "v1_readiness",
     "system_smoke_v1",
     "editorial_engine",
+    "editorial_production",
+    "editorial_media_pipeline",
     "saga_loader",
     "saga_runtime",
     "system_smoke",
