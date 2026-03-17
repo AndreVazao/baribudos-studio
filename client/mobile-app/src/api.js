@@ -971,3 +971,17 @@ export async function buildEditorialVideoPackage(projectId) {
   }))
 }
 
+export async function renderFinalVideo(projectId) {
+  return handle(fetch(`${getApiBase()}/final-media/render-video/${projectId}`, {
+    method: "POST"
+  }))
+}
+
+export async function exportEditorialEpub(projectId, payload = {}) {
+  return handle(fetch(`${getApiBase()}/final-media/export-epub/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
