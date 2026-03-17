@@ -20,9 +20,18 @@ function normalizeApiUrl(url) {
   return value
 }
 
+export function getApiBase() {
+  return normalizeApiUrl(localStorage.getItem(STORAGE_KEY) || DEFAULT_API)
+}
+
+export function setApiBase(url) {
+  const normalized = normalizeApiUrl(url)
+  localStorage.setItem(STORAGE_KEY, normalized)
+  return normalized
+}
+
 function getApiOrigin() {
-  const base = getApiBase()
-  return base.replace(/\/api$/, "")
+  return getApiBase().replace(/\/api$/, "")
 }
 
 export function resolveBackendFileUrl(filePath) {
@@ -38,21 +47,10 @@ export function resolveBackendFileUrl(filePath) {
   const index = normalized.indexOf(marker)
 
   if (index >= 0) {
-    const relative = normalized.slice(index)
-    return `${getApiOrigin()}${relative}`
+    return `${getApiOrigin()}${normalized.slice(index)}`
   }
 
   return ""
-}
-
-export function getApiBase() {
-  return normalizeApiUrl(localStorage.getItem(STORAGE_KEY) || DEFAULT_API)
-}
-
-export function setApiBase(url) {
-  const normalized = normalizeApiUrl(url)
-  localStorage.setItem(STORAGE_KEY, normalized)
-  return normalized
 }
 
 export function getSavedUser() {
@@ -73,7 +71,13 @@ export function clearSavedUser() {
 
 async function handle(resPromise) {
   const res = await resPromise
-  const data = await res.json()
+
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    data = null
+  }
 
   if (!res.ok) {
     throw new Error(data?.detail || data?.error || "Erro API")
@@ -82,367 +86,299 @@ async function handle(resPromise) {
   return data
 }
 
+function jsonHeaders(extra = {}) {
+  return {
+    "Content-Type": "application/json",
+    ...extra
+  }
+}
+
+function qs(params = {}) {
+  const search = new URLSearchParams()
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return
+    search.set(key, String(value))
+  })
+
+  const built = search.toString()
+  return built ? `?${built}` : ""
+}
+
+function get(url) {
+  return handle(fetch(url))
+}
+
+function post(url, body = {}) {
+  return handle(fetch(url, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify(body)
+  }))
+}
+
+function patch(url, body = {}) {
+  return handle(fetch(url, {
+    method: "PATCH",
+    headers: jsonHeaders(),
+    body: JSON.stringify(body)
+  }))
+}
+
+function del(url) {
+  return handle(fetch(url, {
+    method: "DELETE"
+  }))
+}
+
 export async function healthCheck(customBase = "") {
   const base = customBase ? normalizeApiUrl(customBase) : getApiBase()
-  return handle(fetch(`${base}/health`))
+  return get(`${base}/health`)
 }
 
 export async function diagnostics(customBase = "") {
   const base = customBase ? normalizeApiUrl(customBase) : getApiBase()
-  return handle(fetch(`${base}/diagnostics`))
+  return get(`${base}/diagnostics`)
 }
 
 export async function listUsers() {
-  return handle(fetch(`${getApiBase()}/users`))
+  return get(`${getApiBase()}/users`)
 }
 
 export async function login(name, pin) {
-  return handle(fetch(`${getApiBase()}/users/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, pin })
-  }))
+  return post(`${getApiBase()}/users/login`, { name, pin })
 }
 
-export async function createUser(payload) {
-  return handle(fetch(`${getApiBase()}/users`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: payload?.name || "",
-      role: payload?.role || "editor",
-      pin: payload?.pin || "",
-      is_active: payload?.is_active ?? true
-    })
-  }))
+export async function createUser(payload = {}) {
+  return post(`${getApiBase()}/users`, {
+    name: payload?.name || "",
+    role: payload?.role || "editor",
+    pin: payload?.pin || "",
+    is_active: payload?.is_active ?? true
+  })
 }
 
-export async function updateUser(userId, payload) {
-  return handle(fetch(`${getApiBase()}/users/${userId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: payload?.name,
-      role: payload?.role,
-      is_active: payload?.is_active
-    })
-  }))
+export async function updateUser(userId, payload = {}) {
+  return patch(`${getApiBase()}/users/${userId}`, {
+    name: payload?.name,
+    role: payload?.role,
+    is_active: payload?.is_active
+  })
 }
 
 export async function updateUserPin(userId, pin) {
-  return handle(fetch(`${getApiBase()}/users/${userId}/pin`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pin })
-  }))
+  return patch(`${getApiBase()}/users/${userId}/pin`, { pin })
 }
 
 export async function getSettings() {
-  return handle(fetch(`${getApiBase()}/settings`))
+  return get(`${getApiBase()}/settings`)
 }
 
-export async function saveSettings(payload) {
-  return handle(fetch(`${getApiBase()}/settings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+export async function saveSettings(payload = {}) {
+  return post(`${getApiBase()}/settings`, payload)
 }
 
 export async function listSagas() {
-  return handle(fetch(`${getApiBase()}/sagas`))
+  return get(`${getApiBase()}/sagas`)
 }
 
-export async function createSaga(payload) {
-  return handle(fetch(`${getApiBase()}/sagas`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+export async function createSaga(payload = {}) {
+  return post(`${getApiBase()}/sagas`, payload)
 }
 
 export async function listSponsors() {
-  return handle(fetch(`${getApiBase()}/sponsors`))
+  return get(`${getApiBase()}/sponsors`)
 }
 
-export async function createSponsor(payload) {
-  return handle(fetch(`${getApiBase()}/sponsors`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+export async function createSponsor(payload = {}) {
+  return post(`${getApiBase()}/sponsors`, payload)
 }
 
-export async function listProjects(user) {
-  const query = new URLSearchParams({
+export async function listProjects(user = {}) {
+  return get(`${getApiBase()}/projects${qs({
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/projects?${query}`))
+  })}`)
 }
 
-export async function createProject(payload) {
-  return handle(fetch(`${getApiBase()}/projects`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      title: payload?.title || "",
-      saga_slug: payload?.saga_slug || "baribudos",
-      saga_name: payload?.saga_name || "Baribudos",
-      language: payload?.language || "pt-PT",
-      output_languages: payload?.output_languages || ["pt-PT"],
-      created_by: payload?.created_by || "",
-      created_by_name: payload?.created_by_name || "",
-      visible_to_owner_only: payload?.visible_to_owner_only ?? true
-    })
-  }))
+export async function createProject(payload = {}) {
+  return post(`${getApiBase()}/projects`, {
+    title: payload?.title || "",
+    saga_slug: payload?.saga_slug || "baribudos",
+    saga_name: payload?.saga_name || "Baribudos",
+    language: payload?.language || "pt-PT",
+    output_languages: payload?.output_languages || ["pt-PT"],
+    created_by: payload?.created_by || "",
+    created_by_name: payload?.created_by_name || "",
+    visible_to_owner_only: payload?.visible_to_owner_only ?? true
+  })
 }
 
-export async function updateProject(projectId, payload, user) {
-  const query = new URLSearchParams({
+export async function updateProject(projectId, payload = {}, user = {}) {
+  return patch(`${getApiBase()}/projects/${projectId}${qs({
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/projects/${projectId}?${query}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+  })}`, payload)
 }
 
 export async function getProjectCommercial(projectId) {
-  return handle(fetch(`${getApiBase()}/project-commercial/${projectId}`))
+  return get(`${getApiBase()}/project-commercial/${projectId}`)
 }
 
-export async function updateProjectCommercial(projectId, commercial, user) {
-  const query = new URLSearchParams({
+export async function updateProjectCommercial(projectId, commercial = {}, user = {}) {
+  return patch(`${getApiBase()}/project-commercial/${projectId}${qs({
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/project-commercial/${projectId}?${query}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ commercial: commercial || {} })
-  }))
+  })}`, { commercial })
 }
 
 export async function getPublicationPackage(projectId) {
-  return handle(fetch(`${getApiBase()}/publication-package/${projectId}`))
+  return get(`${getApiBase()}/publication-package/${projectId}`)
 }
 
-export async function freezePublicationPackage(projectId, user) {
-  const query = new URLSearchParams({
+export async function freezePublicationPackage(projectId, user = {}) {
+  return post(`${getApiBase()}/publication-package/${projectId}/freeze${qs({
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/publication-package/${projectId}/freeze?${query}`, {
-    method: "POST"
-  }))
+  })}`)
 }
 
 export async function getPublishReadiness(projectId) {
-  return handle(fetch(`${getApiBase()}/publish-readiness/${projectId}`))
+  return get(`${getApiBase()}/publish-readiness/${projectId}`)
 }
 
-export async function markProjectReady(projectId, user) {
-  const query = new URLSearchParams({
+export async function markProjectReady(projectId, user = {}) {
+  return post(`${getApiBase()}/publish-readiness/${projectId}/mark-ready${qs({
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/publish-readiness/${projectId}/mark-ready?${query}`, {
-    method: "POST"
-  }))
+  })}`)
 }
 
-export async function unmarkProjectReady(projectId, user) {
-  const query = new URLSearchParams({
+export async function unmarkProjectReady(projectId, user = {}) {
+  return post(`${getApiBase()}/publish-readiness/${projectId}/unmark-ready${qs({
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/publish-readiness/${projectId}/unmark-ready?${query}`, {
-    method: "POST"
-  }))
+  })}`)
 }
 
 export async function getProjectIntegrity(projectId) {
-  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}`))
+  return get(`${getApiBase()}/project-integrity/${projectId}`)
 }
 
-export async function repairProject(projectId, user) {
-  const query = new URLSearchParams({
+export async function repairProject(projectId, user = {}) {
+  return post(`${getApiBase()}/project-integrity/${projectId}/repair${qs({
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/project-integrity/${projectId}/repair?${query}`, {
-    method: "POST"
-  }))
+  })}`)
 }
 
 export async function listJobs() {
-  return handle(fetch(`${getApiBase()}/jobs`))
+  return get(`${getApiBase()}/jobs`)
 }
 
-export async function createJob(payload) {
-  return handle(fetch(`${getApiBase()}/jobs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+export async function createJob(payload = {}) {
+  return post(`${getApiBase()}/jobs`, payload)
 }
 
 export async function getFactoryCapabilities() {
-  return handle(fetch(`${getApiBase()}/factory/capabilities`))
+  return get(`${getApiBase()}/factory/capabilities`)
 }
 
-export async function runFactory(projectId, payload) {
-  return handle(fetch(`${getApiBase()}/factory/run/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+export async function runFactory(projectId, payload = {}) {
+  return post(`${getApiBase()}/factory/run/${projectId}`, payload)
 }
 
-export async function getFactoryContext(payload) {
-  return handle(fetch(`${getApiBase()}/factory/context`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
-    }
+export async function getFactoryContext(payload = {}) {
+  return post(`${getApiBase()}/factory/context`, payload)
+}
+
 export async function listPublications() {
-  return handle(fetch(`${getApiBase()}/publishing`))
+  return get(`${getApiBase()}/publishing`)
 }
 
-export async function publishProject(payload, user) {
-  const query = new URLSearchParams({
+export async function publishProject(payload = {}, user = {}) {
+  return post(`${getApiBase()}/publishing/publish${qs({
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/publishing/publish?${query}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+  })}`, payload)
 }
 
 export async function exportEbook(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/ebooks/export/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/ebooks/export/${projectId}`, payload)
 }
 
 export async function exportAudiobook(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/audiobooks/export/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/audiobooks/export/${projectId}`, payload)
 }
 
 export async function exportVideo(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/videos/export/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/videos/export/${projectId}`, payload)
 }
 
-export async function listIps(user) {
-  const query = new URLSearchParams({
+export async function listIps(user = {}) {
+  return get(`${getApiBase()}/ip-creator${qs({
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-creator?${query}`))
+  })}`)
 }
 
-export async function createIp(payload) {
-  return handle(fetch(`${getApiBase()}/ip-creator`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+export async function createIp(payload = {}) {
+  return post(`${getApiBase()}/ip-creator`, payload)
 }
 
-export async function getIpBySlug(slug, user) {
-  const query = new URLSearchParams({
+export async function getIpBySlug(slug, user = {}) {
+  return get(`${getApiBase()}/ip-creator/${slug}${qs({
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-creator/${slug}?${query}`))
+  })}`)
 }
 
-export async function getIpPermissions(slug, user) {
-  const query = new URLSearchParams({
+export async function getIpPermissions(slug, user = {}) {
+  return get(`${getApiBase()}/ip-creator/${slug}/permissions${qs({
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-creator/${slug}/permissions?${query}`))
+  })}`)
 }
 
-export async function getIpPalette(slug, user) {
-  const query = new URLSearchParams({
+export async function getIpPalette(slug, user = {}) {
+  return get(`${getApiBase()}/ip-palette/${slug}${qs({
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-palette/${slug}?${query}`))
+  })}`)
 }
 
-export async function updateIpPalette(slug, palette, user) {
-  return handle(fetch(`${getApiBase()}/ip-palette/${slug}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      palette,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
-}
-
-export async function getIpBranding(slug, user) {
-  const query = new URLSearchParams({
+export async function updateIpPalette(slug, palette, user = {}) {
+  return patch(`${getApiBase()}/ip-palette/${slug}`, {
+    palette,
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-branding/${slug}?${query}`))
+  })
 }
 
-export async function updateIpBranding(slug, brandAssets, user) {
-  return handle(fetch(`${getApiBase()}/ip-branding/${slug}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      brand_assets: brandAssets,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
+export async function getIpBranding(slug, user = {}) {
+  return get(`${getApiBase()}/ip-branding/${slug}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
 }
 
-export async function uploadIpBrandingAsset(slug, assetType, file, user) {
+export async function updateIpBranding(slug, brandAssets, user = {}) {
+  return patch(`${getApiBase()}/ip-branding/${slug}`, {
+    brand_assets: brandAssets,
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
+}
+
+export async function uploadIpBrandingAsset(slug, assetType, file, user = {}) {
   const form = new FormData()
   form.append("asset_type", assetType)
   form.append("user_id", user?.id || "")
@@ -456,87 +392,65 @@ export async function uploadIpBrandingAsset(slug, assetType, file, user) {
   }))
 }
 
-export async function getIpCharacters(slug, user) {
-  const query = new URLSearchParams({
+export async function getIpCharacters(slug, user = {}) {
+  return get(`${getApiBase()}/ip-characters/${slug}${qs({
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-characters/${slug}?${query}`))
+  })}`)
 }
 
-export async function updateIpCharacters(slug, mainCharacters, user) {
-  return handle(fetch(`${getApiBase()}/ip-characters/${slug}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      main_characters: mainCharacters,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
-}
-
-export async function getIpCanon(slug, canonType, user) {
-  const query = new URLSearchParams({
+export async function updateIpCharacters(slug, mainCharacters, user = {}) {
+  return patch(`${getApiBase()}/ip-characters/${slug}`, {
+    main_characters: mainCharacters,
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-canons/${slug}/${canonType}?${query}`))
+  })
 }
 
-export async function updateIpCanon(slug, canonType, data, user) {
-  return handle(fetch(`${getApiBase()}/ip-canons/${slug}/${canonType}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      data,
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
-}
-
-export async function getIpMetadata(slug, user) {
-  const query = new URLSearchParams({
+export async function getIpCanon(slug, canonType, user = {}) {
+  return get(`${getApiBase()}/ip-canons/${slug}/${canonType}${qs({
     user_id: user?.id || "",
     user_name: user?.name || "",
     user_role: user?.role || ""
-  }).toString()
-
-  return handle(fetch(`${getApiBase()}/ip-metadata/${slug}?${query}`))
+  })}`)
 }
 
-export async function updateIpMetadata(slug, payload, user) {
-  return handle(fetch(`${getApiBase()}/ip-metadata/${slug}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      metadata: payload?.metadata || {},
-      default_language: payload?.default_language || "pt-PT",
-      output_languages: payload?.output_languages || ["pt-PT"],
-      user_id: user?.id || "",
-      user_name: user?.name || "",
-      user_role: user?.role || ""
-    })
-  }))
+export async function updateIpCanon(slug, canonType, data, user = {}) {
+  return patch(`${getApiBase()}/ip-canons/${slug}/${canonType}`, {
+    data,
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
+}
+
+export async function getIpMetadata(slug, user = {}) {
+  return get(`${getApiBase()}/ip-metadata/${slug}${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
+export async function updateIpMetadata(slug, payload = {}, user = {}) {
+  return patch(`${getApiBase()}/ip-metadata/${slug}`, {
+    metadata: payload?.metadata || {},
+    default_language: payload?.default_language || "pt-PT",
+    output_languages: payload?.output_languages || ["pt-PT"],
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })
 }
 
 export async function getSagaRuntime(slug) {
-  return handle(fetch(`${getApiBase()}/saga-runtime/${slug}`))
+  return get(`${getApiBase()}/saga-runtime/${slug}`)
 }
 
-export async function buildCover(payload) {
-  return handle(fetch(`${getApiBase()}/covers/build`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload || {})
-  }))
+export async function buildCover(payload = {}) {
+  return post(`${getApiBase()}/covers/build`, payload)
 }
 
 export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
@@ -552,50 +466,40 @@ export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
 }
 
 export async function listSystemSmokeResults() {
-  return handle(fetch(`${getApiBase()}/system-smoke`))
+  return get(`${getApiBase()}/system-smoke`)
 }
 
 export async function runSystemSmoke(projectId) {
-  return handle(fetch(`${getApiBase()}/system-smoke/${projectId}`, {
-    method: "POST"
-  }))
-      }
+  return post(`${getApiBase()}/system-smoke/${projectId}`)
+}
+
+export async function runSystemSmokeV1() {
+  return get(`${getApiBase()}/system-smoke-v1`)
+}
 
 export async function listProductionRuns() {
-  return handle(fetch(`${getApiBase()}/production-pipeline`))
+  return get(`${getApiBase()}/production-pipeline`)
 }
 
 export async function runProductionPipeline(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/production-pipeline/run/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-    }
+  return post(`${getApiBase()}/production-pipeline/run/${projectId}`, payload)
+}
 
 export async function listIllustrationRuns() {
-  return handle(fetch(`${getApiBase()}/illustration-pipeline`))
+  return get(`${getApiBase()}/illustration-pipeline`)
 }
 
 export async function getIllustrationPipeline(projectId) {
-  return handle(fetch(`${getApiBase()}/illustration-pipeline/${projectId}`))
+  return get(`${getApiBase()}/illustration-pipeline/${projectId}`)
 }
 
 export async function setupIllustrationPipeline(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/illustration-pipeline/setup/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/illustration-pipeline/setup/${projectId}`, payload)
 }
 
 export async function updateIllustrationFrame(projectId, frameId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/illustration-pipeline/${projectId}/frame/${frameId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-    }
+  return post(`${getApiBase()}/illustration-pipeline/${projectId}/frame/${frameId}`, payload)
+}
 
 export async function uploadIllustrationFrameAsset({ projectId, frameId, file }) {
   const form = new FormData()
@@ -610,32 +514,23 @@ export async function uploadIllustrationFrameAsset({ projectId, frameId, file })
 }
 
 export async function getStoryboardManifest(projectId) {
-  return handle(fetch(`${getApiBase()}/illustration-assets/storyboard/${projectId}`))
+  return get(`${getApiBase()}/illustration-assets/storyboard/${projectId}`)
 }
 
 export async function listIllustrationJobs(projectId = "") {
-  const suffix = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""
-  return handle(fetch(`${getApiBase()}/illustration-generation${suffix}`))
+  return get(`${getApiBase()}/illustration-generation${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`)
 }
 
 export async function queueIllustrationGeneration(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/illustration-generation/queue/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/illustration-generation/queue/${projectId}`, payload)
 }
 
 export async function getIllustrationPromptPackage(projectId) {
-  return handle(fetch(`${getApiBase()}/illustration-generation/package/${projectId}`))
+  return get(`${getApiBase()}/illustration-generation/package/${projectId}`)
 }
 
 export async function updateIllustrationJob(jobId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/illustration-generation/job/${jobId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/illustration-generation/job/${jobId}`, payload)
 }
 
 export async function importGeneratedIllustrationFrame({ projectId, frameId, file, approve = true }) {
@@ -652,367 +547,148 @@ export async function importGeneratedIllustrationFrame({ projectId, frameId, fil
 }
 
 export async function getStoryLayout(projectId) {
-  return handle(fetch(`${getApiBase()}/story-layout/${projectId}`))
+  return get(`${getApiBase()}/story-layout/${projectId}`)
 }
 
 export async function paginateStoryLayout(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/story-layout/paginate/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/story-layout/paginate/${projectId}`, payload)
 }
 
 export async function updateStoryLayoutPage(projectId, pageId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`, payload)
 }
 
 export async function createStoryLayoutPage(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/story-layout/page/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
+  return post(`${getApiBase()}/story-layout/page/${projectId}`, payload)
 }
 
 export async function deleteStoryLayoutPage(projectId, pageId) {
-  return handle(fetch(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`, {
-    method: "DELETE"
-  }))
+  return del(`${getApiBase()}/story-layout/page/${projectId}/${pageId}`)
 }
 
 export async function applyStoryLayout(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/story-layout/apply/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-                      
-export async function runIllustrationProvider(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/illustration-provider/run/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-                      }
-
-export async function getLocalAiStatus() {
-  return handle(fetch(`${getApiBase()}/local-ai/status`))
+  return post(`${getApiBase()}/story-layout/apply/${projectId}`, payload)
 }
 
 export async function setupLocalAi(payload = {}) {
-  return handle(fetch(`${getApiBase()}/local-ai/setup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function setLocalAiDefaultProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-ai/default-provider`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
-}
-
-export async function getLocalEngineManagerStatus() {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/status`))
-}
-
-export async function startLocalProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/start`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
+  return post(`${getApiBase()}/local-ai-installer/setup`, payload)
 }
 
 export async function ensureLocalProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/ensure`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
+  return post(`${getApiBase()}/local-engine-manager/ensure`, { provider })
 }
 
 export async function stopLocalProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/stop`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
-      }
-
-export async function getLocalAudioStatus() {
-  return handle(fetch(`${getApiBase()}/local-audio/status`))
-}
-
-export async function setupLocalAudio(payload = {}) {
-  return handle(fetch(`${getApiBase()}/local-audio/setup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function setLocalAudioDefaultProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-audio/default-provider`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
-}
-
-export async function getLocalAudioEngineManagerStatus() {
-  return handle(fetch(`${getApiBase()}/local-audio-engine-manager/status`))
-}
-
-export async function ensureLocalAudioProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-audio-engine-manager/ensure`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
-}
-
-export async function listVoiceProfiles(projectId) {
-  return handle(fetch(`${getApiBase()}/voice-profiles/${projectId}`))
-}
-
-export async function setDefaultVoiceProfile(projectId, profileId) {
-  return handle(fetch(`${getApiBase()}/voice-profiles/default/${projectId}/${profileId}`, {
-    method: "POST"
-  }))
-    }
-
-export async function listVoiceSamples() {
-  return handle(fetch(`${getApiBase()}/voice-library`))
-}
-
-export async function uploadVoiceSample({ name, language = "", notes = "", file }) {
-  const form = new FormData()
-  form.append("name", name)
-  form.append("language", language)
-  form.append("notes", notes)
-  form.append("file", file)
-
-  return handle(fetch(`${getApiBase()}/voice-library/upload`, {
-    method: "POST",
-    body: form
-  }))
-}
-
-export async function generateVoicePreview(payload = {}) {
-  return handle(fetch(`${getApiBase()}/voice-preview`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-              }
-
-export async function getAudioCast(projectId) {
-  return handle(fetch(`${getApiBase()}/audio-cast/${projectId}`))
-}
-
-export async function saveAudioCast(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/audio-cast/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-    }
-
-export async function previewAudioCast(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/audio-cast-preview/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-    }
-
-export async function getLocalVersionInfo() {
-  return handle(fetch(`${getApiBase()}/updater/local-version`))
-}
-
-export async function checkForUpdates(payload = {}) {
-  return handle(fetch(`${getApiBase()}/updater/check`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-    }
-
-export async function moveStoryLayoutPage(projectId, pageId, direction) {
-  return handle(fetch(`${getApiBase()}/story-layout/move-page/${projectId}/${pageId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ direction })
-  }))
-}
-
-export async function splitStoryLayoutPage(projectId, pageId, splitMode = "half") {
-  return handle(fetch(`${getApiBase()}/story-layout/split-page/${projectId}/${pageId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ split_mode: splitMode })
-  }))
-}
-
-export async function moveStoryLayoutText(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/story-layout/move-text/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-  }
-
-export async function getV1Readiness(projectId) {
-  return handle(fetch(`${getApiBase()}/v1-readiness/${projectId}`))
-    }
-
-export async function downloadUpdate(payload = {}) {
-  return handle(fetch(`${getApiBase()}/updater/download`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-    }
-
-export async function runSystemSmokeV1() {
-  return handle(fetch(`${getApiBase()}/system-smoke-v1`))
-}
-
-export async function buildEditorialEngine(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/editorial-engine/build/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function previewEditorialEngine(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/editorial-engine/preview/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function repaginateEditorialEngine(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/editorial-engine/repaginate/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function mergeEditorialPages(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/editorial-engine/merge-pages/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function splitEditorialPage(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/editorial-engine/split-page/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-    }
-
-export async function editorialToStory(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/editorial-production/story/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function editorialToIllustrations(projectId) {
-  return handle(fetch(`${getApiBase()}/editorial-production/illustrations/${projectId}`, {
-    method: "POST"
-  }))
-}
-
-export async function editorialToStoryboard(projectId) {
-  return handle(fetch(`${getApiBase()}/editorial-production/storyboard/${projectId}`, {
-    method: "POST"
-  }))
-  }
-
-export async function generateEditorialIllustrations(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/editorial-media/generate-illustrations/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function buildEditorialVideoPackage(projectId) {
-  return handle(fetch(`${getApiBase()}/editorial-media/build-video-package/${projectId}`, {
-    method: "POST"
-  }))
-}
-
-export async function renderFinalVideo(projectId) {
-  return handle(fetch(`${getApiBase()}/final-media/render-video/${projectId}`, {
-    method: "POST"
-  }))
-}
-
-export async function exportEditorialEpub(projectId, payload = {}) {
-  return handle(fetch(`${getApiBase()}/final-media/export-epub/${projectId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function setupLocalAi(payload = {}) {
-  return handle(fetch(`${getApiBase()}/local-ai-installer/setup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  }))
-}
-
-export async function ensureLocalProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/ensure`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
-}
-
-export async function stopLocalProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/stop`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
+  return post(`${getApiBase()}/local-engine-manager/stop`, { provider })
 }
 
 export async function setLocalAiDefaultProvider(provider) {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/default-provider`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider })
-  }))
+  return post(`${getApiBase()}/local-engine-manager/default-provider`, { provider })
 }
 
 export async function getLocalAiRuntimeStatus() {
-  return handle(fetch(`${getApiBase()}/local-ai-runtime/status`))
+  return get(`${getApiBase()}/local-ai-runtime/status`)
 }
 
 export async function getLocalEngineManagerStatus() {
-  return handle(fetch(`${getApiBase()}/local-engine-manager/status`))
+  return get(`${getApiBase()}/local-engine-manager/status`)
+}
+
+export async function setupLocalAudio(payload = {}) {
+  return post(`${getApiBase()}/local-audio-installer/setup`, payload)
+}
+
+export async function getLocalAudioEngineManagerStatus() {
+  return get(`${getApiBase()}/local-audio-engine-manager/status`)
+}
+
+export async function listVoiceLibrary() {
+  return get(`${getApiBase()}/voice-library`)
+}
+
+export async function cloneVoice(payload = {}) {
+  return post(`${getApiBase()}/voice-library/clone`, payload)
+}
+
+export async function previewVoice(payload = {}) {
+  return post(`${getApiBase()}/voice-preview`, payload)
+}
+
+export async function getAudioCast(projectId) {
+  return get(`${getApiBase()}/audio-cast/${projectId}`)
+}
+
+export async function saveAudioCast(projectId, payload = {}) {
+  return post(`${getApiBase()}/audio-cast/${projectId}`, payload)
+}
+
+export async function previewAudioCast(projectId, payload = {}) {
+  return post(`${getApiBase()}/audio-cast-preview/${projectId}`, payload)
+}
+
+export async function getLocalVersionInfo() {
+  return get(`${getApiBase()}/updater/local-version`)
+}
+
+export async function checkForUpdates(payload = {}) {
+  return post(`${getApiBase()}/updater/check`, payload)
+}
+
+export async function downloadUpdate(payload = {}) {
+  return post(`${getApiBase()}/updater/download`, payload)
+}
+
+export async function getV1Readiness(projectId) {
+  return get(`${getApiBase()}/v1-readiness/${projectId}`)
     }
+
+export async function buildEditorialEngine(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial-engine/build/${projectId}`, payload)
+}
+
+export async function previewEditorialEngine(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial-engine/preview/${projectId}`, payload)
+}
+
+export async function repaginateEditorialEngine(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial-engine/repaginate/${projectId}`, payload)
+}
+
+export async function mergeEditorialPages(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial-engine/merge-pages/${projectId}`, payload)
+}
+
+export async function splitEditorialPage(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial-engine/split-page/${projectId}`, payload)
+}
+
+export async function editorialToStory(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial-production/story/${projectId}`, payload)
+}
+
+export async function editorialToIllustrations(projectId) {
+  return post(`${getApiBase()}/editorial-production/illustrations/${projectId}`)
+}
+
+export async function editorialToStoryboard(projectId) {
+  return post(`${getApiBase()}/editorial-production/storyboard/${projectId}`)
+}
+
+export async function generateEditorialIllustrations(projectId, payload = {}) {
+  return post(`${getApiBase()}/editorial-media/generate-illustrations/${projectId}`, payload)
+}
+
+export async function buildEditorialVideoPackage(projectId) {
+  return post(`${getApiBase()}/editorial-media/build-video-package/${projectId}`)
+}
+
+export async function renderFinalVideo(projectId) {
+  return post(`${getApiBase()}/final-media/render-video/${projectId}`)
+}
+
+export async function exportEditorialEpub(projectId, payload = {}) {
+  return post(`${getApiBase()}/final-media/export-epub/${projectId}`, payload)
+}
+
+/* Compatibilidade */
+export const normalizeMediaUrl = resolveBackendFileUrl
