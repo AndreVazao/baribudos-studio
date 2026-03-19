@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from studio_core.core.models import now_iso
+from studio_core.services.asset_registry_service import get_assets
+from studio_core.services.cdn_service import resolve_cdn_url
 from studio_core.services.saga_runtime_service import load_saga_runtime
 
 
@@ -148,6 +150,132 @@ def _build_readiness(
     }
 
 
+def _build_public_assets(project_id: str | None, ip_slug: str | None) -> Dict[str, Any]:
+    def _first(query: Dict[str, Any]) -> Dict[str, Any] | None:
+        items = get_assets(query)
+        return items[0] if items else None
+
+    def _many(query: Dict[str, Any]) -> List[Dict[str, Any]]:
+        return get_assets(query)
+
+    def _url(asset: Dict[str, Any] | None) -> str | None:
+        if not asset:
+            return None
+        return resolve_cdn_url(asset.get("storage_path", ""), asset.get("version"))
+
+    def _urls(items: List[Dict[str, Any]]) -> List[str]:
+        return [
+            resolve_cdn_url(item.get("storage_path", ""), item.get("version"))
+            for item in items
+            if item.get("storage_path")
+        ]
+
+    studio_logo = _first({
+        "asset_type": "studio_logo",
+        "status": "published",
+        "is_primary": True,
+    })
+
+    ip_primary_logo = _first({
+        "ip_slug": ip_slug,
+        "asset_type": "ip_logo",
+        "status": "published",
+        "is_primary": True,
+    })
+
+    ip_secondary_logos = _many({
+        "ip_slug": ip_slug,
+        "asset_type": "ip_logo",
+        "status": "published",
+    })
+
+    cover = _first({
+        "project_id": project_id,
+        "asset_type": "cover",
+        "status": "published",
+        "is_primary": True,
+    })
+
+    hero = _first({
+        "ip_slug": ip_slug,
+        "asset_type": "hero_background",
+        "status": "published",
+        "is_primary": True,
+    })
+
+    gallery = _many({
+        "project_id": project_id,
+        "asset_type": "gallery_image",
+        "status": "published",
+    })
+
+    ornaments = _many({
+        "ip_slug": ip_slug,
+        "asset_type": "ornament",
+        "status": "published",
+    })
+
+    badges = _many({
+        "ip_slug": ip_slug,
+        "asset_type": "badge",
+        "status": "published",
+    })
+
+    promo = _many({
+        "project_id": project_id,
+        "asset_type": "promo_banner",
+        "status": "published",
+    })
+
+    trailer_thumbnail = _first({
+        "project_id": project_id,
+        "asset_type": "trailer_thumbnail",
+        "status": "published",
+        "is_primary": True,
+    })
+
+    character_cards = _many({
+        "ip_slug": ip_slug,
+        "asset_type": "character_card",
+        "status": "published",
+    })
+
+    background_textures = _many({
+        "ip_slug": ip_slug,
+        "asset_type": "background_texture",
+        "status": "published",
+    })
+
+    social_cards = _many({
+        "project_id": project_id,
+        "asset_type": "social_card",
+        "status": "published",
+    })
+
+    campaign_visuals = _many({
+        "ip_slug": ip_slug,
+        "asset_type": "campaign_visual",
+        "status": "published",
+    })
+
+    return {
+        "studio_logo": _url(studio_logo),
+        "primary_logo": _url(ip_primary_logo),
+        "secondary_logos": _urls(ip_secondary_logos),
+        "cover": _url(cover),
+        "hero_background": _url(hero),
+        "gallery": _urls(gallery),
+        "ornaments": _urls(ornaments),
+        "badges": _urls(badges),
+        "promo_banners": _urls(promo),
+        "trailer_thumbnail": _url(trailer_thumbnail),
+        "character_cards": _urls(character_cards),
+        "background_textures": _urls(background_textures),
+        "social_cards": _urls(social_cards),
+        "campaign_visuals": _urls(campaign_visuals),
+    }
+
+
 def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
     saga_id = _normalize_str(project.get("saga_slug", "baribudos")) or "baribudos"
     runtime = load_saga_runtime(saga_id)
@@ -160,6 +288,14 @@ def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
     recommended_checks = _check_recommended_fields(commercial)
     output_presence = _extract_output_presence(outputs)
     readiness = _build_readiness(required_checks, recommended_checks, output_presence)
+
+    project_id = _normalize_str(project.get("id"))
+    ip_slug = _normalize_str(project.get("saga_slug")) or saga_id
+
+    public_assets = _build_public_assets(
+        project_id=project_id or None,
+        ip_slug=ip_slug or None,
+    )
 
     return {
         "generated_at": now_iso(),
@@ -214,6 +350,7 @@ def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
             "illustration_path": project.get("illustration_path", ""),
             "brand_assets": runtime.get("brand_assets", {}),
             "palette": runtime.get("palette", {}),
+            "public": public_assets,
         },
         "outputs": outputs,
         "checks": {
@@ -222,4 +359,4 @@ def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
             "output_presence": output_presence,
             "readiness": readiness,
         },
-        }
+}
