@@ -19,6 +19,7 @@ import {
   runFactory,
   saveSettings
 } from "../api.js"
+import VisualAssetsPanel from "./VisualAssetsPanel.jsx"
 import AudioCastPanel from "./AudioCastPanel.jsx"
 import EditorialStudioPanel from "./EditorialStudioPanel.jsx"
 import IllustrationPipelinePanel from "./IllustrationPipelinePanel.jsx"
@@ -363,6 +364,7 @@ export default function DashboardPanel({ user }) {
       <SagaRuntimePanel user={user} />
       <LocalAiInstallerPanel />
       <LocalAudioInstallerPanel />
+      <VisualAssetsPanel user={user} />
       <EditorialStudioPanel user={user} />
       <VoiceCloningPanel user={user} />
       <AudioCastPanel user={user} />
