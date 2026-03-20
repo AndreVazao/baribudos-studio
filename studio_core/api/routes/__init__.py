@@ -50,4 +50,5 @@ __all__ = [
     "ip_canons",
     "ip_metadata",
     "illustrations",
+    "public_assets",   # 🔴 NOVO SISTEMA EDITORIAL GLOBAL
 ]
