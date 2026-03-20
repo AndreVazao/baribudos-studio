@@ -92,9 +92,7 @@ def _identity_group(asset: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _same_group(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
-    group_a = _identity_group(a)
-    group_b = _identity_group(b)
-    return group_a == group_b
+    return _identity_group(a) == _identity_group(b)
 
 
 def _next_version(registry: List[Dict[str, Any]], payload: Dict[str, Any]) -> int:
