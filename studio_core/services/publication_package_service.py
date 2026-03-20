@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 from studio_core.core.models import now_iso
 from studio_core.services.asset_registry_service import get_assets
+from studio_core.services.branding_resolver_service import resolve_brand_assets
 from studio_core.services.cdn_service import resolve_cdn_url
 from studio_core.services.saga_runtime_service import load_saga_runtime
 
@@ -291,17 +292,58 @@ def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
 
     project_id = _normalize_str(project.get("id"))
     ip_slug = _normalize_str(project.get("saga_slug")) or saga_id
+    language = _normalize_str(project.get("language")) or runtime.get("default_language", "pt-PT")
 
     public_assets = _build_public_assets(
         project_id=project_id or None,
         ip_slug=ip_slug or None,
     )
 
+    branding_resolution = resolve_brand_assets(
+        context="product_page",
+        ip_slug=ip_slug or None,
+        project_id=project_id or None,
+        language=language or None,
+        channel="website",
+    )
+
+    website_contract = {
+        "project_id": project_id,
+        "project_slug": _normalize_str(project.get("slug")) or project_id,
+        "ip_slug": ip_slug,
+        "ip_name": _normalize_str(project.get("saga_name")) or runtime.get("name", ""),
+        "series_name": metadata.get("series_name", ""),
+        "language": language,
+        "title": _normalize_str(project.get("title")),
+        "description": metadata.get("description", ""),
+        "formats": [name for name, ok in output_presence.items() if ok],
+        "price": commercial.get("price", ""),
+        "currency": commercial.get("currency", "EUR"),
+        "variant_id": f"{project_id}:website:{language}:default" if project_id else "",
+        "channel": "website",
+        "seo": {
+            "title": _normalize_str(project.get("title")),
+            "description": commercial.get("blurb") or metadata.get("description", ""),
+            "keywords": _safe_list(commercial.get("keywords", [])),
+            "canonical_url": "",
+            "og_image": public_assets.get("cover") or public_assets.get("hero_background") or "",
+        },
+        "assets": public_assets,
+        "characters": _safe_list(runtime.get("main_characters", [])),
+        "themes": _safe_list(metadata.get("themes", [])),
+        "values": _safe_list(metadata.get("values", [])),
+        "authors": [metadata.get("author_default")] if metadata.get("author_default") else [],
+        "badges": _safe_list(public_assets.get("badges", [])),
+        "video_trailer": public_assets.get("trailer_thumbnail", ""),
+        "buy_links": [],
+    }
+
     return {
         "generated_at": now_iso(),
         "project": {
             "id": project.get("id"),
             "title": project.get("title"),
+            "slug": project.get("slug", ""),
             "language": project.get("language"),
             "output_languages": project.get("output_languages", []),
             "saga_slug": project.get("saga_slug"),
@@ -351,6 +393,7 @@ def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
             "brand_assets": runtime.get("brand_assets", {}),
             "palette": runtime.get("palette", {}),
             "public": public_assets,
+            "branding_resolution": branding_resolution,
         },
         "outputs": outputs,
         "checks": {
@@ -359,4 +402,5 @@ def build_publication_package(project: Dict[str, Any]) -> Dict[str, Any]:
             "output_presence": output_presence,
             "readiness": readiness,
         },
+        "website_payload": website_contract,
 }
