@@ -40,6 +40,7 @@ from studio_core.api.routes.production_pipeline import router as production_pipe
 from studio_core.api.routes.project_commercial import router as project_commercial_router
 from studio_core.api.routes.project_integrity import router as project_integrity_router
 from studio_core.api.routes.projects import router as projects_router
+from studio_core.api.routes.public_assets import router as public_assets_router
 from studio_core.api.routes.publication_package import router as publication_package_router
 from studio_core.api.routes.publish_readiness import router as publish_readiness_router
 from studio_core.api.routes.publishing import router as publishing_router
@@ -144,6 +145,9 @@ app.include_router(ip_characters_router, prefix="/api")
 app.include_router(ip_canons_router, prefix="/api")
 app.include_router(ip_metadata_router, prefix="/api")
 app.include_router(illustrations_router, prefix="/api")
+
+# Public media contract for Website consumption
+app.include_router(public_assets_router, prefix="/api")
 
 
 @app.get("/")
