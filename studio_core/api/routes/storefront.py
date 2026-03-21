@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from studio_core.services.project_service import list_projects
 from studio_core.services.publication_payload_builder import build_store_payload
@@ -9,23 +9,29 @@ from studio_core.services.publication_payload_builder import build_store_payload
 router = APIRouter(prefix="/store", tags=["storefront"])
 
 
+def _load_all_projects() -> list[dict]:
+    result = list_projects(None)
+    if isinstance(result, dict):
+        return result.get("projects", [])
+    return []
+
+
 # ==========================================================
 # PRODUCT PAGE
 # ==========================================================
 @router.get("/product/{project_id}")
-def store_product(project_id: str):
-    projects = list_projects(None).get("projects", [])
-
-    project = next((p for p in projects if p["id"] == project_id), None)
+def store_product(project_id: str) -> dict:
+    projects = _load_all_projects()
+    project = next((p for p in projects if str(p.get("id")) == str(project_id)), None)
 
     if not project:
-        return {"ok": False, "error": "project_not_found"}
+        raise HTTPException(status_code=404, detail="project_not_found")
 
     payload = build_store_payload(project)
 
     return {
         "ok": True,
-        "product": payload
+        "product": payload,
     }
 
 
@@ -33,8 +39,8 @@ def store_product(project_id: str):
 # CATALOG
 # ==========================================================
 @router.get("/catalog")
-def store_catalog():
-    projects = list_projects(None).get("projects", [])
+def store_catalog() -> dict:
+    projects = _load_all_projects()
 
     catalog = []
 
@@ -47,7 +53,7 @@ def store_catalog():
     return {
         "ok": True,
         "count": len(catalog),
-        "products": catalog
+        "products": catalog,
     }
 
 
@@ -55,13 +61,13 @@ def store_catalog():
 # IP STORE PAGE
 # ==========================================================
 @router.get("/ip/{ip_slug}")
-def store_ip(ip_slug: str):
-    projects = list_projects(None).get("projects", [])
+def store_ip(ip_slug: str) -> dict:
+    projects = _load_all_projects()
 
     products = []
 
     for project in projects:
-        if project.get("saga_slug") == ip_slug:
+        if str(project.get("saga_slug") or "") == str(ip_slug):
             try:
                 products.append(build_store_payload(project))
             except Exception:
@@ -71,7 +77,7 @@ def store_ip(ip_slug: str):
         "ok": True,
         "ip_slug": ip_slug,
         "count": len(products),
-        "products": products
+        "products": products,
     }
 
 
@@ -79,8 +85,8 @@ def store_ip(ip_slug: str):
 # HOMEPAGE HIGHLIGHTS
 # ==========================================================
 @router.get("/highlights")
-def store_highlights():
-    projects = list_projects(None).get("projects", [])
+def store_highlights() -> dict:
+    projects = _load_all_projects()
 
     highlights = []
 
@@ -92,5 +98,6 @@ def store_highlights():
 
     return {
         "ok": True,
-        "highlights": highlights
-  }
+        "count": len(highlights),
+        "highlights": highlights,
+    }
