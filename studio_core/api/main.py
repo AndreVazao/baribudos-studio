@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from studio_core.api.routes.age_badges import router as age_badges_router
+from studio_core.api.routes.assets import router as assets_router
 from studio_core.api.routes.audio_cast import router as audio_cast_router
 from studio_core.api.routes.audio_cast_preview import router as audio_cast_preview_router
 from studio_core.api.routes.audiobooks import router as audiobooks_router
@@ -49,6 +50,7 @@ from studio_core.api.routes.saga_runtime import router as saga_runtime_router
 from studio_core.api.routes.sagas import router as sagas_router
 from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
+from studio_core.api.routes.storefront import router as storefront_router
 from studio_core.api.routes.story_layout import router as story_layout_router
 from studio_core.api.routes.system_smoke import router as system_smoke_router
 from studio_core.api.routes.system_smoke_v1 import router as system_smoke_v1_router
@@ -57,8 +59,6 @@ from studio_core.api.routes.users import ensure_default_owner, router as users_r
 from studio_core.api.routes.v1_readiness import router as v1_readiness_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
-from studio_core.api.routes.assets import router as assets_routerfromroms
-from studio_core.api.routes.storefront import router as storefront_router
 from studio_core.api.routes.voice_preview import router as voice_preview_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
 from studio_core.services.ai_runtime_bootstrap import start_all
@@ -147,9 +147,13 @@ app.include_router(ip_characters_router, prefix="/api")
 app.include_router(ip_canons_router, prefix="/api")
 app.include_router(ip_metadata_router, prefix="/api")
 app.include_router(illustrations_router, prefix="/api")
-app.include_router(assets_router, prefix="/apiPublicPublic media contract for Website consumption
-app.include_router(storefront_router)
+app.include_router(assets_router, prefix="/api")
+
+# Public media contract for Website consumption
 app.include_router(public_assets_router, prefix="/api")
+
+# Commerce / storefront layer
+app.include_router(storefront_router)
 
 
 @app.get("/")
