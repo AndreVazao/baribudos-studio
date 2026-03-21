@@ -64,6 +64,7 @@ from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_st
 from studio_core.services.ai_runtime_bootstrap import start_all
 from studio_core.services.bootstrap_service import bootstrap_system
 from studio_core.api.routes.website_contract import router as website_contract_router
+from studio_core.api.routes.branding_pack import router as branding_pack_router
 
 
 @asynccontextmanager
@@ -150,6 +151,7 @@ app.include_router(ip_metadata_router, prefix="/api")
 app.include_router(illustrations_router, prefix="/api")
 app.include_router(assets_router, prefix="/api")
 app.include_router(website_contract_router, prefix="/api")
+app.include_router(branding_pack_router, prefix="/api")
 
 # Public media contract for Website consumption
 app.include_router(public_assets_router, prefix="/api")
