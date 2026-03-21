@@ -53,4 +53,5 @@ __all__ = [
     "public_assets",   # 🔴 NOVO SISTEMA EDITORIAL GLOBAL
     "assets",
     "storefront",
+    "website_contract",
 ]
