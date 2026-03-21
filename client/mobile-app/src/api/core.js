@@ -171,4 +171,4 @@ export async function createSponsor(payload = {}) {
 
 export async function listJobs() {
   return get(`${getApiBase()}/jobs`)
-                     }
+}
