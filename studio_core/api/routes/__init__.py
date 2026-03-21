@@ -52,4 +52,5 @@ __all__ = [
     "illustrations",
     "public_assets",   # 🔴 NOVO SISTEMA EDITORIAL GLOBAL
     "assets",
+    "storefront",
 ]
