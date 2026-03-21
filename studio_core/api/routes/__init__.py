@@ -54,4 +54,5 @@ __all__ = [
     "assets",
     "storefront",
     "website_contract",
+    "branding_pack",
 ]
