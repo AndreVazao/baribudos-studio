@@ -105,7 +105,7 @@ export default function VisualAssetsPanel({ user }) {
 
   useEffect(() => {
     loadAssets()
-  }, [selectedIp, selectedProject, assetType, context])
+  }, [selectedIp, selectedProject])
 
   const filteredProjects = useMemo(() => {
     if (!selectedIp) return projects
@@ -368,4 +368,4 @@ export default function VisualAssetsPanel({ user }) {
       </div>
     </Card>
   )
-  }
+            }
