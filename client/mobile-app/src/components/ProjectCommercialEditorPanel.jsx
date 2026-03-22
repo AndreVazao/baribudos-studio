@@ -247,4 +247,4 @@ export default function ProjectCommercialEditorPanel({ user }) {
       </button>
     </Card>
   )
-        }
+  }
