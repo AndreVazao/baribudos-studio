@@ -64,4 +64,4 @@ export async function uploadVoiceSample({ name, language = "", notes = "", file 
 
 export async function generateVoicePreview(payload = {}) {
   return post(`${getApiBase()}/voice-preview`, payload)
-              }
+}
