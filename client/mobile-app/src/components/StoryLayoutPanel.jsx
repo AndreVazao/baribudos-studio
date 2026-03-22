@@ -358,4 +358,4 @@ export default function StoryLayoutPanel({ user }) {
       ) : null}
     </Card>
   )
-    }
+  }
