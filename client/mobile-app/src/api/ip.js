@@ -131,4 +131,4 @@ export async function updateIpMetadata(slug, payload = {}, user = {}) {
 
 export async function getSagaRuntime(slug) {
   return get(`${getApiBase()}/saga-runtime/${slug}`)
-    }
+}
