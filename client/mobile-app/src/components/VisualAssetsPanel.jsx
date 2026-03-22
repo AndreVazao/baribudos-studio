@@ -368,4 +368,4 @@ export default function VisualAssetsPanel({ user }) {
       </div>
     </Card>
   )
-            }
+  }
