@@ -148,4 +148,4 @@ export default function PublicationPackagePanel({ user }) {
       ) : null}
     </Card>
   )
-      }
+  }
