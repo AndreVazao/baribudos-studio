@@ -300,4 +300,4 @@ export default function VoiceCloningPanel({ user }) {
       </div>
     </Card>
   )
-    }
+  }
