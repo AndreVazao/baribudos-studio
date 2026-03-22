@@ -27,9 +27,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: client/mobile-app/package-lock.json
-
+        
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
