@@ -76,4 +76,4 @@ export default function SystemSmokeV1Panel() {
       ) : null}
     </Card>
   )
-      }
+  }
