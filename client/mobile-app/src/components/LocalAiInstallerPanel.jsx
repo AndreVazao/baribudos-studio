@@ -82,4 +82,4 @@ export default function LocalAiInstallerPanel() {
       <pre>{JSON.stringify(status, null, 2)}</pre>
     </div>
   )
-    }
+  }
