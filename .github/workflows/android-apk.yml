@@ -9,6 +9,7 @@ jobs:
 
     env:
       JAVA_VERSION: "17"
+      NODE_VERSION: "20"
       ANDROID_API_LEVEL: "34"
       ANDROID_BUILD_TOOLS: "34.0.0"
 
@@ -25,11 +26,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: client/mobile-app/package-lock.json
 
-      - name: Install Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Accept Android SDK licenses
@@ -37,9 +38,16 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platform-tools" \
-                     "platforms;android-${ANDROID_API_LEVEL}" \
-                     "build-tools;${ANDROID_BUILD_TOOLS}"
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;${ANDROID_BUILD_TOOLS}"
+
+      - name: Verify Android SDK
+        run: |
+          sdkmanager --list | head -n 50 || true
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
 
       - name: Install frontend dependencies
         working-directory: client/mobile-app
@@ -49,16 +57,19 @@ jobs:
         working-directory: client/mobile-app
         run: npm run build
 
-      - name: Install Capacitor Android dependencies
+      - name: Verify Capacitor config
         working-directory: client/mobile-app
         run: |
-          npm install
-          npx cap add android || true
-          npx cap sync android
+          test -f capacitor.config.ts || test -f capacitor.config.js
+          test -d android
+
+      - name: Sync Capacitor Android
+        working-directory: client/mobile-app
+        run: npx cap sync android
 
       - name: Build APK
         working-directory: client/mobile-app/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
