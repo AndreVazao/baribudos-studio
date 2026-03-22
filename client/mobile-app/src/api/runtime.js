@@ -58,4 +58,4 @@ export async function checkForUpdates(payload = {}) {
 
 export async function downloadUpdate(payload = {}) {
   return post(`${getApiBase()}/updater/download`, payload)
-  }
+}
