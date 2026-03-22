@@ -130,4 +130,4 @@ export default function ProjectIntegrityPanel({ user }) {
       </button>
     </Card>
   )
-    }
+  }
