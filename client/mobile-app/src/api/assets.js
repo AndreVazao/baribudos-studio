@@ -78,4 +78,4 @@ export async function rollbackAsset(assetId) {
   return handle(fetch(`${getApiBase()}/assets/${assetId}/rollback`, {
     method: "POST"
   }))
-  }
+}
