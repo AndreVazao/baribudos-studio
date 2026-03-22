@@ -141,4 +141,4 @@ export default function SystemSmokePanel({ user }) {
       </div>
     </Card>
   )
-    }
+  }
