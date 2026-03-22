@@ -57,11 +57,12 @@ jobs:
         working-directory: client/mobile-app
         run: npm run build
 
-      - name: Verify Capacitor config
+      - name: Ensure Android platform exists
         working-directory: client/mobile-app
         run: |
-          test -f capacitor.config.ts || test -f capacitor.config.js
-          test -d android
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
       - name: Sync Capacitor Android
         working-directory: client/mobile-app
