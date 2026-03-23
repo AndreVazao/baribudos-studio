@@ -5,7 +5,8 @@ import {
   clearSavedUser,
   getConnectionBadge,
   getConnectionState,
-  getSavedUser
+  getSavedUser,
+  setSavedUser
 } from "./api.js"
 import AppShell from "./components/AppShell.jsx"
 import BrandHeader from "./components/BrandHeader.jsx"
@@ -87,14 +88,19 @@ export default function App() {
     }
   }
 
-  function handleLogout() {
-    clearSavedUser()
-    setUser(null)
-  }
-
   function handleConnected() {
     const state = getConnectionState()
     setConnected(Boolean(state?.connected))
+  }
+
+  function handleLogin(nextUser) {
+    setUser(nextUser)
+    setSavedUser(nextUser)
+  }
+
+  function handleLogout() {
+    clearSavedUser()
+    setUser(null)
   }
 
   function handleOpenDownload() {
@@ -169,7 +175,7 @@ export default function App() {
       ) : null}
 
       {connected && !user ? (
-        <LoginPanel onLogin={setUser} />
+        <LoginPanel onLogin={handleLogin} />
       ) : null}
 
       {connected && user ? (
@@ -212,4 +218,4 @@ export default function App() {
       ) : null}
     </AppShell>
   )
-        }
+}
