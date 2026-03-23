@@ -53,7 +53,7 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
     }
   }
 
-  async function handleSaveProfile() {
+  function handleSaveProfile() {
     saveConnectionProfile(profile)
     refreshState()
     alert("Perfil de ligação guardado.")
@@ -150,4 +150,4 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
       </ActionButton>
     </div>
   )
-      }
+}
