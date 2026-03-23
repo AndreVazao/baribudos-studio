@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react"
 import {
+  autoConnect,
   checkForUpdates,
   clearSavedUser,
+  getConnectionBadge,
+  getConnectionState,
   getSavedUser
 } from "./api.js"
 import AppShell from "./components/AppShell.jsx"
@@ -10,16 +13,67 @@ import DashboardPanel from "./components/DashboardPanel.jsx"
 import LoginPanel from "./components/LoginPanel.jsx"
 import PcConnectionPanel from "./components/PcConnectionPanel.jsx"
 
+function ConnectionBadge() {
+  const [badge, setBadge] = useState(getConnectionBadge())
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setBadge(getConnectionBadge())
+    }, 1500)
+
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 12,
+        right: 12,
+        zIndex: 9999,
+        background: badge.color,
+        color: "#fff",
+        padding: "8px 12px",
+        borderRadius: 999,
+        fontWeight: 700,
+        fontSize: 12,
+        boxShadow: "0 8px 20px rgba(0,0,0,0.18)"
+      }}
+    >
+      {badge.text}
+    </div>
+  )
+}
+
 export default function App() {
   const [connected, setConnected] = useState(false)
+  const [checkingConnection, setCheckingConnection] = useState(true)
   const [user, setUser] = useState(getSavedUser())
   const [updateInfo, setUpdateInfo] = useState(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
 
   useEffect(() => {
+    boot()
+  }, [])
+
+  useEffect(() => {
     if (!connected) return
     runStartupUpdateCheck()
   }, [connected])
+
+  async function boot() {
+    setCheckingConnection(true)
+
+    try {
+      await autoConnect()
+      const state = getConnectionState()
+      setConnected(Boolean(state?.connected))
+    } catch {
+      setConnected(false)
+    }
+
+    setCheckingConnection(false)
+  }
 
   async function runStartupUpdateCheck() {
     try {
@@ -38,6 +92,11 @@ export default function App() {
     setUser(null)
   }
 
+  function handleConnected() {
+    const state = getConnectionState()
+    setConnected(Boolean(state?.connected))
+  }
+
   function handleOpenDownload() {
     const url = String(updateInfo?.download_url || "").trim()
     if (!url) {
@@ -49,6 +108,7 @@ export default function App() {
 
   return (
     <AppShell>
+      <ConnectionBadge />
       <BrandHeader />
 
       {updateInfo?.update_available && !updateDismissed ? (
@@ -101,7 +161,11 @@ export default function App() {
       ) : null}
 
       {!connected ? (
-        <PcConnectionPanel onConnected={() => setConnected(true)} />
+        <PcConnectionPanel
+          connected={connected}
+          checkingConnection={checkingConnection}
+          onConnected={handleConnected}
+        />
       ) : null}
 
       {connected && !user ? (
@@ -148,4 +212,4 @@ export default function App() {
       ) : null}
     </AppShell>
   )
-    }
+        }
