@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import {
   autoConnect,
+  createPairing,
   getConnectionProfile,
   getConnectionState,
+  resolvePairingCode,
   saveConnectionProfile,
   setManualConnection
 } from "../api.js"
@@ -31,6 +33,8 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
   const [state, setState] = useState(getConnectionState())
   const [manualHost, setManualHost] = useState("")
   const [busy, setBusy] = useState(false)
+  const [pairCodeInput, setPairCodeInput] = useState("")
+  const [generatedPairCode, setGeneratedPairCode] = useState("")
 
   useEffect(() => {
     setProfile(getConnectionProfile())
@@ -74,6 +78,86 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
       if (!result.ok) {
         alert(result.error || "Ligação manual falhou.")
       }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleResolvePairCode() {
+    if (!pairCodeInput.trim()) {
+      alert("Indica um código de emparelhamento.")
+      return
+    }
+
+    setBusy(true)
+    try {
+      const result = await resolvePairingCode(pairCodeInput)
+
+      if (!result?.ok || !result?.pairing) {
+        alert(result?.error || "Código não encontrado.")
+        return
+      }
+
+      const pairing = result.pairing
+
+      const nextProfile = saveConnectionProfile({
+        pcName: pairing.pc_name || profile.pcName || "",
+        lanHost: pairing.lan_host || "",
+        remoteHost: pairing.remote_host || "",
+        pairCode: pairing.pair_code || pairCodeInput
+      })
+
+      setProfile(nextProfile)
+      setPairCodeInput(pairing.pair_code || pairCodeInput)
+
+      await autoConnect()
+      refreshState()
+      onConnected?.()
+      alert("Emparelhamento aplicado.")
+    } catch (error) {
+      alert(error?.message || "Falha ao resolver código.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleCreatePairing() {
+    if (!profile.pcName?.trim()) {
+      alert("Indica o nome do PC.")
+      return
+    }
+
+    if (!profile.lanHost?.trim()) {
+      alert("Indica o host LAN do PC.")
+      return
+    }
+
+    setBusy(true)
+    try {
+      const result = await createPairing({
+        pc_name: profile.pcName,
+        lan_host: profile.lanHost,
+        remote_host: profile.remoteHost || "",
+        created_by: profile.pcName || ""
+      })
+
+      if (!result?.ok || !result?.pairing) {
+        alert(result?.error || "Falha ao criar código.")
+        return
+      }
+
+      const code = result.pairing.pair_code || ""
+      setGeneratedPairCode(code)
+
+      const nextProfile = saveConnectionProfile({
+        ...profile,
+        pairCode: code
+      })
+
+      setProfile(nextProfile)
+      alert("Código de emparelhamento criado.")
+    } catch (error) {
+      alert(error?.message || "Falha ao criar pairing.")
     } finally {
       setBusy(false)
     }
@@ -124,16 +208,38 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
 
       <label>Código de emparelhamento</label>
       <input
-        value={profile.pairCode || ""}
-        onChange={(e) => setProfile((current) => ({ ...current, pairCode: e.target.value }))}
+        value={pairCodeInput || profile.pairCode || ""}
+        onChange={(e) => setPairCodeInput(e.target.value)}
         placeholder="Ex: BARI-7K2P-91XM"
         style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       />
+
+      {generatedPairCode ? (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            background: "rgba(220,252,231,0.8)",
+            border: "1px solid rgba(34,197,94,0.25)"
+          }}
+        >
+          <strong>Código gerado:</strong> {generatedPairCode}
+        </div>
+      ) : null}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <ActionButton onClick={handleSaveProfile}>Guardar perfil</ActionButton>
         <ActionButton onClick={handleAutoConnect} color="#0369a1">
           {busy ? "A ligar..." : "Ligação automática"}
+        </ActionButton>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <ActionButton onClick={handleResolvePairCode} color="#7c3aed">
+          Emparelhar por código
+        </ActionButton>
+        <ActionButton onClick={handleCreatePairing} color="#0f766e">
+          Gerar código neste PC
         </ActionButton>
       </div>
 
@@ -145,7 +251,7 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
         style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       />
 
-      <ActionButton onClick={handleManualConnect} color="#7c3aed">
+      <ActionButton onClick={handleManualConnect} color="#991b1b">
         Ligar manualmente
       </ActionButton>
     </div>
