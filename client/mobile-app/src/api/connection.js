@@ -239,4 +239,4 @@ export function getConnectionBadge() {
     text: state.label || "Ligado",
     color: "#0369a1"
   }
-      }
+}
