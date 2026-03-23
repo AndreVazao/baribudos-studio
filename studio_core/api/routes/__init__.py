@@ -56,4 +56,5 @@ __all__ = [
     "website_contract",
     "branding_pack",
     "marketplace_visuals",
+    "pairing",
 ]
