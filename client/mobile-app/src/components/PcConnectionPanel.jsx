@@ -1,21 +1,79 @@
-import { useState } from "react"
-import { getApiBase, healthCheck, setApiBase } from "../api.js"
+import { useEffect, useState } from "react"
+import {
+  autoConnect,
+  getConnectionProfile,
+  getConnectionState,
+  saveConnectionProfile,
+  setManualConnection
+} from "../api.js"
 
-export default function PcConnectionPanel({ onConnected }) {
-  const [value, setValue] = useState(getApiBase())
-  const [status, setStatus] = useState("")
+function ActionButton({ children, onClick, color = "#2F5E2E" }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "10px 12px",
+        borderRadius: 12,
+        border: "none",
+        background: color,
+        color: "#fff",
+        fontWeight: 700,
+        cursor: "pointer"
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+export default function PcConnectionPanel({ connected, checkingConnection, onConnected }) {
+  const [profile, setProfile] = useState(getConnectionProfile())
+  const [state, setState] = useState(getConnectionState())
+  const [manualHost, setManualHost] = useState("")
   const [busy, setBusy] = useState(false)
 
-  async function handleConnect() {
+  useEffect(() => {
+    setProfile(getConnectionProfile())
+    setState(getConnectionState())
+  }, [connected, checkingConnection])
+
+  function refreshState() {
+    setProfile(getConnectionProfile())
+    setState(getConnectionState())
+  }
+
+  async function handleAutoConnect() {
+    setBusy(true)
     try {
-      setBusy(true)
-      setStatus("A testar ligação...")
-      const normalized = setApiBase(value)
-      const health = await healthCheck(normalized)
-      setStatus(`Ligado a ${normalized}`)
-      onConnected?.(normalized, health)
-    } catch (error) {
-      setStatus(error?.message || "Falha ao ligar ao PC.")
+      await autoConnect()
+      refreshState()
+      onConnected?.()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleSaveProfile() {
+    saveConnectionProfile(profile)
+    refreshState()
+    alert("Perfil de ligação guardado.")
+  }
+
+  async function handleManualConnect() {
+    if (!manualHost.trim()) {
+      alert("Indica um host manual.")
+      return
+    }
+
+    setBusy(true)
+    try {
+      const result = await setManualConnection(manualHost)
+      refreshState()
+      onConnected?.()
+
+      if (!result.ok) {
+        alert(result.error || "Ligação manual falhou.")
+      }
     } finally {
       setBusy(false)
     }
@@ -24,8 +82,6 @@ export default function PcConnectionPanel({ onConnected }) {
   return (
     <div
       style={{
-        position: "relative",
-        zIndex: 2,
         border: "1px solid rgba(255,255,255,0.25)",
         borderRadius: 16,
         background: "rgba(255,255,255,0.84)",
@@ -38,47 +94,60 @@ export default function PcConnectionPanel({ onConnected }) {
     >
       <h3 style={{ margin: 0, color: "#2F5E2E" }}>Ligação ao PC</h3>
 
+      <div><strong>Estado:</strong> {checkingConnection ? "A verificar..." : state?.label || "Sem ligação"}</div>
+      <div><strong>Host ativo:</strong> {state?.activeHost || "-"}</div>
+      <div><strong>API ativa:</strong> {state?.activeApiBase || "-"}</div>
+
+      <label>Nome do PC</label>
       <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Ex.: 192.168.1.50:8787 ou localhost:8787"
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none"
-        }}
+        value={profile.pcName || ""}
+        onChange={(e) => setProfile((current) => ({ ...current, pcName: e.target.value }))}
+        placeholder="Ex: PC-André"
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       />
 
-      <button
-        onClick={handleConnect}
-        disabled={busy}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "none",
-          background: "#2F5E2E",
-          color: "#fff",
-          fontWeight: 700,
-          cursor: "pointer"
-        }}
-      >
-        {busy ? "A ligar..." : "Ligar ao backend Python"}
-      </button>
+      <label>Host LAN (Casa)</label>
+      <input
+        value={profile.lanHost || ""}
+        onChange={(e) => setProfile((current) => ({ ...current, lanHost: e.target.value }))}
+        placeholder="Ex: 192.168.1.25:8787"
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      />
 
-      {status ? (
-        <div
-          style={{
-            background: "#f7f7f7",
-            border: "1px solid #eee",
-            borderRadius: 12,
-            padding: 12,
-            color: "#374151"
-          }}
-        >
-          {status}
-        </div>
-      ) : null}
+      <label>Host remoto privado</label>
+      <input
+        value={profile.remoteHost || ""}
+        onChange={(e) => setProfile((current) => ({ ...current, remoteHost: e.target.value }))}
+        placeholder="Ex: 100.x.y.z:8787"
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      />
+
+      <label>Código de emparelhamento</label>
+      <input
+        value={profile.pairCode || ""}
+        onChange={(e) => setProfile((current) => ({ ...current, pairCode: e.target.value }))}
+        placeholder="Ex: BARI-7K2P-91XM"
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      />
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <ActionButton onClick={handleSaveProfile}>Guardar perfil</ActionButton>
+        <ActionButton onClick={handleAutoConnect} color="#0369a1">
+          {busy ? "A ligar..." : "Ligação automática"}
+        </ActionButton>
+      </div>
+
+      <label>Ligação manual avançada</label>
+      <input
+        value={manualHost}
+        onChange={(e) => setManualHost(e.target.value)}
+        placeholder="Ex: 192.168.1.25:8787 ou host remoto"
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      />
+
+      <ActionButton onClick={handleManualConnect} color="#7c3aed">
+        Ligar manualmente
+      </ActionButton>
     </div>
   )
-  }
+      }
