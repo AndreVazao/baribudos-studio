@@ -19,7 +19,6 @@ import {
   runFactory,
   saveSettings
 } from "../api.js"
-import VisualAssetsPanel from "./VisualAssetsPanel.jsx"
 import AudioCastPanel from "./AudioCastPanel.jsx"
 import EditorialStudioPanel from "./EditorialStudioPanel.jsx"
 import IllustrationPipelinePanel from "./IllustrationPipelinePanel.jsx"
@@ -45,7 +44,9 @@ import SystemSmokePanel from "./SystemSmokePanel.jsx"
 import SystemSmokeV1Panel from "./SystemSmokeV1Panel.jsx"
 import UpdaterPanel from "./UpdaterPanel.jsx"
 import V1ReadinessPanel from "./V1ReadinessPanel.jsx"
+import VisualAssetsPanel from "./VisualAssetsPanel.jsx"
 import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
+import WebsiteControlPanel from "./WebsiteControlPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 
@@ -356,6 +357,8 @@ export default function DashboardPanel({ user }) {
         <div><strong>Engine:</strong> {factoryCaps?.engine || "-"}</div>
         <div><strong>Línguas:</strong> {(factoryCaps?.supported_languages || []).join(", ")}</div>
       </Card>
+
+      <WebsiteControlPanel user={user} projects={projects} onReload={loadAll} />
 
       <UpdaterPanel />
       <V1ReadinessPanel user={user} />
