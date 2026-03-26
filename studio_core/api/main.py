@@ -54,6 +54,7 @@ from studio_core.api.routes.publishing import router as publishing_router
 from studio_core.api.routes.saga_loader import router as saga_loader_router
 from studio_core.api.routes.saga_runtime import router as saga_runtime_router
 from studio_core.api.routes.sagas import router as sagas_router
+from studio_core.api.routes.secret_control import router as secret_control_router
 from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
 from studio_core.api.routes.storefront import router as storefront_router
@@ -168,6 +169,7 @@ app.include_router(website_admin_router, prefix="/api")
 app.include_router(deploy_control_router, prefix="/api")
 app.include_router(db_control_router, prefix="/api")
 app.include_router(commerce_groups_router, prefix="/api")
+app.include_router(secret_control_router, prefix="/api")
 app.include_router(public_assets_router, prefix="/api")
 app.include_router(storefront_router)
 

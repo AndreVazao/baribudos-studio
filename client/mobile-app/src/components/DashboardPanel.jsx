@@ -45,6 +45,7 @@ import SystemSmokePanel from "./SystemSmokePanel.jsx"
 import SystemSmokeV1Panel from "./SystemSmokeV1Panel.jsx"
 import UpdaterPanel from "./UpdaterPanel.jsx"
 import V1ReadinessPanel from "./V1ReadinessPanel.jsx"
+import VaultPanel from "./VaultPanel.jsx"
 import VisualAssetsPanel from "./VisualAssetsPanel.jsx"
 import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
 import WebsiteControlPanel from "./WebsiteControlPanel.jsx"
@@ -361,6 +362,7 @@ export default function DashboardPanel({ user }) {
 
       <WebsiteControlPanel user={user} projects={projects} onReload={loadAll} />
       <CommerceGroupsPanel user={user} />
+      <VaultPanel user={user} />
 
       <UpdaterPanel />
       <V1ReadinessPanel user={user} />
