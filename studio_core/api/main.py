@@ -11,6 +11,7 @@ from studio_core.api.routes.assets import router as assets_router
 from studio_core.api.routes.audio_cast import router as audio_cast_router
 from studio_core.api.routes.audio_cast_preview import router as audio_cast_preview_router
 from studio_core.api.routes.audiobooks import router as audiobooks_router
+from studio_core.api.routes.branding_pack import router as branding_pack_router
 from studio_core.api.routes.covers import router as covers_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.editorial_engine import router as editorial_engine_router
@@ -37,6 +38,8 @@ from studio_core.api.routes.local_ai_runtime import router as local_ai_runtime_r
 from studio_core.api.routes.local_audio_engine_manager import router as local_audio_engine_manager_router
 from studio_core.api.routes.local_audio_installer import router as local_audio_installer_router
 from studio_core.api.routes.local_engine_manager import router as local_engine_manager_router
+from studio_core.api.routes.marketplace_visuals import router as marketplace_visuals_router
+from studio_core.api.routes.pairing import router as pairing_router
 from studio_core.api.routes.production_pipeline import router as production_pipeline_router
 from studio_core.api.routes.project_commercial import router as project_commercial_router
 from studio_core.api.routes.project_integrity import router as project_integrity_router
@@ -60,13 +63,11 @@ from studio_core.api.routes.v1_readiness import router as v1_readiness_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
 from studio_core.api.routes.voice_preview import router as voice_preview_router
+from studio_core.api.routes.website_contract import router as website_contract_router
+from studio_core.api.routes.website_publisher import router as website_publisher_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
 from studio_core.services.ai_runtime_bootstrap import start_all
 from studio_core.services.bootstrap_service import bootstrap_system
-from studio_core.api.routes.website_contract import router as website_contract_router
-from studio_core.api.routes.branding_pack import router as branding_pack_router
-from studio_core.api.routes.marketplace_visuals import router as marketplace_visuals_router
-from studio_core.api.routes.pairing import router as pairing_router
 
 
 @asynccontextmanager
@@ -156,6 +157,7 @@ app.include_router(website_contract_router, prefix="/api")
 app.include_router(branding_pack_router, prefix="/api")
 app.include_router(marketplace_visuals_router, prefix="/api")
 app.include_router(pairing_router, prefix="/api")
+app.include_router(website_publisher_router, prefix="/api")
 
 # Public media contract for Website consumption
 app.include_router(public_assets_router, prefix="/api")
@@ -173,4 +175,4 @@ def root() -> dict:
         "docs": "/docs",
         "health": "/api/health",
         "diagnostics": "/api/diagnostics",
-}
+    }
