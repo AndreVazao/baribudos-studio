@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from typing import Any, Dict
 from urllib import error, request
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
+from studio_core.services.credential_resolver_service import resolve_credential
 from studio_core.services.website_contract_payload_service import build_website_payload_from_package
 
 PROJECTS_FILE = "data/projects.json"
@@ -83,8 +83,8 @@ def build_publish_envelope(project_id: str) -> Dict[str, Any]:
 
 
 def publish_project_to_website(project_id: str) -> Dict[str, Any]:
-    target_url = _normalize_text(os.getenv("BARIBUDOS_WEBSITE_PUBLISH_URL"))
-    api_key = _normalize_text(os.getenv("BARIBUDOS_WEBSITE_PUBLISH_API_KEY"))
+    target_url = resolve_credential("BARIBUDOS_WEBSITE_PUBLISH_URL", target="website")
+    api_key = resolve_credential("BARIBUDOS_WEBSITE_PUBLISH_API_KEY", target="website")
 
     if not target_url:
         raise ValueError("website_publish_url_missing")

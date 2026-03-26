@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import os
 import socket
 from typing import Any, Dict
 from urllib.parse import urlparse
+
+from studio_core.services.credential_resolver_service import resolve_credential
 
 
 def _normalize_text(value: Any) -> str:
@@ -11,15 +12,19 @@ def _normalize_text(value: Any) -> str:
 
 
 def _database_url() -> str:
-    return _normalize_text(os.getenv("BARIBUDOS_WEBSITE_DATABASE_URL")) or _normalize_text(os.getenv("DATABASE_URL"))
+    return resolve_credential(
+        "BARIBUDOS_WEBSITE_DATABASE_URL",
+        target="supabase",
+        aliases=["DATABASE_URL"],
+    )
 
 
 def _supabase_url() -> str:
-    return _normalize_text(os.getenv("BARIBUDOS_SUPABASE_URL"))
+    return resolve_credential("BARIBUDOS_SUPABASE_URL", target="supabase")
 
 
 def _supabase_service_key() -> str:
-    return _normalize_text(os.getenv("BARIBUDOS_SUPABASE_SERVICE_ROLE_KEY"))
+    return resolve_credential("BARIBUDOS_SUPABASE_SERVICE_ROLE_KEY", target="supabase")
 
 
 def _extract_host_port() -> Dict[str, Any]:

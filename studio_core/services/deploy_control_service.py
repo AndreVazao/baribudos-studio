@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
-from typing import Any, Dict, List
+from typing import Any, Dict
 from urllib import error, parse, request
+
+from studio_core.services.credential_resolver_service import resolve_credential
 
 
 def _normalize_text(value: Any) -> str:
@@ -11,21 +12,21 @@ def _normalize_text(value: Any) -> str:
 
 
 def _api_token() -> str:
-    token = _normalize_text(os.getenv("BARIBUDOS_VERCEL_API_TOKEN"))
+    token = resolve_credential("BARIBUDOS_VERCEL_API_TOKEN", target="vercel")
     if not token:
         raise ValueError("vercel_api_token_missing")
     return token
 
 
 def _team_id() -> str:
-    team_id = _normalize_text(os.getenv("BARIBUDOS_VERCEL_TEAM_ID"))
+    team_id = resolve_credential("BARIBUDOS_VERCEL_TEAM_ID", target="vercel")
     if not team_id:
         raise ValueError("vercel_team_id_missing")
     return team_id
 
 
 def _website_project_id() -> str:
-    project_id = _normalize_text(os.getenv("BARIBUDOS_VERCEL_PROJECT_ID_WEBSITE"))
+    project_id = resolve_credential("BARIBUDOS_VERCEL_PROJECT_ID_WEBSITE", target="vercel")
     if not project_id:
         raise ValueError("vercel_project_id_website_missing")
     return project_id

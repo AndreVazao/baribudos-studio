@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Any, Dict
 from urllib import error, parse, request
+
+from studio_core.services.credential_resolver_service import resolve_credential
 
 
 def _normalize_text(value: Any) -> str:
@@ -31,14 +32,14 @@ def _request_json(url: str, api_key: str) -> Dict[str, Any]:
 
 
 def _base_url() -> str:
-    value = _normalize_text(os.getenv("BARIBUDOS_WEBSITE_BASE_URL"))
+    value = resolve_credential("BARIBUDOS_WEBSITE_BASE_URL", target="website")
     if not value:
         raise ValueError("website_base_url_missing")
     return value.rstrip("/")
 
 
 def _api_key() -> str:
-    value = _normalize_text(os.getenv("BARIBUDOS_WEBSITE_PUBLISH_API_KEY"))
+    value = resolve_credential("BARIBUDOS_WEBSITE_PUBLISH_API_KEY", target="website")
     if not value:
         raise ValueError("website_publish_api_key_missing")
     return value
