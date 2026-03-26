@@ -1,4 +1,4 @@
-import { getApiBase, get, post, qs } from "./core.js"
+import { getApiBase, get, patch, post, qs } from "./core.js"
 
 export async function getWebsiteControlHealth() {
   return get(`${getApiBase()}/website-control/health`)
@@ -42,4 +42,12 @@ export async function getDbControlStatus() {
 
 export async function getDbControlReadiness() {
   return get(`${getApiBase()}/db-control/readiness`)
+}
+
+export async function updateWebsiteProductVisibility(productId, payload = {}) {
+  return patch(`${getApiBase()}/website-admin/products/${encodeURIComponent(String(productId || "").trim())}/visibility`, payload)
+}
+
+export async function updateWebsiteProductPricing(productId, payload = {}) {
+  return patch(`${getApiBase()}/website-admin/products/${encodeURIComponent(String(productId || "").trim())}/pricing`, payload)
 }

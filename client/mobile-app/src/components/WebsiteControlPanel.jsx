@@ -11,6 +11,8 @@ import {
   getWebsitePublishEnvelope,
   getWebsitePublishStatus,
   publishProjectToWebsite,
+  updateWebsiteProductPricing,
+  updateWebsiteProductVisibility,
 } from "../api.js"
 
 function canPublish(user) {
@@ -278,6 +280,84 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
     }
   }
 
+  async function handleToggleProductActive(item) {
+    if (!canPublish(user)) {
+      alert("Sem permissão para alterar visibilidade operacional.")
+      return
+    }
+    setBusy(true)
+    setBusyLabel("A atualizar produto...")
+    setLastError("")
+    try {
+      await updateWebsiteProductVisibility(item.product_id, { active: !item.active })
+      await loadWebsiteData()
+    } catch (error) {
+      const message = error?.message || "Falha ao atualizar estado do produto."
+      setLastError(message)
+      alert(message)
+    } finally {
+      setBusy(false)
+      setBusyLabel("")
+    }
+  }
+
+  async function handleToggleProductFeatured(item) {
+    if (!canPublish(user)) {
+      alert("Sem permissão para alterar destaque operacional.")
+      return
+    }
+    setBusy(true)
+    setBusyLabel("A atualizar destaque...")
+    setLastError("")
+    try {
+      await updateWebsiteProductVisibility(item.product_id, { featured: !item.featured })
+      await loadWebsiteData()
+    } catch (error) {
+      const message = error?.message || "Falha ao atualizar destaque do produto."
+      setLastError(message)
+      alert(message)
+    } finally {
+      setBusy(false)
+      setBusyLabel("")
+    }
+  }
+
+  async function handleUpdateProductPricing(item) {
+    if (!isStructuralOwner(user)) {
+      alert("Pricing estrutural reservado ao owner / super admin.")
+      return
+    }
+
+    const currentValue = (Number(item.price_cents || 0) / 100).toFixed(2)
+    const input = window.prompt(`Novo preço para ${item.title} (${item.currency || "EUR"})`, currentValue)
+    if (input === null) return
+
+    const normalized = String(input).replace(",", ".").trim()
+    const amount = Number(normalized)
+    if (!Number.isFinite(amount) || amount < 0) {
+      alert("Preço inválido.")
+      return
+    }
+
+    setBusy(true)
+    setBusyLabel("A atualizar preço...")
+    setLastError("")
+    try {
+      await updateWebsiteProductPricing(item.product_id, {
+        price_cents: Math.round(amount * 100),
+        currency: item.currency || "EUR",
+      })
+      await loadWebsiteData()
+    } catch (error) {
+      const message = error?.message || "Falha ao atualizar preço do produto."
+      setLastError(message)
+      alert(message)
+    } finally {
+      setBusy(false)
+      setBusyLabel("")
+    }
+  }
+
   function openWebsite(path = "") {
     const base = String(health?.site_url || "").trim()
     if (!base) {
@@ -533,6 +613,17 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
               <div>IP: {item.publication?.ip_name || item.publication?.ip_slug || "-"}</div>
               <div>Ativo: {item.active ? "Sim" : "Não"} · Featured: {item.featured ? "Sim" : "Não"}</div>
               <div>Assets: {(item.asset_roles || []).join(", ") || "-"}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <ActionButton onClick={() => handleToggleProductActive(item)} disabled={busy || !canPublish(user)} tone="secondary">
+                  {item.active ? "Desativar" : "Ativar"}
+                </ActionButton>
+                <ActionButton onClick={() => handleToggleProductFeatured(item)} disabled={busy || !canPublish(user)} tone="secondary">
+                  {item.featured ? "Remover destaque" : "Destacar"}
+                </ActionButton>
+                <ActionButton onClick={() => handleUpdateProductPricing(item)} disabled={busy || !structuralOwner}>
+                  Atualizar preço
+                </ActionButton>
+              </div>
             </div>
           ))}
         </div>

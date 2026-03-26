@@ -65,6 +65,7 @@ from studio_core.api.routes.v1_readiness import router as v1_readiness_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
 from studio_core.api.routes.voice_preview import router as voice_preview_router
+from studio_core.api.routes.website_admin import router as website_admin_router
 from studio_core.api.routes.website_contract import router as website_contract_router
 from studio_core.api.routes.website_control import router as website_control_router
 from studio_core.api.routes.website_publisher import router as website_publisher_router
@@ -162,13 +163,10 @@ app.include_router(marketplace_visuals_router, prefix="/api")
 app.include_router(pairing_router, prefix="/api")
 app.include_router(website_publisher_router, prefix="/api")
 app.include_router(website_control_router, prefix="/api")
+app.include_router(website_admin_router, prefix="/api")
 app.include_router(deploy_control_router, prefix="/api")
 app.include_router(db_control_router, prefix="/api")
-
-# Public media contract for Website consumption
 app.include_router(public_assets_router, prefix="/api")
-
-# Commerce / storefront layer
 app.include_router(storefront_router)
 
 
