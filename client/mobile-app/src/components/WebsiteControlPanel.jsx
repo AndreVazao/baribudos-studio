@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import {
+  getDbControlReadiness,
+  getDbControlStatus,
+  getDeployControlVercelDeployments,
+  getDeployControlVercelSummary,
   getWebsiteControlCatalog,
   getWebsiteControlHealth,
   getWebsiteControlPublication,
@@ -113,6 +117,10 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
   const [health, setHealth] = useState(null)
   const [summary, setSummary] = useState(null)
   const [catalog, setCatalog] = useState(null)
+  const [deploySummary, setDeploySummary] = useState(null)
+  const [deployments, setDeployments] = useState([])
+  const [dbStatus, setDbStatus] = useState(null)
+  const [dbReadiness, setDbReadiness] = useState(null)
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [publishStatus, setPublishStatus] = useState(null)
   const [publishEnvelope, setPublishEnvelope] = useState(null)
@@ -144,19 +152,36 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
 
   async function loadWebsiteData() {
     setBusy(true)
-    setBusyLabel("A sincronizar painel do Website...")
+    setBusyLabel("A sincronizar cockpit...")
     setLastError("")
     try {
-      const [healthRes, summaryRes, catalogRes] = await Promise.all([
+      const [
+        healthRes,
+        summaryRes,
+        catalogRes,
+        deploySummaryRes,
+        deploymentsRes,
+        dbStatusRes,
+        dbReadinessRes,
+      ] = await Promise.all([
         getWebsiteControlHealth(),
         getWebsiteControlSummary(),
         getWebsiteControlCatalog({ limit: 12, activeOnly: false }),
+        getDeployControlVercelSummary(),
+        getDeployControlVercelDeployments({ limit: 8 }),
+        getDbControlStatus(),
+        getDbControlReadiness(),
       ])
+
       setHealth(healthRes?.website || healthRes || null)
       setSummary(summaryRes?.website || summaryRes || null)
       setCatalog(catalogRes?.website || catalogRes || null)
+      setDeploySummary(deploySummaryRes?.deploy || deploySummaryRes || null)
+      setDeployments(deploymentsRes?.deploy?.deployments || deploymentsRes?.deployments || [])
+      setDbStatus(dbStatusRes?.database || dbStatusRes || null)
+      setDbReadiness(dbReadinessRes?.database || dbReadinessRes || null)
     } catch (error) {
-      setLastError(error?.message || "Falha ao carregar painel do Website.")
+      setLastError(error?.message || "Falha ao carregar cockpit do Studio.")
     } finally {
       setBusy(false)
       setBusyLabel("")
@@ -270,6 +295,10 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
   const currentSync = selectedProject?.website_sync || publishStatus?.website_sync || null
   const siteUrl = String(health?.site_url || "").trim()
   const structuralOwner = isStructuralOwner(user)
+  const latestDeployment = deploySummary?.latest_deployment || {}
+  const projectInfo = deploySummary?.project || {}
+  const dbProbeOk = Boolean(dbStatus?.network_probe?.ok)
+  const dbReady = Boolean(dbReadiness?.ready)
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -279,7 +308,7 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <StatusPill ok={Boolean(health?.ok) && !lastError} label={lastError ? "Com falhas" : (health?.status === "healthy" ? "Website saudável" : "Ligado ao Website")} />
             <ActionButton onClick={loadWebsiteData} disabled={busy} tone="secondary">
-              {busy ? busyLabel || "A atualizar..." : "Atualizar Website"}
+              {busy ? busyLabel || "A atualizar..." : "Atualizar cockpit"}
             </ActionButton>
           </div>
         }
@@ -297,7 +326,7 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
           <div><strong>Saúde e acesso</strong></div>
           <div>Status: {health?.status || "-"}</div>
           <div>Environment: {health?.environment || "-"}</div>
-          <div>Database: {health?.services?.database?.ok ? "OK" : "FALHA"}</div>
+          <div>Database interna do Website: {health?.services?.database?.ok ? "OK" : "FALHA"}</div>
           <div>Site URL: {siteUrl || "-"}</div>
           <div>Última leitura: {health?.checked_at || summary?.checked_at || "-"}</div>
 
@@ -310,8 +339,9 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
 
         <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: structuralOwner ? "rgba(220,252,231,0.7)" : "rgba(254,249,195,0.75)" }}>
           <div><strong>Política de permissões</strong></div>
-          <div>Publicar e rever Website: permitido para owner/admin autorizado.</div>
-          <div>Alterações estruturais, revogação de permissões e controlos críticos: reservados ao owner/super admin.</div>
+          <div>Publicar, rever catálogo e operações comerciais: permitido para owner/admin autorizado.</div>
+          <div>Alterações estruturais, revogação de permissões, controlos críticos e pricing estrutural: reservados ao owner/super admin.</div>
+          <div>O Studio é a autoridade para preços, bundles e grupos de artigos.</div>
           <div>Utilizador atual: <strong>{user?.name || "-"}</strong> · {user?.role || "-"}</div>
           <div>Nível atual: <strong>{structuralOwner ? "Owner / Super admin operacional" : (canPublish(user) ? "Admin editorial/comercial" : "Leitura / sem publish")}</strong></div>
         </div>
@@ -321,6 +351,59 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
             {lastError}
           </div>
         ) : null}
+      </SectionCard>
+
+      <SectionCard title="Deploy e infraestrutura pública">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+          <SmallInfoCard label="Projeto Vercel" value={projectInfo.name || "-"} />
+          <SmallInfoCard label="Framework" value={projectInfo.framework || "-"} />
+          <SmallInfoCard label="Node" value={projectInfo.node_version || "-"} />
+          <SmallInfoCard label="Último deploy" value={latestDeployment.ready_state || "-"} />
+          <SmallInfoCard label="Database readiness" value={dbReady ? "READY" : "PENDENTE"} />
+          <SmallInfoCard label="DB network probe" value={dbProbeOk ? "OK" : "FALHA"} />
+        </div>
+
+        <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}>
+          <div><strong>Deploy summary</strong></div>
+          <div>Project ID: {projectInfo.id || "-"}</div>
+          <div>Domains: {(projectInfo.domains || []).join(", ") || "-"}</div>
+          <div>Latest deployment URL: {latestDeployment.url || "-"}</div>
+          <div>Latest deployment target: {latestDeployment.target || "preview/branch"}</div>
+        </div>
+
+        <div style={{ display: "grid", gap: 8 }}>
+          <div><strong>Deploys recentes</strong></div>
+          {deployments.length === 0 ? <div>Sem deploys carregados.</div> : null}
+          {deployments.map((item) => (
+            <div key={item.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 4 }}>
+              <div><strong>{item.state}</strong> · {item.url}</div>
+              <div>Ref: {item.git?.ref || "-"} · SHA: {item.git?.sha || "-"}</div>
+              <div>Mensagem: {item.git?.message || "-"}</div>
+              <div>Autor: {item.git?.author || item.creator?.username || "-"}</div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Database control plane">
+        <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}>
+          <div><strong>Estado da base pública do Website</strong></div>
+          <div>Modo: {dbStatus?.mode || "-"}</div>
+          <div>Database configured: {dbStatus?.database_configured ? "Sim" : "Não"}</div>
+          <div>Supabase configured: {dbStatus?.supabase_configured ? "Sim" : "Não"}</div>
+          <div>Supabase service role configured: {dbStatus?.supabase_service_role_configured ? "Sim" : "Não"}</div>
+          <div>Target: {dbStatus?.database_target?.scheme || "-"}://{dbStatus?.database_target?.host || "-"}:{dbStatus?.database_target?.port || "-"}/{dbStatus?.database_target?.database || "-"}</div>
+          <div>Socket probe: {dbProbeOk ? "OK" : (dbStatus?.network_probe?.error || "-")}</div>
+        </div>
+
+        <div style={{ display: "grid", gap: 8 }}>
+          <div><strong>Readiness checklist</strong></div>
+          {((dbReadiness?.checklist) || []).map((item) => (
+            <div key={item.field} style={{ padding: 10, borderRadius: 10, border: "1px solid #e5e7eb", background: item.ok ? "rgba(220,252,231,0.7)" : "rgba(254,242,242,0.8)" }}>
+              {item.field} — <strong>{item.ok ? "OK" : "PENDENTE"}</strong>
+            </div>
+          ))}
+        </div>
       </SectionCard>
 
       <SectionCard title="Publicar e sincronizar Website">

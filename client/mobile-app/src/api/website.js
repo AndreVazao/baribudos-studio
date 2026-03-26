@@ -27,3 +27,19 @@ export async function getWebsitePublishStatus(projectId) {
 export async function publishProjectToWebsite(projectId) {
   return post(`${getApiBase()}/website-publisher/publish/${projectId}`, {})
 }
+
+export async function getDeployControlVercelSummary() {
+  return get(`${getApiBase()}/deploy-control/vercel/summary`)
+}
+
+export async function getDeployControlVercelDeployments({ limit = 10 } = {}) {
+  return get(`${getApiBase()}/deploy-control/vercel/deployments${qs({ limit })}`)
+}
+
+export async function getDbControlStatus() {
+  return get(`${getApiBase()}/db-control/status`)
+}
+
+export async function getDbControlReadiness() {
+  return get(`${getApiBase()}/db-control/readiness`)
+}
