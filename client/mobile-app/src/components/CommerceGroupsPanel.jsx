@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import {
   createCommerceGroup,
   deleteCommerceGroup,
+  getWebsiteControlCatalog,
   listCommerceGroups,
   updateCommerceGroup,
 } from "../api.js"
@@ -59,6 +60,7 @@ function productToGroupItem(product, position = 0) {
 
 export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
   const [groups, setGroups] = useState([])
+  const [remoteCatalog, setRemoteCatalog] = useState([])
   const [loading, setLoading] = useState(false)
   const [newSlug, setNewSlug] = useState("")
   const [newName, setNewName] = useState("")
@@ -68,13 +70,28 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
 
   useEffect(() => {
     loadGroups()
+    loadCatalog()
   }, [])
+
+  const effectiveCatalog = useMemo(
+    () => (catalogItems && catalogItems.length ? catalogItems : remoteCatalog),
+    [catalogItems, remoteCatalog]
+  )
 
   const catalogMap = useMemo(() => {
     const map = new Map()
-    catalogItems.forEach((item) => map.set(item.product_id, item))
+    effectiveCatalog.forEach((item) => map.set(item.product_id, item))
     return map
-  }, [catalogItems])
+  }, [effectiveCatalog])
+
+  async function loadCatalog() {
+    try {
+      const response = await getWebsiteControlCatalog({ limit: 50, activeOnly: false })
+      setRemoteCatalog(response?.website?.items || response?.items || [])
+    } catch {
+      setRemoteCatalog([])
+    }
+  }
 
   async function loadGroups() {
     setLoading(true)
@@ -230,8 +247,8 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
 
         <div style={{ display: "grid", gap: 8 }}>
           <div><strong>Produtos a incluir</strong></div>
-          {catalogItems.length === 0 ? <div>Sem produtos do Website carregados no cockpit.</div> : null}
-          {catalogItems.map((item) => (
+          {effectiveCatalog.length === 0 ? <div>Sem produtos do Website carregados no cockpit.</div> : null}
+          {effectiveCatalog.map((item) => (
             <label key={item.product_id} style={{ display: "flex", gap: 8, alignItems: "center", padding: 8, borderRadius: 10, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}>
               <input type="checkbox" checked={selectedProductIds.includes(item.product_id)} onChange={() => toggleSelectedProduct(item.product_id)} />
               <span>{item.title} · {item.type} · {item.currency} {(Number(item.price_cents || 0) / 100).toFixed(2)}</span>

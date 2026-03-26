@@ -20,6 +20,7 @@ import {
   saveSettings
 } from "../api.js"
 import AudioCastPanel from "./AudioCastPanel.jsx"
+import CommerceGroupsPanel from "./CommerceGroupsPanel.jsx"
 import EditorialStudioPanel from "./EditorialStudioPanel.jsx"
 import IllustrationPipelinePanel from "./IllustrationPipelinePanel.jsx"
 import IpBrandingEditorPanel from "./IpBrandingEditorPanel.jsx"
@@ -359,6 +360,7 @@ export default function DashboardPanel({ user }) {
       </Card>
 
       <WebsiteControlPanel user={user} projects={projects} onReload={loadAll} />
+      <CommerceGroupsPanel user={user} />
 
       <UpdaterPanel />
       <V1ReadinessPanel user={user} />

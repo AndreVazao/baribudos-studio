@@ -12,6 +12,7 @@ from studio_core.api.routes.audio_cast import router as audio_cast_router
 from studio_core.api.routes.audio_cast_preview import router as audio_cast_preview_router
 from studio_core.api.routes.audiobooks import router as audiobooks_router
 from studio_core.api.routes.branding_pack import router as branding_pack_router
+from studio_core.api.routes.commerce_groups import router as commerce_groups_router
 from studio_core.api.routes.covers import router as covers_router
 from studio_core.api.routes.db_control import router as db_control_router
 from studio_core.api.routes.deploy_control import router as deploy_control_router
@@ -166,6 +167,7 @@ app.include_router(website_control_router, prefix="/api")
 app.include_router(website_admin_router, prefix="/api")
 app.include_router(deploy_control_router, prefix="/api")
 app.include_router(db_control_router, prefix="/api")
+app.include_router(commerce_groups_router, prefix="/api")
 app.include_router(public_assets_router, prefix="/api")
 app.include_router(storefront_router)
 
