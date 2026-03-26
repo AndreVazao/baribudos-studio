@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react"
 import {
   createCommerceGroup,
   deleteCommerceGroup,
+  getWebsiteBundlesStatus,
   getWebsiteControlCatalog,
   listCommerceGroups,
+  publishCommerceGroupToWebsite,
   updateCommerceGroup,
 } from "../api.js"
 
@@ -61,6 +63,7 @@ function productToGroupItem(product, position = 0) {
 export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
   const [groups, setGroups] = useState([])
   const [remoteCatalog, setRemoteCatalog] = useState([])
+  const [websiteBundles, setWebsiteBundles] = useState([])
   const [loading, setLoading] = useState(false)
   const [newSlug, setNewSlug] = useState("")
   const [newName, setNewName] = useState("")
@@ -71,6 +74,7 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
   useEffect(() => {
     loadGroups()
     loadCatalog()
+    loadWebsiteBundles()
   }, [])
 
   const effectiveCatalog = useMemo(
@@ -90,6 +94,15 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
       setRemoteCatalog(response?.website?.items || response?.items || [])
     } catch {
       setRemoteCatalog([])
+    }
+  }
+
+  async function loadWebsiteBundles() {
+    try {
+      const response = await getWebsiteBundlesStatus(20)
+      setWebsiteBundles(response?.website?.bundles || response?.bundles || [])
+    } catch {
+      setWebsiteBundles([])
     }
   }
 
@@ -218,6 +231,23 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
     }
   }
 
+  async function handlePublishGroup(group) {
+    if (!canCommercial(user)) {
+      alert("Sem permissão comercial.")
+      return
+    }
+    setLoading(true)
+    try {
+      await publishCommerceGroupToWebsite(group.id)
+      await loadGroups()
+      await loadWebsiteBundles()
+    } catch (error) {
+      alert(error?.message || "Falha ao publicar bundle no Website.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div
       style={{
@@ -281,10 +311,26 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
               <ActionButton onClick={() => handleUpdatePrice(group)} disabled={loading || !isOwner(user)}>
                 Atualizar preço
               </ActionButton>
+              <ActionButton onClick={() => handlePublishGroup(group)} disabled={loading || !canCommercial(user)}>
+                Publicar no Website
+              </ActionButton>
               <ActionButton onClick={() => handleDeleteGroup(group)} disabled={loading || !isOwner(user)} tone="danger">
                 Apagar
               </ActionButton>
             </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        <div><strong>Bundles materializados no Website</strong></div>
+        {websiteBundles.length === 0 ? <div>Sem bundles materializados ainda.</div> : null}
+        {websiteBundles.map((bundle) => (
+          <div key={bundle.group_id} style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 6 }}>
+            <div><strong>{bundle.name}</strong> ({bundle.slug})</div>
+            <div>Tipo: {bundle.group_type} · {bundle.currency} {(Number(bundle.price_cents || 0) / 100).toFixed(2)}</div>
+            <div>Ativo: {bundle.active ? "Sim" : "Não"} · Featured: {bundle.featured ? "Sim" : "Não"}</div>
+            <div>Itens: {(bundle.items || []).map((item) => item.title || item.slug || item.product_id).join(", ") || "-"}</div>
           </div>
         ))}
       </div>

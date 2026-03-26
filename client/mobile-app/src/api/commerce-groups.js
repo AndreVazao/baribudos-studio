@@ -15,3 +15,11 @@ export async function updateCommerceGroup(groupId, payload = {}) {
 export async function deleteCommerceGroup(groupId) {
   return del(`${getApiBase()}/commerce-groups/${encodeURIComponent(String(groupId || "").trim())}`)
 }
+
+export async function publishCommerceGroupToWebsite(groupId) {
+  return post(`${getApiBase()}/website-bundles/publish/${encodeURIComponent(String(groupId || "").trim())}`, {})
+}
+
+export async function getWebsiteBundlesStatus(limit = 20) {
+  return get(`${getApiBase()}/website-bundles/status?limit=${Math.max(1, Math.min(Number(limit || 20), 100))}`)
+}
