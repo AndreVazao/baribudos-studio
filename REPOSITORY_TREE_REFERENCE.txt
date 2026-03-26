@@ -1,0 +1,156 @@
+BARIBUDOS STUDIO - REPOSITORY TREE REFERENCE
+Repository: AndreVazao/baribudos-studio
+Purpose: official repository structure reference before functional integration changes
+
+IMPORTANT NOTE
+This reference was created from connector-accessible audited files and imported module paths before touching functional code. The connector did not expose a literal raw recursive directory dump from the repository root in this session, so this file is the official working tree reference for architecture/governance and integration planning.
+
+==================================================
+TOP LEVEL (AUDITED / CONFIRMED)
+==================================================
+.
+├── README.md
+├── package.json
+├── OFFICIAL_STUDIO_WEBSITE_CONTRACT.txt
+├── REPOSITORY_TREE_REFERENCE.txt
+├── client/
+│   └── mobile-app/
+│       ├── package.json
+│       └── src/
+│           └── components/
+│               └── PcConnectionPanel.jsx
+├── public/
+│   └── brand/
+├── scripts/
+├── studio_core/
+│   ├── api/
+│   │   ├── main.py
+│   │   └── routes/
+│   ├── core/
+│   └── services/
+└── data/
+
+==================================================
+STUDIO API ROUTES IMPORTED IN main.py
+==================================================
+studio_core/
+└── api/
+    ├── main.py
+    └── routes/
+        ├── age_badges.py
+        ├── assets.py
+        ├── audio_cast.py
+        ├── audio_cast_preview.py
+        ├── audiobooks.py
+        ├── branding_pack.py
+        ├── covers.py
+        ├── diagnostics.py
+        ├── editorial_engine.py
+        ├── editorial_media_pipeline.py
+        ├── editorial_production.py
+        ├── ebooks.py
+        ├── factory.py
+        ├── final_media_render.py
+        ├── health.py
+        ├── illustration_assets.py
+        ├── illustration_generation.py
+        ├── illustration_pipeline.py
+        ├── illustration_provider.py
+        ├── illustrations.py
+        ├── ip_branding.py
+        ├── ip_canons.py
+        ├── ip_characters.py
+        ├── ip_creator.py
+        ├── ip_metadata.py
+        ├── ip_palette.py
+        ├── jobs.py
+        ├── local_ai_installer.py
+        ├── local_ai_runtime.py
+        ├── local_audio_engine_manager.py
+        ├── local_audio_installer.py
+        ├── local_engine_manager.py
+        ├── marketplace_visuals.py
+        ├── pairing.py
+        ├── production_pipeline.py
+        ├── project_commercial.py
+        ├── project_integrity.py
+        ├── projects.py
+        ├── public_assets.py
+        ├── publication_package.py
+        ├── publish_readiness.py
+        ├── publishing.py
+        ├── saga_loader.py
+        ├── saga_runtime.py
+        ├── sagas.py
+        ├── settings.py
+        ├── sponsors.py
+        ├── storefront.py
+        ├── story_layout.py
+        ├── system_smoke.py
+        ├── system_smoke_v1.py
+        ├── updater.py
+        ├── users.py
+        ├── v1_readiness.py
+        ├── videos.py
+        ├── voice_library.py
+        ├── voice_preview.py
+        └── website_contract.py
+
+==================================================
+STUDIO SERVICES AUDITED / CONFIRMED
+==================================================
+studio_core/
+└── services/
+    ├── ai_runtime_bootstrap.py
+    ├── asset_registry_service.py
+    ├── bootstrap_service.py
+    ├── branding_pack_service.py
+    ├── branding_resolver_service.py
+    ├── cdn_service.py
+    ├── marketplace_visual_adaptation_service.py
+    ├── pairing_service.py
+    ├── project_service.py
+    ├── publication_package_service.py
+    ├── publication_payload_builder.py
+    ├── saga_runtime_service.py
+    ├── website_contract_validator.py
+    └── (other Studio services likely present but not enumerated directly in this session)
+
+==================================================
+STUDIO FILES AUDITED DIRECTLY IN THIS SESSION
+==================================================
+- README.md
+- package.json
+- client/mobile-app/package.json
+- client/mobile-app/src/components/PcConnectionPanel.jsx
+- studio_core/api/main.py
+- studio_core/api/routes/website_contract.py
+- studio_core/api/routes/public_assets.py
+- studio_core/api/routes/storefront.py
+- studio_core/api/routes/branding_pack.py
+- studio_core/api/routes/marketplace_visuals.py
+- studio_core/api/routes/pairing.py
+- studio_core/api/routes/publication_package.py
+- studio_core/services/website_contract_validator.py
+- studio_core/services/publication_payload_builder.py
+- studio_core/services/publication_package_service.py
+
+==================================================
+ARCHITECTURAL READING OF THIS TREE
+==================================================
+- Studio is a private monorepo.
+- Frontend/mobile/desktop shell lives under client/mobile-app.
+- Backend/API core lives under studio_core.
+- Public/static brand media lives under public.
+- Automation/local tooling lives under scripts.
+- Publication contract, public assets, storefront, branding, visuals, and pairing are already separated as independent route/service concerns.
+
+==================================================
+TREE GOVERNANCE RULE
+==================================================
+Before structural refactors:
+1. Keep this repository modular.
+2. Add new integration services alongside existing modules.
+3. Redirect legacy code paths before deleting them.
+4. Preserve green builds.
+5. Do not merge this repository with Website.
