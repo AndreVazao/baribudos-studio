@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import {
   createCommerceGroup,
   deleteCommerceGroup,
+  getBundleReconcileReport,
   getWebsiteBundlesStatus,
   getWebsiteControlCatalog,
   listCommerceGroups,
@@ -60,10 +61,17 @@ function productToGroupItem(product, position = 0) {
   }
 }
 
+function reconcileBadge(status) {
+  if (status === "in_sync") return { label: "Em sync", background: "rgba(220,252,231,0.8)", color: "#166534" }
+  if (status === "diverged") return { label: "Divergiu", background: "rgba(254,249,195,0.85)", color: "#854d0e" }
+  return { label: "Falta no Website", background: "rgba(254,226,226,0.85)", color: "#991b1b" }
+}
+
 export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
   const [groups, setGroups] = useState([])
   const [remoteCatalog, setRemoteCatalog] = useState([])
   const [websiteBundles, setWebsiteBundles] = useState([])
+  const [reconcileReport, setReconcileReport] = useState([])
   const [loading, setLoading] = useState(false)
   const [newSlug, setNewSlug] = useState("")
   const [newName, setNewName] = useState("")
@@ -75,6 +83,7 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
     loadGroups()
     loadCatalog()
     loadWebsiteBundles()
+    loadReconcileReport()
   }, [])
 
   const effectiveCatalog = useMemo(
@@ -106,6 +115,15 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
     }
   }
 
+  async function loadReconcileReport() {
+    try {
+      const response = await getBundleReconcileReport(100)
+      setReconcileReport(response?.report || [])
+    } catch {
+      setReconcileReport([])
+    }
+  }
+
   async function loadGroups() {
     setLoading(true)
     try {
@@ -124,6 +142,10 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
         ? current.filter((id) => id !== productId)
         : [...current, productId]
     )
+  }
+
+  async function refreshAll() {
+    await Promise.all([loadGroups(), loadWebsiteBundles(), loadReconcileReport()])
   }
 
   async function handleCreateGroup() {
@@ -164,7 +186,7 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
       setNewDescription("")
       setNewPrice("0.00")
       setSelectedProductIds([])
-      await loadGroups()
+      await refreshAll()
     } catch (error) {
       alert(error?.message || "Falha ao criar grupo comercial.")
     } finally {
@@ -179,10 +201,8 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
     }
     setLoading(true)
     try {
-      await updateCommerceGroup(group.id, {
-        [field]: !Boolean(group?.[field]),
-      })
-      await loadGroups()
+      await updateCommerceGroup(group.id, { [field]: !Boolean(group?.[field]) })
+      await refreshAll()
     } catch (error) {
       alert(error?.message || "Falha ao atualizar grupo.")
     } finally {
@@ -206,7 +226,7 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
     setLoading(true)
     try {
       await updateCommerceGroup(group.id, { price_cents: Math.round(amount * 100) })
-      await loadGroups()
+      await refreshAll()
     } catch (error) {
       alert(error?.message || "Falha ao atualizar preço do grupo.")
     } finally {
@@ -223,7 +243,7 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
     setLoading(true)
     try {
       await deleteCommerceGroup(group.id)
-      await loadGroups()
+      await refreshAll()
     } catch (error) {
       alert(error?.message || "Falha ao apagar grupo.")
     } finally {
@@ -239,8 +259,7 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
     setLoading(true)
     try {
       await publishCommerceGroupToWebsite(group.id)
-      await loadGroups()
-      await loadWebsiteBundles()
+      await refreshAll()
     } catch (error) {
       alert(error?.message || "Falha ao publicar bundle no Website.")
     } finally {
@@ -249,24 +268,16 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid rgba(255,255,255,0.25)",
-        borderRadius: 16,
-        background: "rgba(255,255,255,0.84)",
-        backdropFilter: "blur(8px)",
-        padding: 16,
-        display: "grid",
-        gap: 12,
-        boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
-      }}
-    >
+    <div style={{ border: "1px solid rgba(255,255,255,0.25)", borderRadius: 16, background: "rgba(255,255,255,0.84)", backdropFilter: "blur(8px)", padding: 16, display: "grid", gap: 12, boxShadow: "0 10px 24px rgba(0,0,0,0.10)" }}>
       <h3 style={{ margin: 0, color: "#2F5E2E" }}>Grupos comerciais / Bundles</h3>
 
       <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}>
         <div><strong>Autoridade comercial</strong></div>
         <div>O Studio é a source of truth para grupos, bundles e pricing estrutural.</div>
         <div>Website materializa e expõe; não manda na lógica comercial de origem.</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <ActionButton onClick={refreshAll} disabled={loading} tone="secondary">Atualizar estado</ActionButton>
+        </div>
       </div>
 
       <div style={{ display: "grid", gap: 8 }}>
@@ -274,7 +285,6 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
         <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome do bundle" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db" }} />
         <input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Descrição" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db" }} />
         <input value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="Preço do bundle (EUR)" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db" }} />
-
         <div style={{ display: "grid", gap: 8 }}>
           <div><strong>Produtos a incluir</strong></div>
           {effectiveCatalog.length === 0 ? <div>Sem produtos do Website carregados no cockpit.</div> : null}
@@ -285,10 +295,7 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
             </label>
           ))}
         </div>
-
-        <ActionButton onClick={handleCreateGroup} disabled={loading || !canCommercial(user)}>
-          Criar grupo comercial
-        </ActionButton>
+        <ActionButton onClick={handleCreateGroup} disabled={loading || !canCommercial(user)}>Criar grupo comercial</ActionButton>
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>
@@ -302,21 +309,11 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
             <div>Itens: {(group.items || []).map((item) => item.title || item.slug || item.product_id).join(", ") || "-"}</div>
             <div>Publish Website: {group.publish_state?.website?.published ? "Publicado" : "Por publicar"}</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <ActionButton onClick={() => handleToggleFlag(group, "active")} disabled={loading || !canCommercial(user)} tone="secondary">
-                {group.active ? "Desativar" : "Ativar"}
-              </ActionButton>
-              <ActionButton onClick={() => handleToggleFlag(group, "featured")} disabled={loading || !canCommercial(user)} tone="secondary">
-                {group.featured ? "Remover destaque" : "Destacar"}
-              </ActionButton>
-              <ActionButton onClick={() => handleUpdatePrice(group)} disabled={loading || !isOwner(user)}>
-                Atualizar preço
-              </ActionButton>
-              <ActionButton onClick={() => handlePublishGroup(group)} disabled={loading || !canCommercial(user)}>
-                Publicar no Website
-              </ActionButton>
-              <ActionButton onClick={() => handleDeleteGroup(group)} disabled={loading || !isOwner(user)} tone="danger">
-                Apagar
-              </ActionButton>
+              <ActionButton onClick={() => handleToggleFlag(group, "active")} disabled={loading || !canCommercial(user)} tone="secondary">{group.active ? "Desativar" : "Ativar"}</ActionButton>
+              <ActionButton onClick={() => handleToggleFlag(group, "featured")} disabled={loading || !canCommercial(user)} tone="secondary">{group.featured ? "Remover destaque" : "Destacar"}</ActionButton>
+              <ActionButton onClick={() => handleUpdatePrice(group)} disabled={loading || !isOwner(user)}>Atualizar preço</ActionButton>
+              <ActionButton onClick={() => handlePublishGroup(group)} disabled={loading || !canCommercial(user)}>Publicar no Website</ActionButton>
+              <ActionButton onClick={() => handleDeleteGroup(group)} disabled={loading || !isOwner(user)} tone="danger">Apagar</ActionButton>
             </div>
           </div>
         ))}
@@ -333,6 +330,24 @@ export default function CommerceGroupsPanel({ user, catalogItems = [] }) {
             <div>Itens: {(bundle.items || []).map((item) => item.title || item.slug || item.product_id).join(", ") || "-"}</div>
           </div>
         ))}
+      </div>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        <div><strong>Reconcile Studio ↔ Website</strong></div>
+        {reconcileReport.length === 0 ? <div>Sem relatório de reconcile ainda.</div> : null}
+        {reconcileReport.map((item) => {
+          const badge = reconcileBadge(item.status)
+          return (
+            <div key={item.group_id} style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <strong>{item.local?.name || item.local?.slug || item.group_id}</strong>
+                <span style={{ padding: "6px 10px", borderRadius: 999, background: badge.background, color: badge.color, fontWeight: 700, fontSize: 12 }}>{badge.label}</span>
+              </div>
+              <div>Local: {item.local?.currency} {(Number(item.local?.price_cents || 0) / 100).toFixed(2)} · itens {item.local?.items_count || 0}</div>
+              <div>Website: {item.website ? `${item.website.currency} ${(Number(item.website.price_cents || 0) / 100).toFixed(2)} · itens ${item.website.items_count || 0}` : "Ainda não materializado"}</div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

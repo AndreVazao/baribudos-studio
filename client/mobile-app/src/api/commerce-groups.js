@@ -23,3 +23,7 @@ export async function publishCommerceGroupToWebsite(groupId) {
 export async function getWebsiteBundlesStatus(limit = 20) {
   return get(`${getApiBase()}/website-bundles/status?limit=${Math.max(1, Math.min(Number(limit || 20), 100))}`)
 }
+
+export async function getBundleReconcileReport(limit = 100) {
+  return get(`${getApiBase()}/website-bundles-reconcile?limit=${Math.max(1, Math.min(Number(limit || 100), 100))}`)
+}
