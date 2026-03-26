@@ -1,0 +1,215 @@
+OFFICIAL STUDIO ↔ WEBSITE CONTRACT
+Version: website_ingest_v1
+Status: OFFICIAL WORKING CONTRACT FOR MODULAR IMPLEMENTATION
+Repository: AndreVazao/baribudos-studio
+
+==================================================
+1. PRINCIPLE OF AUTHORITY
+==================================================
+1. Studio is private and is the official source of truth.
+2. Website is public and is the official public/commercial projection.
+3. Repositories remain separate.
+4. Databases remain separate.
+5. Studio publishes frozen snapshots to Website.
+6. Website consumes, persists, exposes, sells, and reports back status/receipt.
+7. Website never becomes the editorial source of truth.
+8. Runtime payloads are not the final authority. Frozen publication packages are.
+
+==================================================
+2. RESPONSIBILITY SPLIT
+==================================================
+STUDIO owns:
+- editorial creation
+- production pipeline
+- assets and public asset manifests
+- branding packs
+- marketplace visuals
+- readiness validation
+- publication freeze
+- official publish/unpublish/republish decisions
+- pairing and private operator control
+
+WEBSITE owns:
+- public website rendering
+- public catalog persistence
+- product pages
+- IP pages
+- checkout
+- customer accounts
+- library access
+- order history
+- sales operations
+- public/commercial analytics
+
+==================================================
+3. INTEGRATION MODEL
+==================================================
+Integration is API based.
+Integration is contract versioned.
+Integration is authenticated with x-studio-api-key.
+Integration is idempotent by publication_id + variant_id.
+Integration always uses a frozen snapshot.
+
+Official direction:
+Studio  --->  Website
+Website --->  Studio (receipt, status, sync result, publish outcome)
+
+No repository fusion.
+No direct shared persistence.
+No Website-managed editorial overrides as source-of-truth.
+
+==================================================
+4. OFFICIAL PUBLISH FLOW
+==================================================
+Step 1. Project is prepared in Studio.
+Step 2. Studio freezes publication package.
+Step 3. Studio validates Website contract.
+Step 4. Studio generates website_ingest_v1 envelope.
+Step 5. Studio POSTs envelope to Website private endpoint.
+Step 6. Website validates schema.
+Step 7. Website upserts IP / Series / Publication / Variant / Assets / Products.
+Step 8. Website returns publish receipt.
+Step 9. Studio stores receipt and sync state.
+
+==================================================
+5. OFFICIAL INGEST ENVELOPE
+==================================================
+Envelope name:
+website_ingest_v1
+
+Minimum envelope fields:
+- schema_version
+- publication_id
+- variant_id
+- project_id
+- project_version
+- published_at
+- checksum
+- payload
+- related_variants
+- related_projects
+
+Optional envelope extensions:
+- asset_manifest
+- branding_pack
+- marketplace_visuals
+- sync_metadata
+- publish_reason
+- source_runtime
+
+==================================================
+6. OFFICIAL PAYLOAD FIELDS FOR WEBSITE
+==================================================
+The Website-facing payload must contain, at minimum:
+- project_id
+- project_slug
+- ip_slug
+- ip_name
+- series_name
+- language
+- title
+- subtitle
+- description
+- short_description
+- formats
+- price
+- currency
+- channel
+- assets
+- seo
+- characters
+- themes
+- values
+- authors
+- badges
+- buy_links
+
+Assets should support at least:
+- cover
+- logos
+- gallery
+- sample_pages
+- audiobook_preview
+- video_trailer
+- downloadable_files
+
+Extended Studio-origin assets that should be preserved for later Website rendering:
+- studio_logo
+- primary_logo
+- secondary_logos
+- hero_background
+- ornaments
+- promo_banners
+- trailer_thumbnail
+- character_cards
+- background_textures
+- social_cards
+- campaign_visuals
+
+SEO must support at least:
+- title
+- description
+- keywords
+- canonical_url
+- og_image
+
+==================================================
+7. NON-NEGOTIABLE RULES
+==================================================
+1. Studio contract builder must be unique.
+2. Validator and publisher must use the same contract builder.
+3. Frozen package is the publish authority.
+4. Website import endpoint must be separate from manual admin fallback.
+5. Manual admin import may remain for emergency/debug only.
+6. Publish must return a receipt.
+7. Receipt must be stored by Studio.
+8. Future versions must be additive and versioned, never silent-breaking.
+
+==================================================
+8. OFFICIAL ENDPOINT INTENT
+==================================================
+Studio private side:
+- /api/publication-package/{project_id}
+- /api/publication-package/{project_id}/freeze
+- /api/website-contract/validate/{project_id}
+- /api/website-contract/validate-all
+- /api/public/...
+- /api/branding-pack/...
+- /api/marketplace-visuals/...
+- future: /api/website-publisher/publish/{project_id}
+- future: /api/website-publisher/status/{project_id}
+- future: /api/website-publisher/republish/{project_id}
+- future: /api/website-publisher/unpublish/{project_id}
+
+Website private intake side:
+- existing manual fallback: /api/admin/import-package
+- official intake to implement: /api/studio/publish
+- future: /api/studio/unpublish
+- future: /api/studio/publish-status
+
+==================================================
+9. DATA OWNERSHIP RULE
+==================================================
+Studio owns editorial truth.
+Website owns public/commercial projection state.
+If there is divergence, Studio contract wins.
+
+==================================================
+10. IMPLEMENTATION SAFETY RULE
+==================================================
+Before changing functional code:
+- preserve green builds
+- avoid repo fusion
+- avoid DB fusion
+- create contract and tree reference files first
+- migrate by redirecting old code paths to the new contract builder
+- remove legacy only after new path is stable
+
+==================================================
+11. OFFICIAL DECISION
+==================================================
+The official architecture is:
+PRIVATE STUDIO PRODUCES AND CONTROLS.
+PUBLIC WEBSITE CONSUMES, PERSISTS, EXPOSES, SELLS, AND RESPONDS.
+
+This file is the official written contract anchor for the Studio repository.
