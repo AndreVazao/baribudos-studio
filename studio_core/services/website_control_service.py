@@ -44,6 +44,11 @@ def _api_key() -> str:
     return value
 
 
+def get_website_health_status() -> Dict[str, Any]:
+    url = f"{_base_url()}/api/studio/status/health"
+    return _request_json(url, _api_key())
+
+
 def get_website_summary_status() -> Dict[str, Any]:
     url = f"{_base_url()}/api/studio/status/summary"
     return _request_json(url, _api_key())
@@ -55,4 +60,13 @@ def get_website_catalog_status(limit: int = 25, active_only: bool = False) -> Di
         "active": 1 if active_only else 0,
     })
     url = f"{_base_url()}/api/studio/status/catalog?{query}"
+    return _request_json(url, _api_key())
+
+
+def get_website_publication_status(publication_id: str) -> Dict[str, Any]:
+    publication_value = _normalize_text(publication_id)
+    if not publication_value:
+        raise ValueError("publication_id_missing")
+    encoded = parse.quote(publication_value, safe="")
+    url = f"{_base_url()}/api/studio/status/publication/{encoded}"
     return _request_json(url, _api_key())
