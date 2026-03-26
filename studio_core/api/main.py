@@ -13,6 +13,8 @@ from studio_core.api.routes.audio_cast_preview import router as audio_cast_previ
 from studio_core.api.routes.audiobooks import router as audiobooks_router
 from studio_core.api.routes.branding_pack import router as branding_pack_router
 from studio_core.api.routes.covers import router as covers_router
+from studio_core.api.routes.db_control import router as db_control_router
+from studio_core.api.routes.deploy_control import router as deploy_control_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.editorial_engine import router as editorial_engine_router
 from studio_core.api.routes.editorial_media_pipeline import router as editorial_media_pipeline_router
@@ -160,6 +162,8 @@ app.include_router(marketplace_visuals_router, prefix="/api")
 app.include_router(pairing_router, prefix="/api")
 app.include_router(website_publisher_router, prefix="/api")
 app.include_router(website_control_router, prefix="/api")
+app.include_router(deploy_control_router, prefix="/api")
+app.include_router(db_control_router, prefix="/api")
 
 # Public media contract for Website consumption
 app.include_router(public_assets_router, prefix="/api")
