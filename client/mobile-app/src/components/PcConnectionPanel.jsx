@@ -5,7 +5,9 @@ import {
   createPairing,
   getConnectionProfile,
   getConnectionState,
+  listPairings,
   resolvePairingCode,
+  revokePairing,
   saveConnectionProfile,
   setManualConnection
 } from "../api.js"
@@ -49,6 +51,8 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
   const [pairCodeInput, setPairCodeInput] = useState("")
   const [generatedPairing, setGeneratedPairing] = useState(null)
   const [qrDataUrl, setQrDataUrl] = useState("")
+  const [pairings, setPairings] = useState([])
+  const [loadingPairings, setLoadingPairings] = useState(false)
 
   useEffect(() => {
     setProfile(getConnectionProfile())
@@ -58,6 +62,10 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
   useEffect(() => {
     buildQr()
   }, [generatedPairing])
+
+  useEffect(() => {
+    loadPairings()
+  }, [])
 
   function refreshState() {
     setProfile(getConnectionProfile())
@@ -80,6 +88,17 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
       2
     )
   }, [generatedPairing])
+
+  async function loadPairings() {
+    setLoadingPairings(true)
+    try {
+      const result = await listPairings()
+      setPairings(result?.items || [])
+    } catch {
+      setPairings([])
+    }
+    setLoadingPairings(false)
+  }
 
   async function buildQr() {
     if (!generatedPairing) {
@@ -220,9 +239,36 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
 
       setProfile(nextProfile)
       setPairCodeInput(pairing.pair_code || "")
+      await loadPairings()
       alert("Código de emparelhamento criado.")
     } catch (error) {
       alert(error?.message || "Falha ao criar pairing.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleRevokePairing(pairCode) {
+    const code = String(pairCode || "").trim()
+    if (!code) return
+
+    setBusy(true)
+    try {
+      const result = await revokePairing(code)
+      if (!result?.ok) {
+        alert(result?.error || "Falha ao revogar pairing.")
+        return
+      }
+
+      if ((generatedPairing?.pair_code || "") === code) {
+        setGeneratedPairing(null)
+        setQrDataUrl("")
+      }
+
+      await loadPairings()
+      alert("Pairing revogado.")
+    } catch (error) {
+      alert(error?.message || "Falha ao revogar pairing.")
     } finally {
       setBusy(false)
     }
@@ -293,6 +339,9 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
         <ActionButton onClick={handleCreatePairing} color="#0f766e">
           Gerar código neste PC
         </ActionButton>
+        <ActionButton onClick={loadPairings} color="#475569">
+          {loadingPairings ? "A atualizar..." : "Atualizar pairings"}
+        </ActionButton>
       </div>
 
       {generatedPairing ? (
@@ -355,6 +404,54 @@ export default function PcConnectionPanel({ connected, checkingConnection, onCon
           />
         </div>
       ) : null}
+
+      <div
+        style={{
+          display: "grid",
+          gap: 8,
+          padding: 12,
+          borderRadius: 12,
+          border: "1px solid #e5e7eb",
+          background: "rgba(255,255,255,0.55)"
+        }}
+      >
+        <div><strong>Pairings ativos</strong></div>
+
+        {loadingPairings ? <div>A carregar pairings...</div> : null}
+
+        {!loadingPairings && pairings.length === 0 ? (
+          <div>Nenhum pairing ativo.</div>
+        ) : null}
+
+        {pairings.map((item) => (
+          <div
+            key={item.pair_code}
+            style={{
+              display: "grid",
+              gap: 6,
+              padding: 10,
+              borderRadius: 10,
+              border: "1px solid #e5e7eb",
+              background: "#fff"
+            }}
+          >
+            <div><strong>{item.pair_code}</strong></div>
+            <div>PC: {item.pc_name || "-"}</div>
+            <div>LAN: {item.lan_host || "-"}</div>
+            <div>Remoto: {item.remote_host || "-"}</div>
+            <div>Expira: {item.expires_at || "-"}</div>
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <ActionButton onClick={() => copyText(item.pair_code || "")} color="#0f766e">
+                Copiar
+              </ActionButton>
+              <ActionButton onClick={() => handleRevokePairing(item.pair_code)} color="#991b1b">
+                Revogar
+              </ActionButton>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <label>Ligação manual avançada</label>
       <input
