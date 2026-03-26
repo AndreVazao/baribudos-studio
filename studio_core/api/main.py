@@ -64,6 +64,7 @@ from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
 from studio_core.api.routes.voice_preview import router as voice_preview_router
 from studio_core.api.routes.website_contract import router as website_contract_router
+from studio_core.api.routes.website_control import router as website_control_router
 from studio_core.api.routes.website_publisher import router as website_publisher_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
 from studio_core.services.ai_runtime_bootstrap import start_all
@@ -158,6 +159,7 @@ app.include_router(branding_pack_router, prefix="/api")
 app.include_router(marketplace_visuals_router, prefix="/api")
 app.include_router(pairing_router, prefix="/api")
 app.include_router(website_publisher_router, prefix="/api")
+app.include_router(website_control_router, prefix="/api")
 
 # Public media contract for Website consumption
 app.include_router(public_assets_router, prefix="/api")
