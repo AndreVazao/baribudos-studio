@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { getIpCharacters, listIps, updateIpCharacters } from "../api.js"
+import { getIpCharacters, getIpCharactersConsistencySummary, listIps, updateIpCharacters } from "../api.js"
 
 function Card({ title, children }) {
   return (
@@ -21,6 +21,15 @@ function Card({ title, children }) {
   )
 }
 
+function SummaryChip({ label, value }) {
+  return (
+    <div style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.7)", minWidth: 120 }}>
+      <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>{value}</div>
+    </div>
+  )
+}
+
 function emptyCharacter() {
   return {
     id: "",
@@ -38,6 +47,7 @@ export default function IpCharactersEditorPanel({ user }) {
   const [ips, setIps] = useState([])
   const [selectedSlug, setSelectedSlug] = useState("")
   const [characters, setCharacters] = useState([])
+  const [consistencySummary, setConsistencySummary] = useState(null)
 
   useEffect(() => {
     loadIps()
@@ -46,6 +56,7 @@ export default function IpCharactersEditorPanel({ user }) {
   useEffect(() => {
     if (selectedSlug) {
       loadCharacters(selectedSlug)
+      loadConsistency(selectedSlug)
     }
   }, [selectedSlug])
 
@@ -64,6 +75,15 @@ export default function IpCharactersEditorPanel({ user }) {
       setCharacters(res?.main_characters || [])
     } catch (error) {
       alert(error?.message || "Erro ao carregar personagens.")
+    }
+  }
+
+  async function loadConsistency(slug) {
+    try {
+      const res = await getIpCharactersConsistencySummary(slug, user)
+      setConsistencySummary(res || null)
+    } catch {
+      setConsistencySummary(null)
     }
   }
 
@@ -102,6 +122,7 @@ export default function IpCharactersEditorPanel({ user }) {
       await updateIpCharacters(selectedSlug, normalized, user)
       alert("Personagens guardadas.")
       await loadCharacters(selectedSlug)
+      await loadConsistency(selectedSlug)
     } catch (error) {
       alert(error?.message || "Erro ao guardar personagens.")
     }
@@ -122,6 +143,25 @@ export default function IpCharactersEditorPanel({ user }) {
           </option>
         ))}
       </select>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <SummaryChip label="Personagens" value={consistencySummary?.count ?? characters.length} />
+        <SummaryChip label="Completos" value={consistencySummary?.complete ?? 0} />
+        <SummaryChip label="Precisam atenção" value={consistencySummary?.needs_attention ?? 0} />
+      </div>
+
+      {Array.isArray(consistencySummary?.reports) && consistencySummary.reports.length > 0 ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {consistencySummary.reports.map((report) => (
+            <div key={report.id || report.name} style={{ padding: 10, borderRadius: 12, border: "1px solid #e5e7eb", background: report.status === "complete" ? "rgba(220,252,231,0.6)" : "rgba(254,249,195,0.7)" }}>
+              <div><strong>{report.name || report.id || "Sem nome"}</strong> — {report.status === "complete" ? "Consistente" : "Precisa atenção"}</div>
+              {Array.isArray(report.missing) && report.missing.length > 0 ? (
+                <div style={{ color: "#854d0e", fontSize: 13 }}>Em falta: {report.missing.join(", ")}</div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <button
         onClick={addCharacter}
@@ -248,4 +288,4 @@ export default function IpCharactersEditorPanel({ user }) {
       </button>
     </Card>
   )
-  }
+}
