@@ -1,0 +1,42 @@
+SAGA_VISUAL_SET_CONTRACT_V1
+
+OWNER_SOURCE_OF_TRUTH=Studio
+RUNTIME_CONSUMER=Website
+CROSS_SAGA_MIX=false
+
+REQUIRED_FIELDS:
+- saga_slug
+- display_name
+- version
+- slots
+- rotation_policy
+- active
+
+RECOMMENDED_SLOTS:
+- hero_video
+- hero_video_alt
+- mobile_teaser
+- hero_image
+- search_visual
+- carousel_visual
+- promo_visual
+- family_visual
+
+SLOT_RULES:
+- Cada slot pertence apenas a uma saga.
+- Website nunca mistura assets de sagas diferentes.
+- Quando o conteúdo/página/search pertence a uma saga, resolver apenas o visual set dessa saga.
+- Hero default usa hero_video quando existir.
+- Mobile teaser usa mobile_teaser quando existir.
+
+BARIBUDOS_V1:
+- hero_video = /media/sagas/baribudos/baribudos-hero-intro-main-20s.mp4
+- hero_video_alt = /media/sagas/baribudos/baribudos-hero-intro-alt-13s.mp4
+- mobile_teaser = /media/sagas/baribudos/baribudos-mobile-teaser-vertical-5s.mp4
+- hero_rotation = hero_video,hero_video_alt
+- mobile_rotation = mobile_teaser
+
+WEBSITE_RUNTIME_EXPECTATION:
+- autoplay muted loop playsinline para vídeos de entrada/ambient
+- fallback estático por saga quando necessário
+- rotação apenas intra-saga
