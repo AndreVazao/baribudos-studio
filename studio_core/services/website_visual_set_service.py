@@ -7,6 +7,7 @@ from urllib import error, request
 
 from studio_core.core.storage import list_json_items, update_json_item
 from studio_core.services.credential_resolver_service import resolve_credential
+from studio_core.services.website_visual_set_reconcile_service import get_visual_set_reconcile_report
 
 SAGA_VISUAL_SETS_FILE = "data/saga_visual_sets.json"
 
@@ -91,6 +92,24 @@ def export_saga_visual_sets_payload() -> Dict[str, Any]:
 
 def get_website_visual_sets_status() -> Dict[str, Any]:
     return _request_json("GET", "/api/studio/status/visual-sets")
+
+
+def get_website_visual_sets_summary() -> Dict[str, Any]:
+    local_items = _safe_list(list_json_items(SAGA_VISUAL_SETS_FILE))
+    website_payload = get_website_visual_sets_status()
+    website_items = _safe_list(website_payload.get("items"))
+    reconcile = get_visual_set_reconcile_report()
+    report = _safe_list(reconcile.get("report"))
+
+    return {
+        "ok": True,
+        "local_count": len(local_items),
+        "website_count": len(website_items),
+        "in_sync": len([item for item in report if item.get("status") == "in_sync"]),
+        "diverged": len([item for item in report if item.get("status") == "diverged"]),
+        "missing_on_website": len([item for item in report if item.get("status") == "missing_on_website"]),
+        "website_source": website_payload.get("source"),
+    }
 
 
 def publish_saga_visual_set_to_website(item_id: str) -> Dict[str, Any]:

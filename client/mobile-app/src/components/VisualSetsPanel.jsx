@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import {
   getWebsiteVisualSetReconcile,
   getWebsiteVisualSetsStatus,
+  getWebsiteVisualSetsSummary,
   listSagaVisualSets,
   publishAllSagaVisualSetsToWebsite,
   publishSagaVisualSetToWebsite,
@@ -45,10 +46,20 @@ function reconcileBadge(status) {
   return { label: "Falta no Website", background: "rgba(254,226,226,0.85)", color: "#991b1b" }
 }
 
+function SummaryChip({ label, value }) {
+  return (
+    <div style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.7)", minWidth: 120 }}>
+      <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>{value}</div>
+    </div>
+  )
+}
+
 export default function VisualSetsPanel({ user }) {
   const [items, setItems] = useState([])
   const [websiteItems, setWebsiteItems] = useState([])
   const [reconcileReport, setReconcileReport] = useState([])
+  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -78,10 +89,19 @@ export default function VisualSetsPanel({ user }) {
     }
   }
 
+  async function loadSummary() {
+    try {
+      const response = await getWebsiteVisualSetsSummary()
+      setSummary(response || null)
+    } catch {
+      setSummary(null)
+    }
+  }
+
   async function refreshAll() {
     setLoading(true)
     try {
-      await Promise.all([loadLocal(), loadWebsite(), loadReconcile()])
+      await Promise.all([loadLocal(), loadWebsite(), loadReconcile(), loadSummary()])
     } finally {
       setLoading(false)
     }
@@ -146,6 +166,14 @@ export default function VisualSetsPanel({ user }) {
           <ActionButton onClick={refreshAll} disabled={loading} tone="secondary">Atualizar estado</ActionButton>
           <ActionButton onClick={handlePublishAll} disabled={loading || !canCommercial(user)}>Publicar tudo no Website</ActionButton>
         </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <SummaryChip label="Studio" value={summary?.local_count ?? items.length} />
+        <SummaryChip label="Website" value={summary?.website_count ?? websiteItems.length} />
+        <SummaryChip label="Em sync" value={summary?.in_sync ?? 0} />
+        <SummaryChip label="Divergiu" value={summary?.diverged ?? 0} />
+        <SummaryChip label="Falta no Website" value={summary?.missing_on_website ?? 0} />
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>

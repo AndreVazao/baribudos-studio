@@ -1,4 +1,4 @@
-import { getApiBase, get, patch, post, put, qs } from "./core.js"
+import { getApiBase, get, patch, post, put } from "./core.js"
 
 export async function listSagaVisualSets() {
   return get(`${getApiBase()}/saga-visual-sets`)
@@ -18,6 +18,10 @@ export async function exportWebsiteVisualSets() {
 
 export async function getWebsiteVisualSetsStatus() {
   return get(`${getApiBase()}/website-visual-sets/status`)
+}
+
+export async function getWebsiteVisualSetsSummary() {
+  return get(`${getApiBase()}/website-visual-sets/summary`)
 }
 
 export async function publishSagaVisualSetToWebsite(itemId) {

@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from studio_core.services.website_visual_set_service import (
     export_saga_visual_sets_payload,
     get_website_visual_sets_status,
+    get_website_visual_sets_summary,
     publish_all_saga_visual_sets_to_website,
     publish_saga_visual_set_to_website,
 )
@@ -23,6 +24,14 @@ def website_visual_sets_export() -> Dict[str, Any]:
 def website_visual_sets_status() -> Dict[str, Any]:
     try:
         return get_website_visual_sets_status()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/summary")
+def website_visual_sets_summary() -> Dict[str, Any]:
+    try:
+        return get_website_visual_sets_summary()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
