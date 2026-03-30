@@ -47,6 +47,7 @@ import UpdaterPanel from "./UpdaterPanel.jsx"
 import V1ReadinessPanel from "./V1ReadinessPanel.jsx"
 import VaultPanel from "./VaultPanel.jsx"
 import VisualAssetsPanel from "./VisualAssetsPanel.jsx"
+import VisualSetsPanel from "./VisualSetsPanel.jsx"
 import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
 import WebsiteControlPanel from "./WebsiteControlPanel.jsx"
 
@@ -362,6 +363,7 @@ export default function DashboardPanel({ user }) {
 
       <WebsiteControlPanel user={user} projects={projects} onReload={loadAll} />
       <CommerceGroupsPanel user={user} />
+      <VisualSetsPanel user={user} />
       <VaultPanel user={user} />
 
       <UpdaterPanel />

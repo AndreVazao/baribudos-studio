@@ -101,6 +101,14 @@ export function post(url, payload = {}) {
   }))
 }
 
+export function put(url, payload = {}) {
+  return handle(fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }))
+}
+
 export function patch(url, payload = {}) {
   return handle(fetch(url, {
     method: "PATCH",
