@@ -74,6 +74,7 @@ from studio_core.api.routes.website_bundles import router as website_bundles_rou
 from studio_core.api.routes.website_contract import router as website_contract_router
 from studio_core.api.routes.website_control import router as website_control_router
 from studio_core.api.routes.website_publisher import router as website_publisher_router
+from studio_core.api.routes.website_visual_set_reconcile import router as website_visual_set_reconcile_router
 from studio_core.api.routes.website_visual_sets import router as website_visual_sets_router
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
 from studio_core.services.ai_runtime_bootstrap import start_all
@@ -174,6 +175,7 @@ app.include_router(website_admin_router, prefix="/api")
 app.include_router(website_bundles_router, prefix="/api")
 app.include_router(website_bundle_reconcile_router, prefix="/api")
 app.include_router(website_visual_sets_router, prefix="/api")
+app.include_router(website_visual_set_reconcile_router, prefix="/api")
 app.include_router(deploy_control_router, prefix="/api")
 app.include_router(db_control_router, prefix="/api")
 app.include_router(commerce_groups_router, prefix="/api")
