@@ -53,6 +53,7 @@ from studio_core.api.routes.publish_readiness import router as publish_readiness
 from studio_core.api.routes.publishing import router as publishing_router
 from studio_core.api.routes.saga_loader import router as saga_loader_router
 from studio_core.api.routes.saga_runtime import router as saga_runtime_router
+from studio_core.api.routes.saga_visual_sets import router as saga_visual_sets_router
 from studio_core.api.routes.sagas import router as sagas_router
 from studio_core.api.routes.secret_control import router as secret_control_router
 from studio_core.api.routes.settings import router as settings_router
@@ -119,6 +120,7 @@ app.include_router(publication_package_router, prefix="/api")
 app.include_router(publish_readiness_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(sagas_router, prefix="/api")
+app.include_router(saga_visual_sets_router, prefix="/api")
 app.include_router(sponsors_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
 app.include_router(factory_router, prefix="/api")
