@@ -43,6 +43,7 @@ from studio_core.api.routes.local_audio_installer import router as local_audio_i
 from studio_core.api.routes.local_engine_manager import router as local_engine_manager_router
 from studio_core.api.routes.marketplace_visuals import router as marketplace_visuals_router
 from studio_core.api.routes.pairing import router as pairing_router
+from studio_core.api.routes.product_credits import router as product_credits_router
 from studio_core.api.routes.production_pipeline import router as production_pipeline_router
 from studio_core.api.routes.project_commercial import router as project_commercial_router
 from studio_core.api.routes.project_integrity import router as project_integrity_router
@@ -119,6 +120,7 @@ app.include_router(users_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(project_commercial_router, prefix="/api")
 app.include_router(project_integrity_router, prefix="/api")
+app.include_router(product_credits_router, prefix="/api")
 app.include_router(publication_package_router, prefix="/api")
 app.include_router(publish_readiness_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
