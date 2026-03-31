@@ -8,6 +8,7 @@ from urllib import error, request
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.credential_resolver_service import resolve_credential
+from studio_core.services.publication_policy_service import evaluate_project_publication_policy
 from studio_core.services.website_contract_payload_service import build_website_payload_from_package
 
 PROJECTS_FILE = "data/projects.json"
@@ -18,11 +19,9 @@ def _load_project(project_id: str) -> Dict[str, Any] | None:
     projects = read_json(PROJECTS_FILE, [])
     if not isinstance(projects, list):
         return None
-
     for project in projects:
         if str(project.get("id", "")) == str(project_id):
             return project
-
     return None
 
 
@@ -39,19 +38,20 @@ def build_publish_envelope(project_id: str) -> Dict[str, Any]:
     if not project:
         raise ValueError("project_not_found")
 
+    policy = evaluate_project_publication_policy(project)
+    if not bool(policy.get("eligible_for_website_publish", False)):
+        raise ValueError(f"project_not_publishable:{','.join(policy.get('reasons', []))}")
+
     package = _safe_dict(project.get("publication_package"))
     frozen_at = _normalize_text(project.get("publication_package_frozen_at"))
-
     if not package:
         raise ValueError("publication_package_not_frozen")
-
     if not frozen_at:
         raise ValueError("publication_package_missing_freeze_timestamp")
 
     website_payload = build_website_payload_from_package(package)
     base_variant_id = _normalize_text(website_payload.get("project_id"))
     language = _normalize_text(website_payload.get("language")) or "pt-PT"
-
     final_variant_id = _normalize_text(website_payload.get("variant_id")) or f"{base_variant_id}:website:{language}:default"
     publication_id = f"{base_variant_id}:website"
 
@@ -88,7 +88,6 @@ def publish_project_to_website(project_id: str) -> Dict[str, Any]:
 
     if not target_url:
         raise ValueError("website_publish_url_missing")
-
     if not api_key:
         raise ValueError("website_publish_api_key_missing")
 
@@ -137,12 +136,7 @@ def publish_project_to_website(project_id: str) -> Dict[str, Any]:
         },
     )
 
-    return {
-        "ok": True,
-        "project_id": project_id,
-        "envelope": envelope,
-        "receipt": receipt,
-    }
+    return {"ok": True, "project_id": project_id, "envelope": envelope, "receipt": receipt}
 
 
 def get_project_publish_status(project_id: str) -> Dict[str, Any]:
@@ -152,6 +146,7 @@ def get_project_publish_status(project_id: str) -> Dict[str, Any]:
 
     package = _safe_dict(project.get("publication_package"))
     website_sync = _safe_dict(project.get("website_sync"))
+    policy = evaluate_project_publication_policy(project)
 
     return {
         "ok": True,
@@ -159,4 +154,5 @@ def get_project_publish_status(project_id: str) -> Dict[str, Any]:
         "has_frozen_package": bool(package),
         "publication_package_frozen_at": project.get("publication_package_frozen_at", ""),
         "website_sync": website_sync,
+        "publication_policy": policy,
     }
