@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { getIpCharacters, getIpCharactersConsistencySummary, listIps, updateIpCharacters } from "../api.js"
+import { getIpCharacterLockStatus, getIpCharacters, getIpCharactersConsistencySummary, listIps, updateIpCharacters } from "../api.js"
 
 function Card({ title, children }) {
   return (
@@ -88,6 +88,7 @@ export default function IpCharactersEditorPanel({ user }) {
   const [selectedSlug, setSelectedSlug] = useState("")
   const [characters, setCharacters] = useState([])
   const [consistencySummary, setConsistencySummary] = useState(null)
+  const [characterLock, setCharacterLock] = useState(null)
 
   useEffect(() => {
     loadIps()
@@ -97,6 +98,7 @@ export default function IpCharactersEditorPanel({ user }) {
     if (selectedSlug) {
       loadCharacters(selectedSlug)
       loadConsistency(selectedSlug)
+      loadCharacterLock(selectedSlug)
     }
   }, [selectedSlug])
 
@@ -132,6 +134,15 @@ export default function IpCharactersEditorPanel({ user }) {
       setConsistencySummary(res || null)
     } catch {
       setConsistencySummary(null)
+    }
+  }
+
+  async function loadCharacterLock(slug) {
+    try {
+      const res = await getIpCharacterLockStatus(slug, user)
+      setCharacterLock(res || null)
+    } catch {
+      setCharacterLock(null)
     }
   }
 
@@ -197,10 +208,13 @@ export default function IpCharactersEditorPanel({ user }) {
       alert("Personagens guardadas.")
       await loadCharacters(selectedSlug)
       await loadConsistency(selectedSlug)
+      await loadCharacterLock(selectedSlug)
     } catch (error) {
       alert(error?.message || "Erro ao guardar personagens.")
     }
   }
+
+  const lockReady = Boolean(characterLock?.character_lock_ready)
 
   return (
     <Card title="Editor de Personagens Principais por IP">
@@ -218,11 +232,33 @@ export default function IpCharactersEditorPanel({ user }) {
         ))}
       </select>
 
+      <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: lockReady ? "rgba(220,252,231,0.65)" : "rgba(254,226,226,0.7)" }}>
+        <div style={{ fontWeight: 800, color: lockReady ? "#166534" : "#991b1b" }}>
+          {lockReady ? "Character lock pronto para produção" : "Character lock ainda bloqueado"}
+        </div>
+        <div style={{ marginTop: 4 }}>
+          {lockReady ? "A família principal está consistente para produção contínua." : `Itens a bloquear o lock: ${characterLock?.needs_attention ?? 0}`}
+        </div>
+      </div>
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <SummaryChip label="Personagens" value={consistencySummary?.count ?? characters.length} />
         <SummaryChip label="Completos" value={consistencySummary?.complete ?? 0} />
         <SummaryChip label="Precisam atenção" value={consistencySummary?.needs_attention ?? 0} />
       </div>
+
+      {Array.isArray(characterLock?.blocking_items) && characterLock.blocking_items.length > 0 ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {characterLock.blocking_items.map((item) => (
+            <div key={item.id || item.name} style={{ padding: 10, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(254,226,226,0.55)" }}>
+              <div><strong>{item.name || item.id || "Sem nome"}</strong> — bloqueia o character lock</div>
+              {Array.isArray(item.missing) && item.missing.length > 0 ? (
+                <div style={{ color: "#991b1b", fontSize: 13 }}>Em falta: {item.missing.join(", ")}</div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {Array.isArray(consistencySummary?.reports) && consistencySummary.reports.length > 0 ? (
         <div style={{ display: "grid", gap: 8 }}>
