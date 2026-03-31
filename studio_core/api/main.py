@@ -59,6 +59,7 @@ from studio_core.api.routes.sagas import router as sagas_router
 from studio_core.api.routes.secret_control import router as secret_control_router
 from studio_core.api.routes.settings import router as settings_router
 from studio_core.api.routes.sponsors import router as sponsors_router
+from studio_core.api.routes.sponsorship_scopes import router as sponsorship_scopes_router
 from studio_core.api.routes.storefront import router as storefront_router
 from studio_core.api.routes.story_layout import router as story_layout_router
 from studio_core.api.routes.system_smoke import router as system_smoke_router
@@ -127,6 +128,7 @@ app.include_router(settings_router, prefix="/api")
 app.include_router(sagas_router, prefix="/api")
 app.include_router(saga_visual_sets_router, prefix="/api")
 app.include_router(sponsors_router, prefix="/api")
+app.include_router(sponsorship_scopes_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
 app.include_router(factory_router, prefix="/api")
 app.include_router(production_pipeline_router, prefix="/api")
