@@ -43,6 +43,7 @@ import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
 import SagaRuntimePanel from "./SagaRuntimePanel.jsx"
 import StoryLayoutPanel from "./StoryLayoutPanel.jsx"
 import StorySourcePanel from "./StorySourcePanel.jsx"
+import StoryTranslationPanel from "./StoryTranslationPanel.jsx"
 import SystemSmokePanel from "./SystemSmokePanel.jsx"
 import SystemSmokeV1Panel from "./SystemSmokeV1Panel.jsx"
 import UpdaterPanel from "./UpdaterPanel.jsx"
@@ -378,6 +379,7 @@ export default function DashboardPanel({ user }) {
       <VisualAssetsPanel user={user} />
       <EditorialStudioPanel user={user} />
       <StorySourcePanel user={user} />
+      <StoryTranslationPanel user={user} />
       <VoiceProfilesPanel user={user} />
       <VoiceCloningPanel user={user} />
       <AudioCastPanel user={user} />
