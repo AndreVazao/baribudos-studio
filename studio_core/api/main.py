@@ -63,6 +63,7 @@ from studio_core.api.routes.sponsorship_scopes import router as sponsorship_scop
 from studio_core.api.routes.storefront import router as storefront_router
 from studio_core.api.routes.story_layout import router as story_layout_router
 from studio_core.api.routes.story_source import router as story_source_router
+from studio_core.api.routes.story_translation import router as story_translation_router
 from studio_core.api.routes.system_smoke import router as system_smoke_router
 from studio_core.api.routes.system_smoke_v1 import router as system_smoke_v1_router
 from studio_core.api.routes.updater import router as updater_router
@@ -143,6 +144,7 @@ app.include_router(system_smoke_router, prefix="/api")
 app.include_router(system_smoke_v1_router, prefix="/api")
 app.include_router(story_layout_router, prefix="/api")
 app.include_router(story_source_router, prefix="/api")
+app.include_router(story_translation_router, prefix="/api")
 app.include_router(editorial_engine_router, prefix="/api")
 app.include_router(editorial_production_router, prefix="/api")
 app.include_router(editorial_media_pipeline_router, prefix="/api")
