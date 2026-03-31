@@ -92,6 +92,14 @@ export async function getIpCharactersConsistencySummary(slug, user = {}) {
   })}`)
 }
 
+export async function getIpCharacterLockStatus(slug, user = {}) {
+  return get(`${getApiBase()}/ip-characters/${slug}/character-lock-status${qs({
+    user_id: user?.id || "",
+    user_name: user?.name || "",
+    user_role: user?.role || ""
+  })}`)
+}
+
 export async function updateIpCharacters(slug, mainCharacters = [], user = {}) {
   return patch(`${getApiBase()}/ip-characters/${slug}`, {
     main_characters: mainCharacters,

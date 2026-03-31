@@ -33,6 +33,7 @@ def _character_consistency_report(char: dict) -> dict:
     wardrobe_identity = _safe_dict(char.get("wardrobe_identity"))
     consistency_rules = _safe_dict(char.get("consistency_rules"))
     prompt_guardrails = _safe_dict(char.get("prompt_guardrails"))
+    reference_assets = _safe_dict(char.get("reference_assets"))
 
     missing = []
 
@@ -71,12 +72,28 @@ def _character_consistency_report(char: dict) -> dict:
         if len(_safe_list(prompt_guardrails.get(key))) == 0:
             missing.append(f"prompt_guardrails.{key}")
 
+    for key in ["front", "expression_sheet"]:
+        if _blank(reference_assets.get(key)):
+            missing.append(f"reference_assets.{key}")
+
     return {
         "id": str(char.get("id", "")).strip(),
         "name": str(char.get("name", "")).strip(),
         "role": str(char.get("role", "")).strip(),
         "status": "complete" if len(missing) == 0 else "needs_attention",
         "missing": missing,
+    }
+
+
+def _build_consistency_summary(item: dict) -> dict:
+    reports = [_character_consistency_report(char) for char in _safe_list(item.get("main_characters")) if isinstance(char, dict)]
+    return {
+        "ok": True,
+        "slug": str(item.get("slug", "")).strip(),
+        "count": len(reports),
+        "complete": len([r for r in reports if r.get("status") == "complete"]),
+        "needs_attention": len([r for r in reports if r.get("status") == "needs_attention"]),
+        "reports": reports,
     }
 
 
@@ -107,15 +124,35 @@ def get_characters_consistency_summary(slug: str, user_id: str = "", user_name: 
     if not can_edit_ip(user, slug) and str(item.get("owner_id", "")).strip() != str(user.get("id", "")).strip():
         raise HTTPException(status_code=403, detail="Sem permissão para ver consistência desta IP.")
 
-    reports = [_character_consistency_report(char) for char in _safe_list(item.get("main_characters")) if isinstance(char, dict)]
+    return _build_consistency_summary(item)
+
+
+@router.get("/{slug}/character-lock-status")
+def get_character_lock_status(slug: str, user_id: str = "", user_name: str = "", user_role: str = "") -> dict:
+    item = get_ip_by_slug(slug)
+    if not item:
+        raise HTTPException(status_code=404, detail="IP não encontrada.")
+
+    user = _user_from_payload_or_query(user_id=user_id, user_name=user_name, user_role=user_role)
+    if not can_edit_ip(user, slug) and str(item.get("owner_id", "")).strip() != str(user.get("id", "")).strip():
+        raise HTTPException(status_code=403, detail="Sem permissão para ver lock desta IP.")
+
+    summary = _build_consistency_summary(item)
+    count = int(summary.get("count") or 0)
+    complete = int(summary.get("complete") or 0)
+    missing_core = []
+    for report in _safe_list(summary.get("reports")):
+      if report.get("status") != "complete":
+        missing_core.append({"id": report.get("id"), "name": report.get("name"), "missing": report.get("missing")})
 
     return {
         "ok": True,
         "slug": slug,
-        "count": len(reports),
-        "complete": len([r for r in reports if r.get("status") == "complete"]),
-        "needs_attention": len([r for r in reports if r.get("status") == "needs_attention"]),
-        "reports": reports,
+        "character_lock_ready": count > 0 and count == complete,
+        "count": count,
+        "complete": complete,
+        "needs_attention": int(summary.get("needs_attention") or 0),
+        "blocking_items": missing_core,
     }
 
 
