@@ -33,6 +33,7 @@ import IpPaletteEditorPanel from "./IpPaletteEditorPanel.jsx"
 import LocalAiInstallerPanel from "./LocalAiInstallerPanel.jsx"
 import LocalAudioInstallerPanel from "./LocalAudioInstallerPanel.jsx"
 import OutputsPanel from "./OutputsPanel.jsx"
+import ProductCreditsPanel from "./ProductCreditsPanel.jsx"
 import ProductionPipelinePanel from "./ProductionPipelinePanel.jsx"
 import ProjectCommercialEditorPanel from "./ProjectCommercialEditorPanel.jsx"
 import ProjectIntegrityPanel from "./ProjectIntegrityPanel.jsx"
@@ -366,7 +367,6 @@ export default function DashboardPanel({ user }) {
       <CommerceGroupsPanel user={user} />
       <VisualSetsPanel user={user} />
       <VaultPanel user={user} />
-
       <UpdaterPanel />
       <V1ReadinessPanel user={user} />
       <SystemSmokeV1Panel />
@@ -379,6 +379,7 @@ export default function DashboardPanel({ user }) {
       <VoiceProfilesPanel user={user} />
       <VoiceCloningPanel user={user} />
       <AudioCastPanel user={user} />
+      <ProductCreditsPanel user={user} />
       <StoryLayoutPanel user={user} />
       <ProductionPipelinePanel user={user} />
       <IllustrationPipelinePanel user={user} />
@@ -395,197 +396,14 @@ export default function DashboardPanel({ user }) {
       <SystemSmokePanel user={user} />
       <IpCoverBuilderPanel user={user} onCoverBuilt={handleCoverBuilt} />
       <OutputsPanel projects={projects} />
-
-      <Card title="Settings">
-        <label>Língua default</label>
-        <input
-          value={settings?.default_language || ""}
-          onChange={(e) =>
-            setSettings((current) => ({
-              ...(current || {}),
-              default_language: e.target.value
-            }))
-          }
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        />
-
-        <label>Autor default</label>
-        <input
-          value={settings?.author_default || ""}
-          onChange={(e) =>
-            setSettings((current) => ({
-              ...(current || {}),
-              author_default: e.target.value
-            }))
-          }
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        />
-
-        <ActionButton onClick={handleSaveSettings}>Guardar settings</ActionButton>
-      </Card>
-
-      <Card title="Utilizadores">
-        {users.map((item) => (
-          <div key={item.id}>
-            <strong>{item.name}</strong> — {item.role}
-          </div>
-        ))}
-      </Card>
-
-      <Card title="Criar Saga">
-        <input
-          value={newSagaName}
-          onChange={(e) => setNewSagaName(e.target.value)}
-          placeholder="Nome da saga"
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        />
-        <ActionButton onClick={handleCreateSaga}>Criar saga</ActionButton>
-
-        {sagas.map((saga, index) => (
-          <div key={saga.id || saga.slug || index}>
-            <strong>{saga.name}</strong> ({saga.slug})
-          </div>
-        ))}
-      </Card>
-
-      <Card title="Criar Sponsor">
-        <label>IP / Saga do patrocinador</label>
-        <select
-          value={newSponsorIpSlug}
-          onChange={(e) => setNewSponsorIpSlug(e.target.value)}
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        >
-          <option value="">Selecionar IP</option>
-          {ips.map((ip) => (
-            <option key={ip.id} value={ip.slug}>
-              {ip.name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          value={newSponsorName}
-          onChange={(e) => setNewSponsorName(e.target.value)}
-          placeholder="Nome do patrocinador"
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        />
-        <ActionButton onClick={handleCreateSponsor}>Criar sponsor</ActionButton>
-
-        {visibleSponsors.map((sponsor, index) => (
-          <div key={sponsor.id || index}>
-            <strong>{sponsor.name}</strong> — {sponsor.saga_slug}
-          </div>
-        ))}
-      </Card>
-
-      <Card title="Criar Projeto">
-        <label>IP / Saga</label>
-        <select
-          value={newProjectIpSlug}
-          onChange={(e) => setNewProjectIpSlug(e.target.value)}
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        >
-          <option value="">Selecionar IP</option>
-          {ips.map((ip) => (
-            <option key={ip.id} value={ip.slug}>
-              {ip.name}
-            </option>
-          ))}
-        </select>
-
-        <label>Língua base</label>
-        <select
-          value={newProjectLanguage}
-          onChange={(e) => setNewProjectLanguage(e.target.value)}
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        >
-          {DEFAULT_LANGUAGES.map((lang) => (
-            <option key={lang} value={lang}>
-              {lang}
-            </option>
-          ))}
-        </select>
-
-        <input
-          value={newProjectTitle}
-          onChange={(e) => setNewProjectTitle(e.target.value)}
-          placeholder="Título do projeto"
-          style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-        />
-
-        {selectedProjectIp ? (
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              background: "rgba(255,255,255,0.55)"
-            }}
-          >
-            <div><strong>IP selecionada:</strong> {selectedProjectIp.name}</div>
-            <div><strong>Slug:</strong> {selectedProjectIp.slug}</div>
-            <div><strong>Privada:</strong> {selectedProjectIp.visible_to_owner_only ? "Sim" : "Não"}</div>
-            <div><strong>Língua default da IP:</strong> {selectedProjectIp.default_language || "-"}</div>
-            <div><strong>Idiomas output da IP:</strong> {(selectedProjectIp.output_languages || []).join(", ")}</div>
-            <div><strong>Autor default:</strong> {selectedProjectIp.metadata?.author_default || "-"}</div>
-            <div><strong>Producer:</strong> {selectedProjectIp.metadata?.producer || "-"}</div>
-          </div>
-        ) : null}
-
-        <ActionButton onClick={handleCreateProject}>Criar projeto</ActionButton>
-      </Card>
-
-      <Card title="Projetos visíveis para este user">
-        {projects.map((project) => (
-          <div
-            key={project.id}
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: 12,
-              padding: 12,
-              display: "grid",
-              gap: 8,
-              background: "rgba(255,255,255,0.55)"
-            }}
-          >
-            <div><strong>{project.title}</strong></div>
-            <div>Saga: {project.saga_name}</div>
-            <div>Slug IP: {project.saga_slug}</div>
-            <div>Língua: {project.language}</div>
-            <div>Dono: {project.created_by_name || "-"}</div>
-            <div>Ilustração base: {project.illustration_path || "-"}</div>
-            <div>Capa: {project.cover_image || "-"}</div>
-            <div>ISBN: {project.commercial?.isbn || "-"}</div>
-            <div>ASIN: {project.commercial?.asin || "-"}</div>
-            <div>Preço: {project.commercial?.price || "-"} {project.commercial?.currency || ""}</div>
-            <div>Status comercial: {project.commercial?.commercial_status || "-"}</div>
-            <div>Pronto para publicar: {project.ready_for_publish ? "Sim" : "Não"}</div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton>
-              <ActionButton onClick={() => handleExportEpub(project.id)}>EPUB</ActionButton>
-              <ActionButton onClick={() => handleExportAudio(project.id)}>Audiobook</ActionButton>
-              <ActionButton onClick={() => handleExportVideo(project.id)}>Vídeo</ActionButton>
-            </div>
-          </div>
-        ))}
-      </Card>
-
-      <Card title="Jobs">
-        {jobs.map((job) => (
-          <div key={job.id}>
-            <strong>{job.type}</strong> — {job.status}
-          </div>
-        ))}
-      </Card>
-
-      <Card title="Publicações">
-        {publications.map((item) => (
-          <div key={item.id}>
-            <strong>{item.project_id}</strong> — {item.language} — {item.channel} — {item.status}
-          </div>
-        ))}
-      </Card>
+      <Card title="Settings"><label>Língua default</label><input value={settings?.default_language || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), default_language: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><label>Autor default</label><input value={settings?.author_default || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), author_default: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><ActionButton onClick={handleSaveSettings}>Guardar settings</ActionButton></Card>
+      <Card title="Utilizadores">{users.map((item) => (<div key={item.id}><strong>{item.name}</strong> — {item.role}</div>))}</Card>
+      <Card title="Criar Saga"><input value={newSagaName} onChange={(e) => setNewSagaName(e.target.value)} placeholder="Nome da saga" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><ActionButton onClick={handleCreateSaga}>Criar saga</ActionButton>{sagas.map((saga, index) => (<div key={saga.id || saga.slug || index}><strong>{saga.name}</strong> ({saga.slug})</div>))}</Card>
+      <Card title="Criar Sponsor"><label>IP / Saga do patrocinador</label><select value={newSponsorIpSlug} onChange={(e) => setNewSponsorIpSlug(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}><option value="">Selecionar IP</option>{ips.map((ip) => (<option key={ip.id} value={ip.slug}>{ip.name}</option>))}</select><input value={newSponsorName} onChange={(e) => setNewSponsorName(e.target.value)} placeholder="Nome do patrocinador" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><ActionButton onClick={handleCreateSponsor}>Criar sponsor</ActionButton>{visibleSponsors.map((sponsor, index) => (<div key={sponsor.id || index}><strong>{sponsor.name}</strong> — {sponsor.saga_slug}</div>))}</Card>
+      <Card title="Criar Projeto"><label>IP / Saga</label><select value={newProjectIpSlug} onChange={(e) => setNewProjectIpSlug(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}><option value="">Selecionar IP</option>{ips.map((ip) => (<option key={ip.id} value={ip.slug}>{ip.name}</option>))}</select><label>Língua base</label><select value={newProjectLanguage} onChange={(e) => setNewProjectLanguage(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>{DEFAULT_LANGUAGES.map((lang) => (<option key={lang} value={lang}>{lang}</option>))}</select><input value={newProjectTitle} onChange={(e) => setNewProjectTitle(e.target.value)} placeholder="Título do projeto" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />{selectedProjectIp ? (<div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}><div><strong>IP selecionada:</strong> {selectedProjectIp.name}</div><div><strong>Slug:</strong> {selectedProjectIp.slug}</div><div><strong>Privada:</strong> {selectedProjectIp.visible_to_owner_only ? "Sim" : "Não"}</div><div><strong>Língua default da IP:</strong> {selectedProjectIp.default_language || "-"}</div><div><strong>Idiomas output da IP:</strong> {(selectedProjectIp.output_languages || []).join(", ")}</div><div><strong>Autor default:</strong> {selectedProjectIp.metadata?.author_default || "-"}</div><div><strong>Producer:</strong> {selectedProjectIp.metadata?.producer || "-"}</div></div>) : null}<ActionButton onClick={handleCreateProject}>Criar projeto</ActionButton></Card>
+      <Card title="Projetos visíveis para este user">{projects.map((project) => (<div key={project.id} style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, display: "grid", gap: 8, background: "rgba(255,255,255,0.55)" }}><div><strong>{project.title}</strong></div><div>Saga: {project.saga_name}</div><div>Slug IP: {project.saga_slug}</div><div>Língua: {project.language}</div><div>Dono: {project.created_by_name || "-"}</div><div>Ilustração base: {project.illustration_path || "-"}</div><div>Capa: {project.cover_image || "-"}</div><div>ISBN: {project.commercial?.isbn || "-"}</div><div>ASIN: {project.commercial?.asin || "-"}</div><div>Preço: {project.commercial?.price || "-"} {project.commercial?.currency || ""}</div><div>Status comercial: {project.commercial?.commercial_status || "-"}</div><div>Pronto para publicar: {project.ready_for_publish ? "Sim" : "Não"}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton><ActionButton onClick={() => handleExportEpub(project.id)}>EPUB</ActionButton><ActionButton onClick={() => handleExportAudio(project.id)}>Audiobook</ActionButton><ActionButton onClick={() => handleExportVideo(project.id)}>Vídeo</ActionButton></div></div>))}</Card>
+      <Card title="Jobs">{jobs.map((job) => (<div key={job.id}><strong>{job.type}</strong> — {job.status}</div>))}</Card>
+      <Card title="Publicações">{publications.map((item) => (<div key={item.id}><strong>{item.project_id}</strong> — {item.language} — {item.channel} — {item.status}</div>))}</Card>
     </div>
   )
 }
