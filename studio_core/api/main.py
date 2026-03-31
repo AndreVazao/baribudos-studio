@@ -68,6 +68,7 @@ from studio_core.api.routes.v1_readiness import router as v1_readiness_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
 from studio_core.api.routes.voice_preview import router as voice_preview_router
+from studio_core.api.routes.voice_profiles import router as voice_profiles_router
 from studio_core.api.routes.website_admin import router as website_admin_router
 from studio_core.api.routes.website_bundle_reconcile import router as website_bundle_reconcile_router
 from studio_core.api.routes.website_bundles import router as website_bundles_router
@@ -151,6 +152,7 @@ app.include_router(local_audio_installer_router, prefix="/api")
 app.include_router(local_audio_engine_manager_router, prefix="/api")
 app.include_router(voice_library_router, prefix="/api")
 app.include_router(voice_preview_router, prefix="/api")
+app.include_router(voice_profiles_router, prefix="/api")
 app.include_router(audio_cast_router, prefix="/api")
 app.include_router(audio_cast_preview_router, prefix="/api")
 app.include_router(updater_router, prefix="/api")

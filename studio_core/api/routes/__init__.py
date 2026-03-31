@@ -19,6 +19,7 @@ __all__ = [
     "videos",
     "voice_library",
     "voice_preview",
+    "voice_profiles",
     "audio_cast",
     "audio_cast_preview",
     "updater",
