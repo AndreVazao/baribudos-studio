@@ -42,6 +42,7 @@ import PublishGatePanel from "./PublishGatePanel.jsx"
 import PublishReadinessPanel from "./PublishReadinessPanel.jsx"
 import SagaRuntimePanel from "./SagaRuntimePanel.jsx"
 import StoryLayoutPanel from "./StoryLayoutPanel.jsx"
+import StorySourcePanel from "./StorySourcePanel.jsx"
 import SystemSmokePanel from "./SystemSmokePanel.jsx"
 import SystemSmokeV1Panel from "./SystemSmokeV1Panel.jsx"
 import UpdaterPanel from "./UpdaterPanel.jsx"
@@ -376,6 +377,7 @@ export default function DashboardPanel({ user }) {
       <LocalAudioInstallerPanel />
       <VisualAssetsPanel user={user} />
       <EditorialStudioPanel user={user} />
+      <StorySourcePanel user={user} />
       <VoiceProfilesPanel user={user} />
       <VoiceCloningPanel user={user} />
       <AudioCastPanel user={user} />
@@ -396,7 +398,15 @@ export default function DashboardPanel({ user }) {
       <SystemSmokePanel user={user} />
       <IpCoverBuilderPanel user={user} onCoverBuilt={handleCoverBuilt} />
       <OutputsPanel projects={projects} />
-      <Card title="Settings"><label>Língua default</label><input value={settings?.default_language || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), default_language: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><label>Autor default</label><input value={settings?.author_default || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), author_default: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><ActionButton onClick={handleSaveSettings}>Guardar settings</ActionButton></Card>
+
+      <Card title="Settings">
+        <label>Língua default</label>
+        <input value={settings?.default_language || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), default_language: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+        <label>Autor default</label>
+        <input value={settings?.author_default || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), author_default: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+        <ActionButton onClick={handleSaveSettings}>Guardar settings</ActionButton>
+      </Card>
+
       <Card title="Utilizadores">{users.map((item) => (<div key={item.id}><strong>{item.name}</strong> — {item.role}</div>))}</Card>
       <Card title="Criar Saga"><input value={newSagaName} onChange={(e) => setNewSagaName(e.target.value)} placeholder="Nome da saga" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><ActionButton onClick={handleCreateSaga}>Criar saga</ActionButton>{sagas.map((saga, index) => (<div key={saga.id || saga.slug || index}><strong>{saga.name}</strong> ({saga.slug})</div>))}</Card>
       <Card title="Criar Sponsor"><label>IP / Saga do patrocinador</label><select value={newSponsorIpSlug} onChange={(e) => setNewSponsorIpSlug(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}><option value="">Selecionar IP</option>{ips.map((ip) => (<option key={ip.id} value={ip.slug}>{ip.name}</option>))}</select><input value={newSponsorName} onChange={(e) => setNewSponsorName(e.target.value)} placeholder="Nome do patrocinador" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} /><ActionButton onClick={handleCreateSponsor}>Criar sponsor</ActionButton>{visibleSponsors.map((sponsor, index) => (<div key={sponsor.id || index}><strong>{sponsor.name}</strong> — {sponsor.saga_slug}</div>))}</Card>
