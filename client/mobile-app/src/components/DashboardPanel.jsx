@@ -49,6 +49,7 @@ import VaultPanel from "./VaultPanel.jsx"
 import VisualAssetsPanel from "./VisualAssetsPanel.jsx"
 import VisualSetsPanel from "./VisualSetsPanel.jsx"
 import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
+import VoiceProfilesPanel from "./VoiceProfilesPanel.jsx"
 import WebsiteControlPanel from "./WebsiteControlPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
@@ -375,6 +376,7 @@ export default function DashboardPanel({ user }) {
       <LocalAudioInstallerPanel />
       <VisualAssetsPanel user={user} />
       <EditorialStudioPanel user={user} />
+      <VoiceProfilesPanel user={user} />
       <VoiceCloningPanel user={user} />
       <AudioCastPanel user={user} />
       <StoryLayoutPanel user={user} />
