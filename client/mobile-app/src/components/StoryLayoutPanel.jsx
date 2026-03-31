@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   applyStoryLayout,
   createStoryLayoutPage,
@@ -32,11 +32,38 @@ function Card({ title, children }) {
   )
 }
 
+function countLines(text) {
+  return String(text || "").split("\n").length
+}
+
+function countWords(text) {
+  return String(text || "").trim().split(/\s+/).filter(Boolean).length
+}
+
+function pageScaleStyle() {
+  return {
+    width: 210,
+    minHeight: 297,
+    borderRadius: 10,
+    border: "1px solid #d1d5db",
+    background: "#fffef8",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
+    padding: 16,
+    display: "grid",
+    alignContent: "start",
+    gap: 8,
+    transform: "scale(0.88)",
+    transformOrigin: "top center",
+    overflow: "hidden"
+  }
+}
+
 export default function StoryLayoutPanel({ user }) {
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [rawText, setRawText] = useState("")
   const [layout, setLayout] = useState(null)
+  const [selectedPageId, setSelectedPageId] = useState("")
 
   useEffect(() => {
     loadProjects()
@@ -47,6 +74,15 @@ export default function StoryLayoutPanel({ user }) {
       loadLayout(selectedProjectId)
     }
   }, [selectedProjectId])
+
+  const pages = layout?.pages || []
+  const selectedPage = useMemo(() => pages.find((page) => page.id === selectedPageId) || pages[0] || null, [pages, selectedPageId])
+
+  useEffect(() => {
+    if (selectedPage && selectedPage.id !== selectedPageId) {
+      setSelectedPageId(selectedPage.id)
+    }
+  }, [selectedPage, selectedPageId])
 
   async function loadProjects() {
     const res = await listProjects(user)
@@ -63,8 +99,10 @@ export default function StoryLayoutPanel({ user }) {
       const nextLayout = res?.layout || null
       setLayout(nextLayout)
       setRawText(nextLayout?.raw_text || "")
+      setSelectedPageId((nextLayout?.pages || [])[0]?.id || "")
     } catch {
       setLayout(null)
+      setSelectedPageId("")
     }
   }
 
@@ -72,7 +110,9 @@ export default function StoryLayoutPanel({ user }) {
     if (!selectedProjectId) return
     try {
       const res = await paginateStoryLayout(selectedProjectId, { raw_text: rawText })
-      setLayout(res?.layout || null)
+      const nextLayout = res?.layout || null
+      setLayout(nextLayout)
+      setSelectedPageId((nextLayout?.pages || [])[0]?.id || "")
       alert("Paginação automática concluída.")
     } catch (error) {
       alert(error?.message || "Erro ao paginar texto.")
@@ -119,6 +159,9 @@ export default function StoryLayoutPanel({ user }) {
     try {
       const res = await deleteStoryLayoutPage(selectedProjectId, pageId)
       setLayout(res?.layout || null)
+      if (selectedPageId === pageId) {
+        setSelectedPageId((res?.layout?.pages || [])[0]?.id || "")
+      }
     } catch (error) {
       alert(error?.message || "Erro ao apagar página.")
     }
@@ -146,7 +189,6 @@ export default function StoryLayoutPanel({ user }) {
 
   async function handleMoveParagraph(pageId, direction) {
     if (!selectedProjectId || !pageId || !layout?.pages?.length) return
-    const pages = layout.pages || []
     const index = pages.findIndex((page) => page.id === pageId)
     if (index < 0) return
 
@@ -164,6 +206,8 @@ export default function StoryLayoutPanel({ user }) {
       alert(error?.message || "Erro ao mover texto.")
     }
   }
+
+  const profile = layout?.profile || {}
 
   return (
     <Card title="Story Layout Editor">
@@ -197,164 +241,92 @@ export default function StoryLayoutPanel({ user }) {
       />
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button
-          onClick={handlePaginate}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "none",
-            background: "#2F5E2E",
-            color: "#fff",
-            fontWeight: 700,
-            cursor: "pointer"
-          }}
-        >
-          Paginar automático
-        </button>
-
-        <button
-          onClick={handleCreatePage}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "none",
-            background: "#1d4ed8",
-            color: "#fff",
-            fontWeight: 700,
-            cursor: "pointer"
-          }}
-        >
-          Nova página
-        </button>
-
-        <button
-          onClick={handleApply}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "none",
-            background: "#7c3aed",
-            color: "#fff",
-            fontWeight: 700,
-            cursor: "pointer"
-          }}
-        >
-          Aplicar à história
-        </button>
+        <button onClick={handlePaginate} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#2F5E2E", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Paginar automático</button>
+        <button onClick={handleCreatePage} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#1d4ed8", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Nova página</button>
+        <button onClick={handleApply} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Aplicar à história</button>
       </div>
 
       {layout ? (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            border: "1px solid #e5e7eb",
-            background: "rgba(255,255,255,0.55)",
-            display: "grid",
-            gap: 10
-          }}
-        >
-          <div><strong>Perfil:</strong> {layout?.profile?.profile || "-"}</div>
-          <div><strong>Máx. linhas/página:</strong> {layout?.profile?.max_lines_per_page || "-"}</div>
-          <div><strong>Máx. palavras/linha:</strong> {layout?.profile?.max_words_per_line || "-"}</div>
-          <div><strong>Ilustração recomendada:</strong> {layout?.profile?.illustration_recommended ? "Sim" : "Não"}</div>
+        <>
+          <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 8 }}>
+            <div><strong>Perfil:</strong> {profile.profile || "-"}</div>
+            <div><strong>Máx. linhas/página:</strong> {profile.max_lines_per_page || "-"}</div>
+            <div><strong>Máx. palavras/linha:</strong> {profile.max_words_per_line || "-"}</div>
+            <div><strong>Ilustração recomendada:</strong> {profile.illustration_recommended ? "Sim" : "Não"}</div>
+            <div><strong>Edição manual:</strong> ativa e obrigatoriamente disponível para afinação final.</div>
+          </div>
 
-          {(layout.pages || []).map((page) => (
-            <div
-              key={page.id}
-              style={{
-                border: "1px solid #d1d5db",
-                borderRadius: 12,
-                padding: 10,
-                display: "grid",
-                gap: 8,
-                background: "#fff"
-              }}
-            >
-              <div><strong>Página {page.pageNumber}</strong></div>
-
-              <input
-                value={page.title || ""}
-                onChange={(e) => handleUpdatePage(page.id, { title: e.target.value, text: page.text, illustration_requested: page.illustration_requested, scene_requested: page.scene_requested })}
-                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
-              />
-
-              <textarea
-                value={page.text || ""}
-                onChange={(e) => handleUpdatePage(page.id, { title: page.title, text: e.target.value, illustration_requested: page.illustration_requested, scene_requested: page.scene_requested })}
-                rows={5}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {pages.map((page) => (
+              <button
+                key={page.id}
+                onClick={() => setSelectedPageId(page.id)}
                 style={{
-                  width: "100%",
-                  padding: 10,
+                  padding: "8px 10px",
                   borderRadius: 10,
-                  border: "1px solid #d1d5db",
-                  outline: "none",
-                  resize: "vertical"
+                  border: page.id === selectedPage?.id ? "2px solid #2F5E2E" : "1px solid #cbd5e1",
+                  background: page.id === selectedPage?.id ? "rgba(47,94,46,0.12)" : "#fff",
+                  cursor: "pointer"
                 }}
-              />
+              >
+                Página {page.pageNumber}
+              </button>
+            ))}
+          </div>
 
-              <label>
+          {selectedPage ? (
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(340px, 1.1fr) minmax(260px, 0.9fr)", gap: 16, alignItems: "start" }}>
+              <div style={{ border: "1px solid #d1d5db", borderRadius: 12, padding: 12, background: "rgba(255,255,255,0.7)", display: "grid", gap: 10 }}>
+                <div><strong>Editor manual — Página {selectedPage.pageNumber}</strong></div>
+
                 <input
-                  type="checkbox"
-                  checked={!!page.illustration_requested}
-                  onChange={(e) => handleUpdatePage(page.id, { title: page.title, text: page.text, illustration_requested: e.target.checked, scene_requested: page.scene_requested })}
-                /> Ilustração pedida
-              </label>
+                  value={selectedPage.title || ""}
+                  onChange={(e) => handleUpdatePage(selectedPage.id, { title: e.target.value, text: selectedPage.text, illustration_requested: selectedPage.illustration_requested, scene_requested: selectedPage.scene_requested })}
+                  style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
+                />
 
-              <label>
-                <input
-                  type="checkbox"
-                  checked={!!page.scene_requested}
-                  onChange={(e) => handleUpdatePage(page.id, { title: page.title, text: page.text, illustration_requested: page.illustration_requested, scene_requested: e.target.checked })}
-                /> Cena para série
-              </label>
+                <textarea
+                  value={selectedPage.text || ""}
+                  onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: e.target.value, illustration_requested: selectedPage.illustration_requested, scene_requested: selectedPage.scene_requested })}
+                  rows={14}
+                  style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none", resize: "vertical", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}
+                />
 
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  onClick={() => handleMovePage(page.id, "up")}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}
-                >
-                  Subir
-                </button>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 8 }}>
+                  <div style={{ padding: 8, borderRadius: 10, background: "#fff" }}><strong>Linhas</strong><div>{countLines(selectedPage.text)}</div></div>
+                  <div style={{ padding: 8, borderRadius: 10, background: "#fff" }}><strong>Palavras</strong><div>{countWords(selectedPage.text)}</div></div>
+                  <div style={{ padding: 8, borderRadius: 10, background: "#fff" }}><strong>Nº página</strong><div>{selectedPage.pageNumber}</div></div>
+                </div>
 
-                <button
-                  onClick={() => handleMovePage(page.id, "down")}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}
-                >
-                  Descer
-                </button>
+                <label><input type="checkbox" checked={!!selectedPage.illustration_requested} onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: selectedPage.text, illustration_requested: e.target.checked, scene_requested: selectedPage.scene_requested })} /> Ilustração pedida</label>
+                <label><input type="checkbox" checked={!!selectedPage.scene_requested} onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: selectedPage.text, illustration_requested: selectedPage.illustration_requested, scene_requested: e.target.checked })} /> Cena para série</label>
 
-                <button
-                  onClick={() => handleSplitPage(page.id)}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#92400e", color: "#fff", cursor: "pointer" }}
-                >
-                  Dividir página
-                </button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button onClick={() => handleMovePage(selectedPage.id, "up")} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}>Subir</button>
+                  <button onClick={() => handleMovePage(selectedPage.id, "down")} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}>Descer</button>
+                  <button onClick={() => handleSplitPage(selectedPage.id)} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#92400e", color: "#fff", cursor: "pointer" }}>Dividir página</button>
+                  <button onClick={() => handleMoveParagraph(selectedPage.id, "prev")} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#1d4ed8", color: "#fff", cursor: "pointer" }}>Enviar texto para anterior</button>
+                  <button onClick={() => handleMoveParagraph(selectedPage.id, "next")} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#1d4ed8", color: "#fff", cursor: "pointer" }}>Enviar texto para seguinte</button>
+                  <button onClick={() => handleDeletePage(selectedPage.id)} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#b91c1c", color: "#fff", cursor: "pointer" }}>Apagar página</button>
+                </div>
+              </div>
 
-                <button
-                  onClick={() => handleMoveParagraph(page.id, "prev")}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#1d4ed8", color: "#fff", cursor: "pointer" }}
-                >
-                  Enviar texto para anterior
-                </button>
-
-                <button
-                  onClick={() => handleMoveParagraph(page.id, "next")}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#1d4ed8", color: "#fff", cursor: "pointer" }}
-                >
-                  Enviar texto para seguinte
-                </button>
-
-                <button
-                  onClick={() => handleDeletePage(page.id)}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#b91c1c", color: "#fff", cursor: "pointer" }}
-                >
-                  Apagar página
-                </button>
+              <div style={{ border: "1px solid #d1d5db", borderRadius: 12, padding: 12, background: "rgba(255,255,255,0.7)", display: "grid", gap: 10, justifyItems: "center" }}>
+                <div><strong>Preview visual da página</strong></div>
+                <div style={pageScaleStyle()}>
+                  <div style={{ fontSize: 10, color: "#6b7280", textAlign: "right" }}>Página {selectedPage.pageNumber}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, textAlign: "center", color: "#1f2937" }}>{selectedPage.title || `Página ${selectedPage.pageNumber}`}</div>
+                  <div style={{ fontSize: 10.5, lineHeight: 1.45, whiteSpace: "pre-wrap", color: "#111827" }}>{selectedPage.text || "(sem texto nesta página)"}</div>
+                  <div style={{ marginTop: "auto", fontSize: 9, color: "#6b7280", display: "flex", justifyContent: "space-between" }}>
+                    <span>{selectedPage.illustration_requested ? "Ilustração pedida" : "Sem ilustração"}</span>
+                    <span>{selectedPage.scene_requested ? "Cena pedida" : "Sem cena"}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "#6b7280", textAlign: "center" }}>Preview em escala reduzida. A edição manual continua a mandar no resultado final.</div>
               </div>
             </div>
-          ))}
-        </div>
+          ) : null}
+        </>
       ) : null}
     </Card>
   )
