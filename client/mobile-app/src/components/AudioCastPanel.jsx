@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   getAudioCast,
   listProjects,
+  listVoiceProfiles,
   listVoiceSamples,
   previewAudioCast,
   saveAudioCast
@@ -28,12 +29,31 @@ function Card({ title, children }) {
   )
 }
 
+function packVoiceSelection({ voice_profile_id = "", voice_sample_id = "" } = {}) {
+  if (String(voice_profile_id || "").trim()) return `profile:${String(voice_profile_id).trim()}`
+  if (String(voice_sample_id || "").trim()) return `sample:${String(voice_sample_id).trim()}`
+  return ""
+}
+
+function unpackVoiceSelection(value) {
+  const clean = String(value || "").trim()
+  if (!clean) return { voice_profile_id: "", voice_sample_id: "" }
+  if (clean.startsWith("profile:")) {
+    return { voice_profile_id: clean.slice(8), voice_sample_id: "" }
+  }
+  if (clean.startsWith("sample:")) {
+    return { voice_profile_id: "", voice_sample_id: clean.slice(7) }
+  }
+  return { voice_profile_id: "", voice_sample_id: clean }
+}
+
 export default function AudioCastPanel({ user }) {
   const [projects, setProjects] = useState([])
-  const [voices, setVoices] = useState([])
+  const [voiceSamples, setVoiceSamples] = useState([])
+  const [voiceProfiles, setVoiceProfiles] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [characterNames, setCharacterNames] = useState([])
-  const [narratorVoiceId, setNarratorVoiceId] = useState("")
+  const [narratorVoiceRef, setNarratorVoiceRef] = useState("")
   const [rows, setRows] = useState([])
   const [previewText, setPreviewText] = useState("Olá. Este é um teste de personagem.")
   const [previewProvider, setPreviewProvider] = useState("xtts")
@@ -50,16 +70,19 @@ export default function AudioCastPanel({ user }) {
   }, [selectedProjectId])
 
   async function loadProjectsAndVoices() {
-    const [projectsRes, voicesRes] = await Promise.all([
+    const [projectsRes, voiceSamplesRes, voiceProfilesRes] = await Promise.all([
       listProjects(user),
-      listVoiceSamples()
+      listVoiceSamples(),
+      listVoiceProfiles(),
     ])
 
     const projectList = projectsRes?.projects || []
-    const voiceList = voicesRes?.voices || []
+    const sampleList = voiceSamplesRes?.voices || []
+    const profileList = voiceProfilesRes?.voice_profiles || []
 
     setProjects(projectList)
-    setVoices(voiceList)
+    setVoiceSamples(sampleList)
+    setVoiceProfiles(profileList)
 
     if (!selectedProjectId && projectList.length) {
       setSelectedProjectId(projectList[0].id)
@@ -73,13 +96,13 @@ export default function AudioCastPanel({ user }) {
       const names = res?.character_names || []
 
       setCharacterNames(names)
-      setNarratorVoiceId(cast?.narrator?.voice_sample_id || "")
+      setNarratorVoiceRef(packVoiceSelection(cast?.narrator || {}))
       setRows(
         names.map((name) => {
           const found = (cast?.characters || []).find((item) => item.name === name)
           return {
             name,
-            voice_sample_id: found?.voice_sample_id || "",
+            voice_ref: packVoiceSelection(found || {}),
             provider: found?.provider || "xtts",
             notes: found?.notes || ""
           }
@@ -87,7 +110,7 @@ export default function AudioCastPanel({ user }) {
       )
     } catch {
       setCharacterNames([])
-      setNarratorVoiceId("")
+      setNarratorVoiceRef("")
       setRows([])
     }
   }
@@ -103,10 +126,15 @@ export default function AudioCastPanel({ user }) {
     try {
       await saveAudioCast(selectedProjectId, {
         narrator: {
-          voice_sample_id: narratorVoiceId,
+          ...unpackVoiceSelection(narratorVoiceRef),
           provider: "xtts"
         },
-        characters: rows
+        characters: rows.map((row) => ({
+          name: row.name,
+          ...unpackVoiceSelection(row.voice_ref),
+          provider: row.provider || "xtts",
+          notes: row.notes || ""
+        }))
       })
       alert("Casting de vozes guardado.")
     } catch (error) {
@@ -130,6 +158,10 @@ export default function AudioCastPanel({ user }) {
   }
 
   const previewUrl = normalizeMediaUrl(previewResult?.file_path)
+  const approvedVoiceProfiles = useMemo(
+    () => voiceProfiles.filter((item) => item?.active && item?.consent_status === "approved"),
+    [voiceProfiles]
+  )
 
   return (
     <Card title="Audio Cast por Personagem">
@@ -175,16 +207,25 @@ export default function AudioCastPanel({ user }) {
 
       <label>Voz do narrador</label>
       <select
-        value={narratorVoiceId}
-        onChange={(e) => setNarratorVoiceId(e.target.value)}
+        value={narratorVoiceRef}
+        onChange={(e) => setNarratorVoiceRef(e.target.value)}
         style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       >
         <option value="">Sem voz fixa</option>
-        {voices.map((voice) => (
-          <option key={voice.id} value={voice.id}>
-            {voice.name} {voice.language ? `— ${voice.language}` : ""}
-          </option>
-        ))}
+        <optgroup label="Voice profiles aprovados">
+          {approvedVoiceProfiles.map((voice) => (
+            <option key={`profile-${voice.id}`} value={`profile:${voice.id}`}>
+              {voice.display_name} {voice.language ? `— ${voice.language}` : ""}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Voice samples antigos">
+          {voiceSamples.map((voice) => (
+            <option key={`sample-${voice.id}`} value={`sample:${voice.id}`}>
+              {voice.name} {voice.language ? `— ${voice.language}` : ""}
+            </option>
+          ))}
+        </optgroup>
       </select>
 
       <div
@@ -214,16 +255,25 @@ export default function AudioCastPanel({ user }) {
             <div><strong>{row.name}</strong></div>
 
             <select
-              value={row.voice_sample_id}
-              onChange={(e) => updateRow(index, { voice_sample_id: e.target.value })}
+              value={row.voice_ref}
+              onChange={(e) => updateRow(index, { voice_ref: e.target.value })}
               style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
             >
               <option value="">Usar narrador/default</option>
-              {voices.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.name} {voice.language ? `— ${voice.language}` : ""}
-                </option>
-              ))}
+              <optgroup label="Voice profiles aprovados">
+                {approvedVoiceProfiles.map((voice) => (
+                  <option key={`row-profile-${voice.id}`} value={`profile:${voice.id}`}>
+                    {voice.display_name} {voice.language ? `— ${voice.language}` : ""}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Voice samples antigos">
+                {voiceSamples.map((voice) => (
+                  <option key={`row-sample-${voice.id}`} value={`sample:${voice.id}`}>
+                    {voice.name} {voice.language ? `— ${voice.language}` : ""}
+                  </option>
+                ))}
+              </optgroup>
             </select>
 
             <textarea
