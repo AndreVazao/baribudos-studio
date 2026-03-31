@@ -70,6 +70,12 @@ function emptyCharacter() {
       can_vary: [],
       never_change: [],
     },
+    reference_assets: {
+      front: "",
+      side: "",
+      expression_sheet: "",
+      turnaround: "",
+    },
     prompt_guardrails: {
       positive: [],
       negative: [],
@@ -112,6 +118,7 @@ export default function IpCharactersEditorPanel({ user }) {
         visual_identity: { ...emptyCharacter().visual_identity, ...(char?.visual_identity || {}) },
         wardrobe_identity: { ...emptyCharacter().wardrobe_identity, ...(char?.wardrobe_identity || {}) },
         consistency_rules: { ...emptyCharacter().consistency_rules, ...(char?.consistency_rules || {}) },
+        reference_assets: { ...emptyCharacter().reference_assets, ...(char?.reference_assets || {}) },
         prompt_guardrails: { ...emptyCharacter().prompt_guardrails, ...(char?.prompt_guardrails || {}) },
       })))
     } catch (error) {
@@ -171,6 +178,13 @@ export default function IpCharactersEditorPanel({ user }) {
           must_keep: Array.isArray(char?.consistency_rules?.must_keep) ? char.consistency_rules.must_keep : [],
           can_vary: Array.isArray(char?.consistency_rules?.can_vary) ? char.consistency_rules.can_vary : [],
           never_change: Array.isArray(char?.consistency_rules?.never_change) ? char.consistency_rules.never_change : [],
+        },
+        reference_assets: {
+          ...(char.reference_assets || {}),
+          front: String(char?.reference_assets?.front || "").trim(),
+          side: String(char?.reference_assets?.side || "").trim(),
+          expression_sheet: String(char?.reference_assets?.expression_sheet || "").trim(),
+          turnaround: String(char?.reference_assets?.turnaround || "").trim(),
         },
         prompt_guardrails: {
           ...(char.prompt_guardrails || {}),
@@ -245,15 +259,30 @@ export default function IpCharactersEditorPanel({ user }) {
           <div style={{ fontWeight: 800, color: "#2F5E2E", marginTop: 6 }}>Identidade visual</div>
           <input value={char?.visual_identity?.body_shape || ""} onChange={(e) => updateNested(index, "visual_identity", { body_shape: e.target.value })} placeholder="Forma corporal / silhueta" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
           <input value={char?.visual_identity?.fur_primary || ""} onChange={(e) => updateNested(index, "visual_identity", { fur_primary: e.target.value })} placeholder="Pelo principal" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={char?.visual_identity?.fur_secondary || ""} onChange={(e) => updateNested(index, "visual_identity", { fur_secondary: e.target.value })} placeholder="Pelo secundário" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={char?.visual_identity?.hair_style || ""} onChange={(e) => updateNested(index, "visual_identity", { hair_style: e.target.value })} placeholder="Estilo de cabelo/topo" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={char?.visual_identity?.eye_shape || ""} onChange={(e) => updateNested(index, "visual_identity", { eye_shape: e.target.value })} placeholder="Forma dos olhos" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
           <input value={char?.visual_identity?.eye_color || ""} onChange={(e) => updateNested(index, "visual_identity", { eye_color: e.target.value })} placeholder="Cor dos olhos" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={char?.visual_identity?.nose_shape || ""} onChange={(e) => updateNested(index, "visual_identity", { nose_shape: e.target.value })} placeholder="Forma do nariz" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
           <input value={char?.visual_identity?.beard_style || ""} onChange={(e) => updateNested(index, "visual_identity", { beard_style: e.target.value })} placeholder="Estilo de barba" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
           <input value={(char?.visual_identity?.distinctive_marks || []).join(", ")} onChange={(e) => updateNested(index, "visual_identity", { distinctive_marks: parseCsv(e.target.value) })} placeholder="Marcas distintivas separadas por vírgula" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
           <input value={(char?.visual_identity?.silhouette_keywords || []).join(", ")} onChange={(e) => updateNested(index, "visual_identity", { silhouette_keywords: parseCsv(e.target.value) })} placeholder="Keywords de silhueta separadas por vírgula" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+
+          <div style={{ fontWeight: 800, color: "#2F5E2E", marginTop: 6 }}>Wardrobe identity</div>
+          <input value={char?.wardrobe_identity?.core_outfit || ""} onChange={(e) => updateNested(index, "wardrobe_identity", { core_outfit: e.target.value })} placeholder="Roupa base / outfit principal" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={(char?.wardrobe_identity?.accessories || []).join(", ")} onChange={(e) => updateNested(index, "wardrobe_identity", { accessories: parseCsv(e.target.value) })} placeholder="Acessórios separados por vírgula" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={(char?.wardrobe_identity?.forbidden_changes || []).join(", ")} onChange={(e) => updateNested(index, "wardrobe_identity", { forbidden_changes: parseCsv(e.target.value) })} placeholder="Mudanças proibidas" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
           <div style={{ fontWeight: 800, color: "#2F5E2E", marginTop: 6 }}>Regras de consistência</div>
           <input value={(char?.consistency_rules?.must_keep || []).join(", ")} onChange={(e) => updateNested(index, "consistency_rules", { must_keep: parseCsv(e.target.value) })} placeholder="Deve manter sempre" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
           <input value={(char?.consistency_rules?.can_vary || []).join(", ")} onChange={(e) => updateNested(index, "consistency_rules", { can_vary: parseCsv(e.target.value) })} placeholder="Pode variar" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
           <input value={(char?.consistency_rules?.never_change || []).join(", ")} onChange={(e) => updateNested(index, "consistency_rules", { never_change: parseCsv(e.target.value) })} placeholder="Nunca mudar" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+
+          <div style={{ fontWeight: 800, color: "#2F5E2E", marginTop: 6 }}>Reference assets</div>
+          <input value={char?.reference_assets?.front || ""} onChange={(e) => updateNested(index, "reference_assets", { front: e.target.value })} placeholder="Asset referência frontal" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={char?.reference_assets?.side || ""} onChange={(e) => updateNested(index, "reference_assets", { side: e.target.value })} placeholder="Asset referência lateral" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={char?.reference_assets?.expression_sheet || ""} onChange={(e) => updateNested(index, "reference_assets", { expression_sheet: e.target.value })} placeholder="Expression sheet" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+          <input value={char?.reference_assets?.turnaround || ""} onChange={(e) => updateNested(index, "reference_assets", { turnaround: e.target.value })} placeholder="Turnaround / rotação" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
           <div style={{ fontWeight: 800, color: "#2F5E2E", marginTop: 6 }}>Guardrails de prompt</div>
           <input value={(char?.prompt_guardrails?.positive || []).join(", ")} onChange={(e) => updateNested(index, "prompt_guardrails", { positive: parseCsv(e.target.value) })} placeholder="Prompts positivos" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
