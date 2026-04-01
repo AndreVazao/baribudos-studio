@@ -22,10 +22,7 @@ function Card({ title, children }) {
 }
 
 function parseCsv(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean)
 }
 
 const EMPTY_FORM = {
@@ -50,6 +47,16 @@ const EMPTY_FORM = {
   reference_text: "",
   notes: "",
   active: true,
+  voice_variation_policy: {
+    allow_variants: true,
+    pitch_range_min: -2,
+    pitch_range_max: 2,
+    tone_range_min: -2,
+    tone_range_max: 2,
+    speed_range_min: 0.9,
+    speed_range_max: 1.1,
+    variant_notes: "Apenas variações subtis da voz original/clonada."
+  }
 }
 
 export default function VoiceProfilesPanel({ user }) {
@@ -60,31 +67,24 @@ export default function VoiceProfilesPanel({ user }) {
   const [selectedRole, setSelectedRole] = useState("narrator")
   const [validationResult, setValidationResult] = useState(null)
 
-  useEffect(() => {
-    refreshAll()
-  }, [])
-
+  useEffect(() => { refreshAll() }, [])
   const selectedIp = useMemo(() => ips.find((item) => item.slug === selectedIpSlug) || null, [ips, selectedIpSlug])
 
   async function refreshAll() {
-    const [voiceProfilesRes, ipsRes] = await Promise.all([
-      listVoiceProfiles(),
-      listIps(user),
-    ])
-
+    const [voiceProfilesRes, ipsRes] = await Promise.all([listVoiceProfiles(), listIps(user)])
     const voiceProfiles = voiceProfilesRes?.voice_profiles || []
     const ipsList = ipsRes?.ips || []
-
     setItems(voiceProfiles)
     setIps(ipsList)
-
-    if (!selectedIpSlug && ipsList.length) {
-      setSelectedIpSlug(ipsList[0].slug)
-    }
+    if (!selectedIpSlug && ipsList.length) setSelectedIpSlug(ipsList[0].slug)
   }
 
-  function updateForm(patch) {
-    setForm((current) => ({ ...current, ...patch }))
+  function updateForm(patch) { setForm((current) => ({ ...current, ...patch })) }
+  function updateVariationPolicy(patch) {
+    setForm((current) => ({
+      ...current,
+      voice_variation_policy: { ...(current.voice_variation_policy || {}), ...patch }
+    }))
   }
 
   async function handleCreate() {
@@ -109,11 +109,7 @@ export default function VoiceProfilesPanel({ user }) {
 
   async function handleValidate(item) {
     try {
-      const res = await validateVoiceProfile(item.id, {
-        ip_slug: selectedIp?.slug || "",
-        saga_slug: selectedIp?.slug || "",
-        role: selectedRole,
-      })
+      const res = await validateVoiceProfile(item.id, { ip_slug: selectedIp?.slug || "", saga_slug: selectedIp?.slug || "", role: selectedRole })
       setValidationResult({ item, result: res })
     } catch (error) {
       alert(error?.message || "Erro ao validar voice profile.")
@@ -124,11 +120,12 @@ export default function VoiceProfilesPanel({ user }) {
     <Card title="Voice Profiles / Clones de Voz">
       <div style={{ display: "grid", gap: 10, padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}>
         <div><strong>Criar perfil vocal</strong></div>
+        <div style={{ color: "#475569", fontSize: 13 }}>O clone e quaisquer variações ficam sempre ligados ao dono real da voz original para créditos automáticos.</div>
 
         <input value={form.display_name} onChange={(e) => updateForm({ display_name: e.target.value })} placeholder="Nome do perfil vocal" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <input value={form.owner_person_id} onChange={(e) => updateForm({ owner_person_id: e.target.value })} placeholder="ID da pessoa dona da voz" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <input value={form.owner_person_name} onChange={(e) => updateForm({ owner_person_name: e.target.value })} placeholder="Nome da pessoa dona da voz" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
-        <input value={form.credited_name} onChange={(e) => updateForm({ credited_name: e.target.value })} placeholder="Nome para créditos" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+        <input value={form.credited_name} onChange={(e) => updateForm({ credited_name: e.target.value })} placeholder="Nome para créditos automáticos" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
         <select value={form.voice_type} onChange={(e) => updateForm({ voice_type: e.target.value })} style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
           <option value="narrator">Narrator</option>
@@ -167,21 +164,32 @@ export default function VoiceProfilesPanel({ user }) {
         <input value={form.allowed_sagas.join(", ")} onChange={(e) => updateForm({ allowed_sagas: parseCsv(e.target.value) })} placeholder="Allowed sagas separadas por vírgula" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <input value={form.allowed_roles.join(", ")} onChange={(e) => updateForm({ allowed_roles: parseCsv(e.target.value) })} placeholder="Allowed roles separados por vírgula" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <input value={form.default_for_roles.join(", ")} onChange={(e) => updateForm({ default_for_roles: parseCsv(e.target.value) })} placeholder="Roles default separados por vírgula" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+
+        <div style={{ padding: 12, borderRadius: 12, border: "1px solid #dbe4d8", background: "rgba(240,253,244,0.85)", display: "grid", gap: 8 }}>
+          <strong>Variações controladas do clone</strong>
+          <label><input type="checkbox" checked={form.voice_variation_policy?.allow_variants !== false} onChange={(e) => updateVariationPolicy({ allow_variants: e.target.checked })} /> Permitir variações controladas da voz clonada</label>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
+            <input type="number" value={form.voice_variation_policy?.pitch_range_min ?? -2} onChange={(e) => updateVariationPolicy({ pitch_range_min: Number(e.target.value) })} placeholder="Pitch mín" style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }} />
+            <input type="number" value={form.voice_variation_policy?.pitch_range_max ?? 2} onChange={(e) => updateVariationPolicy({ pitch_range_max: Number(e.target.value) })} placeholder="Pitch máx" style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }} />
+            <input type="number" value={form.voice_variation_policy?.tone_range_min ?? -2} onChange={(e) => updateVariationPolicy({ tone_range_min: Number(e.target.value) })} placeholder="Tom mín" style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }} />
+            <input type="number" value={form.voice_variation_policy?.tone_range_max ?? 2} onChange={(e) => updateVariationPolicy({ tone_range_max: Number(e.target.value) })} placeholder="Tom máx" style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }} />
+            <input type="number" step="0.01" value={form.voice_variation_policy?.speed_range_min ?? 0.9} onChange={(e) => updateVariationPolicy({ speed_range_min: Number(e.target.value) })} placeholder="Velocidade mín" style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }} />
+            <input type="number" step="0.01" value={form.voice_variation_policy?.speed_range_max ?? 1.1} onChange={(e) => updateVariationPolicy({ speed_range_max: Number(e.target.value) })} placeholder="Velocidade máx" style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }} />
+          </div>
+          <textarea value={form.voice_variation_policy?.variant_notes || ""} onChange={(e) => updateVariationPolicy({ variant_notes: e.target.value })} rows={2} placeholder="Notas sobre os limites das variações" style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
+        </div>
+
         <textarea value={form.reference_text} onChange={(e) => updateForm({ reference_text: e.target.value })} rows={2} placeholder="Texto de referência" style={{ width: "100%", padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
         <textarea value={form.notes} onChange={(e) => updateForm({ notes: e.target.value })} rows={2} placeholder="Notas" style={{ width: "100%", padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
-        <button onClick={handleCreate} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#2F5E2E", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
-          Criar voice profile
-        </button>
+        <button onClick={handleCreate} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#2F5E2E", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Criar voice profile</button>
       </div>
 
       <div style={{ display: "grid", gap: 10, padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}>
         <div><strong>Validar contexto</strong></div>
         <select value={selectedIpSlug} onChange={(e) => setSelectedIpSlug(e.target.value)} style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
           <option value="">Selecionar IP</option>
-          {ips.map((ip) => (
-            <option key={ip.id} value={ip.slug}>{ip.name}</option>
-          ))}
+          {ips.map((ip) => <option key={ip.id} value={ip.slug}>{ip.name}</option>)}
         </select>
         <input value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} placeholder="Role para validar" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
       </div>
@@ -190,19 +198,18 @@ export default function VoiceProfilesPanel({ user }) {
         {items.map((item) => (
           <div key={item.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 6 }}>
             <div><strong>{item.display_name}</strong> — {item.voice_type}</div>
-            <div>Owner: {item.owner_person_name || item.owner_person_id || "-"}</div>
-            <div>Crédito: {item.credited_name || "-"}</div>
+            <div>Owner real: {item.owner_person_name || item.owner_person_id || "-"}</div>
+            <div>Crédito automático: {item.credited_name || item.owner_person_name || "-"}</div>
             <div>Consentimento: {item.consent_status} · Ativa: {item.active ? "Sim" : "Não"}</div>
+            <div>Variações permitidas: {item.voice_variation_policy?.allow_variants === false ? "Não" : "Sim"}</div>
+            <div>Pitch: {item.voice_variation_policy?.pitch_range_min ?? "-"} a {item.voice_variation_policy?.pitch_range_max ?? "-"} · Tom: {item.voice_variation_policy?.tone_range_min ?? "-"} a {item.voice_variation_policy?.tone_range_max ?? "-"}</div>
+            <div>Velocidade: {item.voice_variation_policy?.speed_range_min ?? "-"} a {item.voice_variation_policy?.speed_range_max ?? "-"}</div>
             <div>Escopo IPs: {(item.allowed_ips || []).join(", ") || "global"}</div>
             <div>Escopo sagas: {(item.allowed_sagas || []).join(", ") || "global"}</div>
             <div>Roles: {(item.allowed_roles || []).join(", ") || "qualquer"}</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => handleToggleActive(item)} style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#111827", cursor: "pointer" }}>
-                {item.active ? "Desativar" : "Ativar"}
-              </button>
-              <button onClick={() => handleValidate(item)} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#7c3aed", color: "#fff", cursor: "pointer" }}>
-                Validar contexto
-              </button>
+              <button onClick={() => handleToggleActive(item)} style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#111827", cursor: "pointer" }}>{item.active ? "Desativar" : "Ativar"}</button>
+              <button onClick={() => handleValidate(item)} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#7c3aed", color: "#fff", cursor: "pointer" }}>Validar contexto</button>
             </div>
           </div>
         ))}
