@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from studio_core.core.models import Project, ProjectCreate, ProjectPatch, now_iso
+from studio_core.core.models import Project, ProjectCreate, ProjectPatch, now_iso, DEFAULT_STAGE_MODES
 from studio_core.core.storage import append_json_item, list_json_items, update_json_item
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -20,6 +20,13 @@ def _safe_text(value: str) -> str:
 
 def _hidden_key_from_title(value: str) -> str:
     return _safe_text(value).lower().replace(" ", "-")
+
+
+def _normalized_stage_modes(value) -> dict:
+    return {
+        **DEFAULT_STAGE_MODES,
+        **(value if isinstance(value, dict) else {}),
+    }
 
 
 def _can_view_project(project: dict, user_id: str = "", user_name: str = "", user_role: str = "") -> bool:
@@ -90,6 +97,7 @@ def create_project(payload: ProjectCreate) -> dict:
         hidden_universe_name=hidden_universe_name,
         hidden_saga_key=hidden_saga_key,
         hidden_saga_name=hidden_saga_name,
+        stage_modes=_normalized_stage_modes(payload.stage_modes),
         continuity={
             "can_promote_to_official_ip": True,
             "officialization_status": "hidden" if is_hidden_mode else "official",
@@ -122,75 +130,46 @@ def patch_project(project_id: str, payload: ProjectPatch, user_name: str = "", u
 
         if payload.title is not None:
             updated["title"] = payload.title.strip()
-
         if payload.saga_slug is not None:
             updated["saga_slug"] = payload.saga_slug.strip()
-
         if payload.saga_name is not None:
             updated["saga_name"] = payload.saga_name.strip()
-
         if payload.language is not None:
             updated["language"] = payload.language.strip()
-
         if payload.output_languages is not None:
             updated["output_languages"] = payload.output_languages
-
         if payload.status is not None:
             updated["status"] = payload.status
-
         if payload.editorial_status is not None:
             updated["editorial_status"] = payload.editorial_status
-
         if payload.cover_image is not None:
             updated["cover_image"] = payload.cover_image
-
         if payload.illustration_path is not None:
             updated["illustration_path"] = payload.illustration_path
-
         if payload.project_mode is not None:
             updated["project_mode"] = payload.project_mode
-
         if payload.parent_project_id is not None:
             updated["parent_project_id"] = payload.parent_project_id
-
         if payload.continuity_source_project_id is not None:
             updated["continuity_source_project_id"] = payload.continuity_source_project_id
-
         if payload.hidden_universe_key is not None:
             updated["hidden_universe_key"] = payload.hidden_universe_key
-
         if payload.hidden_universe_name is not None:
             updated["hidden_universe_name"] = payload.hidden_universe_name
-
         if payload.hidden_saga_key is not None:
             updated["hidden_saga_key"] = payload.hidden_saga_key
-
         if payload.hidden_saga_name is not None:
             updated["hidden_saga_name"] = payload.hidden_saga_name
-
         if payload.commercial is not None:
-            updated["commercial"] = {
-                **(current.get("commercial", {}) or {}),
-                **payload.commercial
-            }
-
+            updated["commercial"] = {**(current.get("commercial", {}) or {}), **payload.commercial}
         if payload.front_matter is not None:
-            updated["front_matter"] = {
-                **current.get("front_matter", {}),
-                **payload.front_matter
-            }
-
+            updated["front_matter"] = {**current.get("front_matter", {}), **payload.front_matter}
         if payload.story is not None:
-            updated["story"] = {
-                **current.get("story", {}),
-                **payload.story
-            }
-
+            updated["story"] = {**current.get("story", {}), **payload.story}
         if payload.continuity is not None:
-            updated["continuity"] = {
-                **(current.get("continuity", {}) or {}),
-                **payload.continuity
-            }
+            updated["continuity"] = {**(current.get("continuity", {}) or {}), **payload.continuity}
+        if payload.stage_modes is not None:
+            updated["stage_modes"] = _normalized_stage_modes({**(current.get("stage_modes", {}) or {}), **payload.stage_modes})
 
         return updated
 

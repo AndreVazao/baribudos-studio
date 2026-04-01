@@ -38,6 +38,14 @@ class User(BaseModel):
     updated_at: str = Field(default_factory=now_iso)
 
 
+DEFAULT_STAGE_MODES = {
+    "story_input_mode": "manual",
+    "illustration_mode": "manual",
+    "audio_mode": "manual",
+    "video_mode": "manual",
+}
+
+
 class ProjectCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     saga_slug: str = "baribudos"
@@ -54,6 +62,7 @@ class ProjectCreate(BaseModel):
     hidden_universe_name: str = ""
     hidden_saga_key: str = ""
     hidden_saga_name: str = ""
+    stage_modes: Dict[str, Any] = Field(default_factory=lambda: dict(DEFAULT_STAGE_MODES))
 
 
 class ProjectPatch(BaseModel):
@@ -77,6 +86,7 @@ class ProjectPatch(BaseModel):
     hidden_saga_key: Optional[str] = None
     hidden_saga_name: Optional[str] = None
     continuity: Optional[Dict[str, Any]] = None
+    stage_modes: Optional[Dict[str, Any]] = None
 
 
 class Project(BaseModel):
@@ -98,6 +108,7 @@ class Project(BaseModel):
     hidden_universe_name: str = ""
     hidden_saga_key: str = ""
     hidden_saga_name: str = ""
+    stage_modes: Dict[str, Any] = Field(default_factory=lambda: dict(DEFAULT_STAGE_MODES))
     continuity: Dict[str, Any] = Field(default_factory=lambda: {
         "can_promote_to_official_ip": True,
         "officialization_status": "hidden",
