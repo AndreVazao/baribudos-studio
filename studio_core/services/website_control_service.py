@@ -89,3 +89,37 @@ def revalidate_website_publication(publication_id: str) -> Dict[str, Any]:
     encoded = parse.quote(publication_value, safe="")
     url = f"{_base_url()}/api/studio/publications/{encoded}/revalidate"
     return _request_json(url, _api_key(), method="POST")
+
+
+def get_website_publication_divergence(publication_id: str, expected_checksum: str = "", expected_project_version: str = "") -> Dict[str, Any]:
+    status = get_website_publication_status(publication_id)
+    publication = status.get("status") or status.get("publication") or {}
+    studio_meta = publication.get("studio_meta") or {}
+    actual_checksum = _normalize_text(studio_meta.get("checksum"))
+    actual_project_version = _normalize_text(studio_meta.get("project_version"))
+    expected_checksum = _normalize_text(expected_checksum)
+    expected_project_version = _normalize_text(expected_project_version)
+
+    checksum_matches = bool(expected_checksum) and actual_checksum == expected_checksum
+    project_version_matches = bool(expected_project_version) and actual_project_version == expected_project_version
+
+    reasons = []
+    if expected_checksum and not checksum_matches:
+      reasons.append("checksum_mismatch")
+    if expected_project_version and not project_version_matches:
+      reasons.append("project_version_mismatch")
+
+    ok = len(reasons) == 0
+    return {
+      "ok": True,
+      "publication_id": publication_id,
+      "expected_checksum": expected_checksum,
+      "actual_checksum": actual_checksum,
+      "expected_project_version": expected_project_version,
+      "actual_project_version": actual_project_version,
+      "checksum_matches": checksum_matches,
+      "project_version_matches": project_version_matches,
+      "divergence_ok": ok,
+      "reasons": reasons,
+      "website_status": status,
+    }
