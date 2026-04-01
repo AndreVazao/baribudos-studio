@@ -47,6 +47,13 @@ class ProjectCreate(BaseModel):
     created_by: str = ""
     created_by_name: str = ""
     visible_to_owner_only: bool = True
+    project_mode: str = "official"
+    parent_project_id: str = ""
+    continuity_source_project_id: str = ""
+    hidden_universe_key: str = ""
+    hidden_universe_name: str = ""
+    hidden_saga_key: str = ""
+    hidden_saga_name: str = ""
 
 
 class ProjectPatch(BaseModel):
@@ -62,6 +69,14 @@ class ProjectPatch(BaseModel):
     cover_image: Optional[str] = None
     illustration_path: Optional[str] = None
     commercial: Optional[Dict[str, Any]] = None
+    project_mode: Optional[str] = None
+    parent_project_id: Optional[str] = None
+    continuity_source_project_id: Optional[str] = None
+    hidden_universe_key: Optional[str] = None
+    hidden_universe_name: Optional[str] = None
+    hidden_saga_key: Optional[str] = None
+    hidden_saga_name: Optional[str] = None
+    continuity: Optional[Dict[str, Any]] = None
 
 
 class Project(BaseModel):
@@ -76,6 +91,20 @@ class Project(BaseModel):
     created_by: str = ""
     created_by_name: str = ""
     visible_to_owner_only: bool = True
+    project_mode: str = "official"
+    parent_project_id: str = ""
+    continuity_source_project_id: str = ""
+    hidden_universe_key: str = ""
+    hidden_universe_name: str = ""
+    hidden_saga_key: str = ""
+    hidden_saga_name: str = ""
+    continuity: Dict[str, Any] = Field(default_factory=lambda: {
+        "can_promote_to_official_ip": True,
+        "officialization_status": "hidden",
+        "suggested_title_origin": "manual_or_future_ai",
+        "continuity_character_names": [],
+        "continuity_notes": "",
+    })
     cover_image: str = ""
     illustration_path: str = ""
     commercial: Dict[str, Any] = Field(default_factory=lambda: {
