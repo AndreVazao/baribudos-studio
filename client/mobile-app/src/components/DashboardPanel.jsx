@@ -23,6 +23,7 @@ import AudioCastPanel from "./AudioCastPanel.jsx"
 import CommerceGroupsPanel from "./CommerceGroupsPanel.jsx"
 import ContinuityTypographyPanel from "./ContinuityTypographyPanel.jsx"
 import EditorialStudioPanel from "./EditorialStudioPanel.jsx"
+import GuidedWorkflowPanel from "./GuidedWorkflowPanel.jsx"
 import IllustrationPipelinePanel from "./IllustrationPipelinePanel.jsx"
 import IpBrandingEditorPanel from "./IpBrandingEditorPanel.jsx"
 import IpCanonsEditorPanel from "./IpCanonsEditorPanel.jsx"
@@ -335,6 +336,12 @@ export default function DashboardPanel({ user }) {
     await loadAll()
   }
 
+  async function handleToggleGuidedMode(enabled) {
+    const nextSettings = { ...(settings || {}), guided_workflow_enabled: !!enabled }
+    setSettings(nextSettings)
+    await saveSettings(nextSettings)
+  }
+
   async function handleSaveSettings() {
     if (!canEditorial(user)) {
       alert("Sem permissão editorial.")
@@ -351,8 +358,12 @@ export default function DashboardPanel({ user }) {
     return String(sponsor?.saga_slug || "") === String(newSponsorIpSlug)
   })
 
+  const guidedModeEnabled = settings?.guided_workflow_enabled !== false
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      {guidedModeEnabled ? <GuidedWorkflowPanel settings={settings || {}} onToggleGuidedMode={() => handleToggleGuidedMode(false)} /> : null}
+
       <Card title="Sistema">
         <div><strong>App:</strong> {diagnostic?.app_name || "-"}</div>
         <div><strong>Python:</strong> {diagnostic?.system?.python_version || "-"}</div>
@@ -408,6 +419,7 @@ export default function DashboardPanel({ user }) {
         <input value={settings?.default_language || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), default_language: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <label>Autor default</label>
         <input value={settings?.author_default || ""} onChange={(e) => setSettings((current) => ({ ...(current || {}), author_default: e.target.value }))} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
+        <label><input type="checkbox" checked={guidedModeEnabled} onChange={(e) => setSettings((current) => ({ ...(current || {}), guided_workflow_enabled: e.target.checked }))} /> Modo guiado opcional ativo</label>
         <ActionButton onClick={handleSaveSettings}>Guardar settings</ActionButton>
       </Card>
 
