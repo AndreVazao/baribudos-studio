@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { getStorySource, getStorySourceGate, listProjects, lockStorySource, saveStorySource } from "../api.js"
 
 function Card({ title, children }) {
@@ -19,21 +19,40 @@ const EMPTY_SOURCE = {
   text_approved: false,
 }
 
+const MODE_HELP = {
+  manual: "Entrada manual livre. Escreve ou cola o texto final à mão.",
+  paste: "Fluxo orientado a cópia/cola. Ideal para textos vindos de outro chat ou rascunho externo.",
+  local_first: "Preferência por ferramentas locais simples para tratamento/geração do texto.",
+  free_api: "Preferência por API grátis quando existir, com fallback humano/local.",
+  assisted: "Fluxo assistido: tu introduces a base e o Studio ajuda a estruturar e validar.",
+  auto: "Fluxo automático: o Studio deve tentar fechar esta etapa com mínima intervenção.",
+}
+
+const SOURCE_TYPE_BY_MODE = {
+  manual: ["pasted_text", "imported_text"],
+  paste: ["pasted_text", "external_chat_origin", "imported_text"],
+  local_first: ["imported_text", "pasted_text"],
+  free_api: ["external_chat_origin", "pasted_text"],
+  assisted: ["pasted_text", "imported_text", "external_chat_origin"],
+  auto: ["external_chat_origin", "imported_text", "pasted_text"],
+}
+
+function labelForSourceType(value) {
+  return value === "pasted_text" ? "Texto colado" : value === "imported_text" ? "Texto importado" : value === "external_chat_origin" ? "Origem externa / outro chat" : value
+}
+
 export default function StorySourcePanel({ user }) {
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [storySource, setStorySource] = useState(EMPTY_SOURCE)
   const [gate, setGate] = useState(null)
 
-  useEffect(() => {
-    loadProjects()
-  }, [])
+  useEffect(() => { loadProjects() }, [])
+  useEffect(() => { if (selectedProjectId) refresh(selectedProjectId) }, [selectedProjectId])
 
-  useEffect(() => {
-    if (selectedProjectId) {
-      refresh(selectedProjectId)
-    }
-  }, [selectedProjectId])
+  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId])
+  const storyInputMode = selectedProject?.stage_modes?.story_input_mode || "manual"
+  const allowedSourceTypes = SOURCE_TYPE_BY_MODE[storyInputMode] || SOURCE_TYPE_BY_MODE.manual
 
   async function loadProjects() {
     const res = await listProjects(user)
@@ -80,10 +99,16 @@ export default function StorySourcePanel({ user }) {
       <label>Projeto</label>
       <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
         <option value="">Selecionar projeto</option>
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>{project.title} — {project.saga_name}</option>
-        ))}
+        {projects.map((project) => <option key={project.id} value={project.id}>{project.title} — {project.saga_name}</option>)}
       </select>
+
+      {selectedProject ? (
+        <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 6 }}>
+          <div><strong>Modo de texto desta etapa:</strong> {storyInputMode}</div>
+          <div style={{ color: "#475569" }}>{MODE_HELP[storyInputMode] || MODE_HELP.manual}</div>
+          <div><strong>Modo estrutural:</strong> {selectedProject.project_mode || "official"}</div>
+        </div>
+      ) : null}
 
       {gate ? (
         <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: gate.ready_for_text_first_pipeline ? "rgba(220,252,231,0.65)" : "rgba(254,243,199,0.8)", display: "grid", gap: 6 }}>
@@ -94,17 +119,16 @@ export default function StorySourcePanel({ user }) {
         </div>
       ) : null}
 
-      <select value={storySource.story_source_type || "pasted_text"} onChange={(e) => setStorySource((current) => ({ ...current, story_source_type: e.target.value }))} style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
-        <option value="pasted_text">Texto colado</option>
-        <option value="imported_text">Texto importado</option>
-        <option value="external_chat_origin">Origem externa / outro chat</option>
+      <label>Origem do texto</label>
+      <select value={storySource.story_source_type || allowedSourceTypes[0]} onChange={(e) => setStorySource((current) => ({ ...current, story_source_type: e.target.value }))} style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
+        {allowedSourceTypes.map((option) => <option key={option} value={option}>{labelForSourceType(option)}</option>)}
       </select>
 
       <input value={storySource.story_source_language || "pt-PT"} onChange={(e) => setStorySource((current) => ({ ...current, story_source_language: e.target.value }))} placeholder="Língua do texto base" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
-      <textarea value={storySource.story_source_text || ""} onChange={(e) => setStorySource((current) => ({ ...current, story_source_text: e.target.value }))} rows={12} placeholder="Cola aqui o texto base da história" style={{ width: "100%", padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
+      <textarea value={storySource.story_source_text || ""} onChange={(e) => setStorySource((current) => ({ ...current, story_source_text: e.target.value }))} rows={12} placeholder={storyInputMode === "manual" ? "Escreve ou cola aqui o texto base da história" : storyInputMode === "paste" ? "Cola aqui o texto vindo do outro chat ou origem externa" : storyInputMode === "local_first" ? "Cola ou prepara aqui o texto que será trabalhado localmente" : storyInputMode === "free_api" ? "Descreve/cola aqui a base que a API grátis deverá usar" : storyInputMode === "assisted" ? "Cola aqui o rascunho para o Studio te ajudar a estruturar" : "Texto base para pipeline automática"} style={{ width: "100%", padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
-      <textarea value={storySource.story_source_notes || ""} onChange={(e) => setStorySource((current) => ({ ...current, story_source_notes: e.target.value }))} rows={3} placeholder="Notas sobre a origem do texto" style={{ width: "100%", padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
+      <textarea value={storySource.story_source_notes || ""} onChange={(e) => setStorySource((current) => ({ ...current, story_source_notes: e.target.value }))} rows={3} placeholder="Notas sobre a origem do texto, prompt usado, referência externa ou instruções" style={{ width: "100%", padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={handleSave} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#2F5E2E", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Guardar texto base</button>
