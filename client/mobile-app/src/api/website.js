@@ -16,6 +16,10 @@ export async function getWebsiteControlPublication(publicationId) {
   return get(`${getApiBase()}/website-control/publication/${encodeURIComponent(String(publicationId || "").trim())}`)
 }
 
+export async function getWebsiteControlDivergence(publicationId, expectedChecksum = "", expectedProjectVersion = "") {
+  return get(`${getApiBase()}/website-control/divergence/${encodeURIComponent(String(publicationId || "").trim())}${qs({ expected_checksum: expectedChecksum, expected_project_version: expectedProjectVersion })}`)
+}
+
 export async function getWebsitePublishEnvelope(projectId) {
   return get(`${getApiBase()}/website-publisher/envelope/${projectId}`)
 }
