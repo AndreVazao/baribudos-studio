@@ -28,6 +28,14 @@ export async function publishProjectToWebsite(projectId) {
   return post(`${getApiBase()}/website-publisher/publish/${projectId}`, {})
 }
 
+export async function unpublishProjectOnWebsite(projectId) {
+  return post(`${getApiBase()}/website-publisher/unpublish/${projectId}`, {})
+}
+
+export async function revalidateProjectOnWebsite(projectId) {
+  return post(`${getApiBase()}/website-publisher/revalidate/${projectId}`, {})
+}
+
 export async function getDeployControlVercelSummary() {
   return get(`${getApiBase()}/deploy-control/vercel/summary`)
 }

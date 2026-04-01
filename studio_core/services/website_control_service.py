@@ -11,13 +11,13 @@ def _normalize_text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _request_json(url: str, api_key: str) -> Dict[str, Any]:
+def _request_json(url: str, api_key: str, method: str = "GET") -> Dict[str, Any]:
     http_request = request.Request(
         url,
         headers={
             "x-studio-api-key": api_key,
         },
-        method="GET",
+        method=method,
     )
 
     try:
@@ -51,7 +51,7 @@ def get_website_health_status() -> Dict[str, Any]:
 
 
 def get_website_summary_status() -> Dict[str, Any]:
-    url = f"{_base_url()}/api/studio/status/summary"
+    url = f"{_base_url()}/api/studio/summary"
     return _request_json(url, _api_key())
 
 
@@ -69,5 +69,23 @@ def get_website_publication_status(publication_id: str) -> Dict[str, Any]:
     if not publication_value:
         raise ValueError("publication_id_missing")
     encoded = parse.quote(publication_value, safe="")
-    url = f"{_base_url()}/api/studio/status/publication/{encoded}"
+    url = f"{_base_url()}/api/studio/publications/{encoded}/status"
     return _request_json(url, _api_key())
+
+
+def unpublish_website_publication(publication_id: str) -> Dict[str, Any]:
+    publication_value = _normalize_text(publication_id)
+    if not publication_value:
+        raise ValueError("publication_id_missing")
+    encoded = parse.quote(publication_value, safe="")
+    url = f"{_base_url()}/api/studio/publications/{encoded}/unpublish"
+    return _request_json(url, _api_key(), method="POST")
+
+
+def revalidate_website_publication(publication_id: str) -> Dict[str, Any]:
+    publication_value = _normalize_text(publication_id)
+    if not publication_value:
+        raise ValueError("publication_id_missing")
+    encoded = parse.quote(publication_value, safe="")
+    url = f"{_base_url()}/api/studio/publications/{encoded}/revalidate"
+    return _request_json(url, _api_key(), method="POST")

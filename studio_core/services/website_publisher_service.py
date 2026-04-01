@@ -1,15 +1,20 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any, Dict
-from urllib import error, request
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.credential_resolver_service import resolve_credential
 from studio_core.services.publication_policy_service import evaluate_project_publication_policy
+from studio_core.services.website_control_service import (
+    revalidate_website_publication,
+    unpublish_website_publication,
+)
 from studio_core.services.website_contract_payload_service import build_website_payload_from_package
+
+import hashlib
+import json
+from urllib import error, request
 
 PROJECTS_FILE = "data/projects.json"
 DEFAULT_SCHEMA_VERSION = "website_ingest_v1"
@@ -137,6 +142,42 @@ def publish_project_to_website(project_id: str) -> Dict[str, Any]:
     )
 
     return {"ok": True, "project_id": project_id, "envelope": envelope, "receipt": receipt}
+
+
+def unpublish_project_on_website(project_id: str) -> Dict[str, Any]:
+    project = _load_project(project_id)
+    if not project:
+        raise ValueError("project_not_found")
+    website_sync = _safe_dict(project.get("website_sync"))
+    publication_id = _normalize_text(website_sync.get("publication_id"))
+    if not publication_id:
+        raise ValueError("website_publication_id_missing")
+    result = unpublish_website_publication(publication_id)
+    receipt = {
+        **website_sync,
+        "unpublished_at": now_iso(),
+        "last_unpublish_result": result,
+    }
+    update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "website_sync": receipt, "updated_at": now_iso()})
+    return {"ok": True, "project_id": project_id, "publication_id": publication_id, "result": result}
+
+
+def revalidate_project_on_website(project_id: str) -> Dict[str, Any]:
+    project = _load_project(project_id)
+    if not project:
+        raise ValueError("project_not_found")
+    website_sync = _safe_dict(project.get("website_sync"))
+    publication_id = _normalize_text(website_sync.get("publication_id"))
+    if not publication_id:
+        raise ValueError("website_publication_id_missing")
+    result = revalidate_website_publication(publication_id)
+    receipt = {
+        **website_sync,
+        "last_revalidate_at": now_iso(),
+        "last_revalidate_result": result,
+    }
+    update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "website_sync": receipt, "updated_at": now_iso()})
+    return {"ok": True, "project_id": project_id, "publication_id": publication_id, "result": result}
 
 
 def get_project_publish_status(project_id: str) -> Dict[str, Any]:
