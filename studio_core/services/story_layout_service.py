@@ -6,6 +6,7 @@ from uuid import uuid4
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.saga_runtime_service import load_saga_runtime
+from studio_core.services.saga_service import list_sagas
 from studio_core.services.story_source_service import get_story_source
 
 PROJECTS_FILE = "data/projects.json"
@@ -39,11 +40,32 @@ def _get_project(project_id: str) -> Dict[str, Any] | None:
     return None
 
 
-def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
+def _resolve_typography(project: Dict[str, Any]) -> Dict[str, Any]:
+    saga_slug = str(project.get("saga_slug", "")).strip()
+    saga = next((item for item in list_sagas() if str(item.get("slug", "")).strip() == saga_slug), {})
+    saga_typography = _safe_dict(_safe_dict(saga).get("typography", {}))
+    project_typography = _safe_dict(_safe_dict(project.get("front_matter", {})).get("typography", {}))
+    use_inherited = project_typography.get("use_inherited", True) is not False
+    inherited_font = _normalize_text(saga_typography.get("font_family", "")) or "Georgia"
+    project_font = _normalize_text(project_typography.get("font_family", ""))
+    applied_font = inherited_font if use_inherited or not project_font else project_font
+    preview_text = _normalize_text(project_typography.get("preview_text", "")) or _normalize_text(saga_typography.get("preview_text", "")) or _normalize_text(project.get("title", ""))
+    return {
+        "use_inherited": use_inherited,
+        "saga_font_family": inherited_font,
+        "project_font_family": project_font,
+        "applied_font_family": applied_font,
+        "preview_text": preview_text,
+        "scope": "project" if not use_inherited and project_font else "saga",
+    }
+
+
+def _resolve_layout_profile(runtime: Dict[str, Any], project: Dict[str, Any]) -> Dict[str, Any]:
     metadata = _safe_dict(runtime.get("metadata", {}))
     canons = _safe_dict(runtime.get("canons", {}))
     narrative = _safe_dict(canons.get("narrative", {}))
     visual = _safe_dict(canons.get("visual", {}))
+    typography = _resolve_typography(project)
 
     genre = str(metadata.get("genre", "")).strip().lower()
     target_age = str(metadata.get("target_age", "")).strip()
@@ -55,6 +77,8 @@ def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
         "max_paragraphs_per_page": 3,
         "illustration_recommended": False,
         "text_density": "medium",
+        "font_family": typography.get("applied_font_family", "Georgia"),
+        "preview_text": typography.get("preview_text", ""),
     }
 
     if "infantil" in genre or target_age:
@@ -65,6 +89,8 @@ def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
             "max_paragraphs_per_page": 2,
             "illustration_recommended": True,
             "text_density": "low",
+            "font_family": typography.get("applied_font_family", "Georgia"),
+            "preview_text": typography.get("preview_text", ""),
         }
 
     if "poesia" in genre:
@@ -75,6 +101,8 @@ def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
             "max_paragraphs_per_page": 6,
             "illustration_recommended": False,
             "text_density": "variable",
+            "font_family": typography.get("applied_font_family", "Georgia"),
+            "preview_text": typography.get("preview_text", ""),
         }
 
     if "técnico" in genre or "technical" in genre:
@@ -85,6 +113,8 @@ def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
             "max_paragraphs_per_page": 6,
             "illustration_recommended": False,
             "text_density": "high",
+            "font_family": typography.get("applied_font_family", "Georgia"),
+            "preview_text": typography.get("preview_text", ""),
         }
 
     if "romance" in genre or "adulto" in genre:
@@ -95,6 +125,8 @@ def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
             "max_paragraphs_per_page": 4,
             "illustration_recommended": False,
             "text_density": "medium_high",
+            "font_family": typography.get("applied_font_family", "Georgia"),
+            "preview_text": typography.get("preview_text", ""),
         }
 
     page_structure = _safe_dict(visual.get("page_structure", {}))
@@ -106,6 +138,8 @@ def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
             "max_paragraphs_per_page": int(page_structure.get("max_paragraphs_per_page", 3) or 3),
             "illustration_recommended": bool(page_structure.get("illustration_recommended", False)),
             "text_density": str(page_structure.get("text_density", "medium")).strip() or "medium",
+            "font_family": typography.get("applied_font_family", "Georgia"),
+            "preview_text": typography.get("preview_text", ""),
         }
 
     narrative_page_rules = _safe_dict(narrative.get("page_rules", {}))
@@ -117,6 +151,8 @@ def _resolve_layout_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
             "max_paragraphs_per_page": int(narrative_page_rules.get("max_paragraphs_per_page", 3) or 3),
             "illustration_recommended": bool(narrative_page_rules.get("illustration_recommended", False)),
             "text_density": str(narrative_page_rules.get("text_density", "medium")).strip() or "medium",
+            "font_family": typography.get("applied_font_family", "Georgia"),
+            "preview_text": typography.get("preview_text", ""),
         }
 
     return default_profile
@@ -126,19 +162,15 @@ def _chunk_paragraphs(paragraphs: List[str], max_paragraphs_per_page: int) -> Li
     if not paragraphs:
         return []
     max_paragraphs_per_page = max(1, int(max_paragraphs_per_page or 1))
-
     pages: List[List[str]] = []
     current: List[str] = []
-
     for paragraph in paragraphs:
         current.append(paragraph)
         if len(current) >= max_paragraphs_per_page:
             pages.append(current)
             current = []
-
     if current:
         pages.append(current)
-
     return pages
 
 
@@ -146,11 +178,7 @@ def _renumber_pages(pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     result = []
     for index, item in enumerate(pages, start=1):
         page = _safe_dict(item)
-        result.append({
-            **page,
-            "pageNumber": index,
-            "updated_at": now_iso(),
-        })
+        result.append({**page, "pageNumber": index, "updated_at": now_iso()})
     return result
 
 
@@ -161,7 +189,8 @@ def auto_paginate_story(project_id: str, payload: Dict[str, Any] | None = None) 
         raise ValueError("Projeto não encontrado.")
 
     runtime = load_saga_runtime(str(project.get("saga_slug", "baribudos")).strip() or "baribudos")
-    layout_profile = _resolve_layout_profile(runtime)
+    layout_profile = _resolve_layout_profile(runtime, project)
+    typography = _resolve_typography(project)
 
     language = str(payload.get("language", project.get("language", runtime.get("default_language", "pt-PT")))).strip() or "pt-PT"
     story_variants = _safe_dict(project.get("language_variants", {}))
@@ -190,12 +219,14 @@ def auto_paginate_story(project_id: str, payload: Dict[str, Any] | None = None) 
             "scene_requested": False,
             "has_illustration": False,
             "illustration_path": "",
+            "font_family": typography.get("applied_font_family", "Georgia"),
         })
 
     layout = {
         "id": str(uuid4()),
         "language": language,
         "profile": layout_profile,
+        "typography": typography,
         "raw_text": raw_text,
         "source_mode": "story_source" if source_text else "story_variant",
         "pages": pages,
@@ -203,21 +234,8 @@ def auto_paginate_story(project_id: str, payload: Dict[str, Any] | None = None) 
         "updated_at": now_iso(),
     }
 
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story_layout": layout,
-            "updated_at": now_iso(),
-        }
-    )
-
-    return {
-        "ok": True,
-        "layout": layout,
-        "project": updated_project,
-    }
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story_layout": layout, "updated_at": now_iso()})
+    return {"ok": True, "layout": layout, "project": updated_project}
 
 
 def get_story_layout(project_id: str) -> Dict[str, Any]:
@@ -240,13 +258,11 @@ def update_story_layout_page(project_id: str, page_id: str, payload: Dict[str, A
 
     updated = False
     next_pages = []
-
     for item in pages:
         page = _safe_dict(item)
         if str(page.get("id", "")).strip() != str(page_id).strip():
             next_pages.append(page)
             continue
-
         next_pages.append({
             **page,
             "title": str(payload.get("title", page.get("title", ""))).strip() or page.get("title", ""),
@@ -254,27 +270,13 @@ def update_story_layout_page(project_id: str, page_id: str, payload: Dict[str, A
             "layout_mode": str(payload.get("layout_mode", page.get("layout_mode", "manual"))).strip() or "manual",
             "illustration_requested": bool(payload.get("illustration_requested", page.get("illustration_requested", False))),
             "scene_requested": bool(payload.get("scene_requested", page.get("scene_requested", False))),
+            "font_family": _normalize_text(payload.get("font_family", page.get("font_family", ""))) or page.get("font_family", "Georgia"),
             "updated_at": now_iso(),
         })
         updated = True
-
     if not updated:
         raise ValueError("Página não encontrada.")
-
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story_layout": {
-                **_safe_dict(current.get("story_layout", {})),
-                "pages": next_pages,
-                "updated_at": now_iso(),
-            },
-            "updated_at": now_iso(),
-        }
-    )
-
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": next_pages, "updated_at": now_iso()}, "updated_at": now_iso()})
     return {"ok": True, "layout": _safe_dict(updated_project.get("story_layout", {})), "project": updated_project}
 
 
@@ -283,11 +285,10 @@ def add_story_layout_page(project_id: str, payload: Dict[str, Any] | None = None
     project = _get_project(project_id)
     if not project:
         raise ValueError("Projeto não encontrado.")
-
     layout = _safe_dict(project.get("story_layout", {}))
     pages = _safe_list(layout.get("pages", []))
+    typography = _safe_dict(layout.get("typography", {})) or _resolve_typography(project)
     next_number = len(pages) + 1
-
     new_page = {
         "id": str(uuid4()),
         "pageNumber": next_number,
@@ -298,24 +299,11 @@ def add_story_layout_page(project_id: str, payload: Dict[str, Any] | None = None
         "scene_requested": bool(payload.get("scene_requested", False)),
         "has_illustration": False,
         "illustration_path": "",
+        "font_family": _normalize_text(payload.get("font_family", "")) or typography.get("applied_font_family", "Georgia"),
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
-
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story_layout": {
-                **_safe_dict(current.get("story_layout", {})),
-                "pages": [*_safe_list(_safe_dict(current.get("story_layout", {})).get("pages", [])), new_page],
-                "updated_at": now_iso(),
-            },
-            "updated_at": now_iso(),
-        }
-    )
-
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": [*_safe_list(_safe_dict(current.get("story_layout", {})).get("pages", [])), new_page], "updated_at": now_iso()}, "updated_at": now_iso()})
     return {"ok": True, "layout": _safe_dict(updated_project.get("story_layout", {})), "project": updated_project}
 
 
@@ -323,32 +311,15 @@ def remove_story_layout_page(project_id: str, page_id: str) -> Dict[str, Any]:
     project = _get_project(project_id)
     if not project:
         raise ValueError("Projeto não encontrado.")
-
     layout = _safe_dict(project.get("story_layout", {}))
     pages = _safe_list(layout.get("pages", []))
     if not pages:
         raise ValueError("Projeto sem story layout.")
-
     filtered = [page for page in pages if str(_safe_dict(page).get("id", "")).strip() != str(page_id).strip()]
     if len(filtered) == len(pages):
         raise ValueError("Página não encontrada.")
-
     renumbered = _renumber_pages([_safe_dict(item) for item in filtered])
-
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story_layout": {
-                **_safe_dict(current.get("story_layout", {})),
-                "pages": renumbered,
-                "updated_at": now_iso(),
-            },
-            "updated_at": now_iso(),
-        }
-    )
-
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": renumbered, "updated_at": now_iso()}, "updated_at": now_iso()})
     return {"ok": True, "layout": _safe_dict(updated_project.get("story_layout", {})), "project": updated_project}
 
 
@@ -356,33 +327,19 @@ def move_story_layout_page(project_id: str, page_id: str, direction: str) -> Dic
     project = _get_project(project_id)
     if not project:
         raise ValueError("Projeto não encontrado.")
-
     layout = _safe_dict(project.get("story_layout", {}))
     pages = [_safe_dict(item) for item in _safe_list(layout.get("pages", []))]
     if not pages:
         raise ValueError("Projeto sem story layout.")
-
     index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(page_id).strip()), -1)
     if index < 0:
         raise ValueError("Página não encontrada.")
-
     target = index - 1 if direction == "up" else index + 1 if direction == "down" else -1
     if target < 0 or target >= len(pages):
         return {"ok": True, "layout": layout, "project": project}
-
     pages[index], pages[target] = pages[target], pages[index]
     pages = _renumber_pages(pages)
-
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": pages, "updated_at": now_iso()},
-            "updated_at": now_iso(),
-        }
-    )
-
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": pages, "updated_at": now_iso()}, "updated_at": now_iso()})
     return {"ok": True, "layout": _safe_dict(updated_project.get("story_layout", {})), "project": updated_project}
 
 
@@ -390,53 +347,25 @@ def split_story_layout_page(project_id: str, page_id: str, split_mode: str = "ha
     project = _get_project(project_id)
     if not project:
         raise ValueError("Projeto não encontrado.")
-
     layout = _safe_dict(project.get("story_layout", {}))
     pages = [_safe_dict(item) for item in _safe_list(layout.get("pages", []))]
     if not pages:
         raise ValueError("Projeto sem story layout.")
-
     index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(page_id).strip()), -1)
     if index < 0:
         raise ValueError("Página não encontrada.")
-
     page = pages[index]
     paragraphs = _paragraphs(str(page.get("text", "")))
     if len(paragraphs) < 2:
         raise ValueError("A página precisa de pelo menos 2 blocos para dividir.")
-
     split_at = max(1, len(paragraphs) // 2) if split_mode == "half" else max(1, len(paragraphs) - 1)
     first_text = "\n\n".join(paragraphs[:split_at]).strip()
     second_text = "\n\n".join(paragraphs[split_at:]).strip()
-
     first_page = {**page, "text": first_text, "updated_at": now_iso()}
-    second_page = {
-        "id": str(uuid4()),
-        "pageNumber": page.get("pageNumber", index + 2),
-        "title": f"{str(page.get('title', 'Página')).strip()} (continuação)",
-        "text": second_text,
-        "layout_mode": "manual",
-        "illustration_requested": bool(page.get("illustration_requested", False)),
-        "scene_requested": bool(page.get("scene_requested", False)),
-        "has_illustration": False,
-        "illustration_path": "",
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
-    }
-
+    second_page = {"id": str(uuid4()), "pageNumber": page.get("pageNumber", index + 2), "title": f"{str(page.get('title', 'Página')).strip()} (continuação)", "text": second_text, "layout_mode": "manual", "illustration_requested": bool(page.get("illustration_requested", False)), "scene_requested": bool(page.get("scene_requested", False)), "has_illustration": False, "illustration_path": "", "font_family": page.get("font_family", "Georgia"), "created_at": now_iso(), "updated_at": now_iso()}
     pages[index:index + 1] = [first_page, second_page]
     pages = _renumber_pages(pages)
-
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": pages, "updated_at": now_iso()},
-            "updated_at": now_iso(),
-        }
-    )
-
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": pages, "updated_at": now_iso()}, "updated_at": now_iso()})
     return {"ok": True, "layout": _safe_dict(updated_project.get("story_layout", {})), "project": updated_project}
 
 
@@ -444,46 +373,29 @@ def move_text_between_pages(project_id: str, from_page_id: str, to_page_id: str,
     project = _get_project(project_id)
     if not project:
         raise ValueError("Projeto não encontrado.")
-
     layout = _safe_dict(project.get("story_layout", {}))
     pages = [_safe_dict(item) for item in _safe_list(layout.get("pages", []))]
     if not pages:
         raise ValueError("Projeto sem story layout.")
-
     from_index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(from_page_id).strip()), -1)
     to_index = next((i for i, page in enumerate(pages) if str(page.get("id", "")).strip() == str(to_page_id).strip()), -1)
     if from_index < 0 or to_index < 0:
         raise ValueError("Página de origem ou destino não encontrada.")
     if from_index == to_index:
         raise ValueError("Origem e destino não podem ser a mesma página.")
-
     from_page = pages[from_index]
     to_page = pages[to_index]
     from_parts = _paragraphs(str(from_page.get("text", "")))
     to_parts = _paragraphs(str(to_page.get("text", "")))
     if not from_parts:
         raise ValueError("Página de origem sem texto.")
-
     moved = from_parts.pop(-1) if mode == "last_paragraph" else from_parts.pop(0)
-    if mode == "first_paragraph":
-        to_parts.insert(0, moved)
-    else:
-        to_parts.append(moved)
-
+    if mode == "first_paragraph": to_parts.insert(0, moved)
+    else: to_parts.append(moved)
     pages[from_index] = {**from_page, "text": "\n\n".join(from_parts).strip(), "updated_at": now_iso()}
     pages[to_index] = {**to_page, "text": "\n\n".join(to_parts).strip(), "updated_at": now_iso()}
     pages = _renumber_pages(pages)
-
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": pages, "updated_at": now_iso()},
-            "updated_at": now_iso(),
-        }
-    )
-
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story_layout": {**_safe_dict(current.get("story_layout", {})), "pages": pages, "updated_at": now_iso()}, "updated_at": now_iso()})
     return {"ok": True, "layout": _safe_dict(updated_project.get("story_layout", {})), "project": updated_project}
 
 
@@ -491,12 +403,10 @@ def apply_story_layout_to_story(project_id: str, language: str = "") -> Dict[str
     project = _get_project(project_id)
     if not project:
         raise ValueError("Projeto não encontrado.")
-
     layout = _safe_dict(project.get("story_layout", {}))
     pages = _safe_list(layout.get("pages", []))
     if not pages:
         raise ValueError("Projeto sem story layout.")
-
     target_language = str(language or layout.get("language") or project.get("language") or "pt-PT").strip() or "pt-PT"
     story_payload = {
         "language": target_language,
@@ -504,20 +414,7 @@ def apply_story_layout_to_story(project_id: str, language: str = "") -> Dict[str
         "pages": pages,
         "raw_text": "\n\n".join(str(_safe_dict(page).get("text", "")).strip() for page in pages if str(_safe_dict(page).get("text", "")).strip()).strip(),
         "status": "layout_applied",
+        "typography": _safe_dict(layout.get("typography", {})),
     }
-
-    updated_project = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "story": story_payload if target_language == str(current.get("language", "pt-PT")).strip() else current.get("story", {}),
-            "language_variants": {
-                **_safe_dict(current.get("language_variants", {})),
-                target_language: {**_safe_dict(_safe_dict(current.get("language_variants", {})).get(target_language, {})), **story_payload},
-            },
-            "updated_at": now_iso(),
-        }
-    )
-
+    updated_project = update_json_item(PROJECTS_FILE, project_id, lambda current: {**current, "story": story_payload if target_language == str(current.get("language", "pt-PT")).strip() else current.get("story", {}), "language_variants": {**_safe_dict(current.get("language_variants", {})), target_language: {**_safe_dict(_safe_dict(current.get("language_variants", {})).get(target_language, {})), **story_payload}}, "updated_at": now_iso()})
     return {"ok": True, "story": story_payload, "project": updated_project}
