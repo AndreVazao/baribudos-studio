@@ -40,7 +40,7 @@ function countWords(text) {
   return String(text || "").trim().split(/\s+/).filter(Boolean).length
 }
 
-function pageScaleStyle() {
+function pageScaleStyle(fontFamily) {
   return {
     width: 210,
     minHeight: 297,
@@ -54,7 +54,8 @@ function pageScaleStyle() {
     gap: 8,
     transform: "scale(0.88)",
     transformOrigin: "top center",
-    overflow: "hidden"
+    overflow: "hidden",
+    fontFamily: fontFamily || "Georgia",
   }
 }
 
@@ -77,6 +78,7 @@ export default function StoryLayoutPanel({ user }) {
 
   const pages = layout?.pages || []
   const selectedPage = useMemo(() => pages.find((page) => page.id === selectedPageId) || pages[0] || null, [pages, selectedPageId])
+  const activeFontFamily = selectedPage?.font_family || layout?.typography?.applied_font_family || layout?.profile?.font_family || "Georgia"
 
   useEffect(() => {
     if (selectedPage && selectedPage.id !== selectedPageId) {
@@ -136,7 +138,8 @@ export default function StoryLayoutPanel({ user }) {
         title: "Nova página",
         text: "",
         illustration_requested: false,
-        scene_requested: false
+        scene_requested: false,
+        font_family: activeFontFamily,
       })
       setLayout(res?.layout || null)
     } catch (error) {
@@ -208,6 +211,7 @@ export default function StoryLayoutPanel({ user }) {
   }
 
   const profile = layout?.profile || {}
+  const typography = layout?.typography || {}
 
   return (
     <Card title="Story Layout Editor">
@@ -253,6 +257,8 @@ export default function StoryLayoutPanel({ user }) {
             <div><strong>Máx. linhas/página:</strong> {profile.max_lines_per_page || "-"}</div>
             <div><strong>Máx. palavras/linha:</strong> {profile.max_words_per_line || "-"}</div>
             <div><strong>Ilustração recomendada:</strong> {profile.illustration_recommended ? "Sim" : "Não"}</div>
+            <div><strong>Fonte aplicada:</strong> {activeFontFamily}</div>
+            <div><strong>Preview tipográfico:</strong> {typography.preview_text || profile.preview_text || "-"}</div>
             <div><strong>Edição manual:</strong> ativa e obrigatoriamente disponível para afinação final.</div>
           </div>
 
@@ -266,7 +272,8 @@ export default function StoryLayoutPanel({ user }) {
                   borderRadius: 10,
                   border: page.id === selectedPage?.id ? "2px solid #2F5E2E" : "1px solid #cbd5e1",
                   background: page.id === selectedPage?.id ? "rgba(47,94,46,0.12)" : "#fff",
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  fontFamily: page.font_family || activeFontFamily,
                 }}
               >
                 Página {page.pageNumber}
@@ -281,25 +288,26 @@ export default function StoryLayoutPanel({ user }) {
 
                 <input
                   value={selectedPage.title || ""}
-                  onChange={(e) => handleUpdatePage(selectedPage.id, { title: e.target.value, text: selectedPage.text, illustration_requested: selectedPage.illustration_requested, scene_requested: selectedPage.scene_requested })}
-                  style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none" }}
+                  onChange={(e) => handleUpdatePage(selectedPage.id, { title: e.target.value, text: selectedPage.text, illustration_requested: selectedPage.illustration_requested, scene_requested: selectedPage.scene_requested, font_family: selectedPage.font_family || activeFontFamily })}
+                  style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none", fontFamily: activeFontFamily }}
                 />
 
                 <textarea
                   value={selectedPage.text || ""}
-                  onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: e.target.value, illustration_requested: selectedPage.illustration_requested, scene_requested: selectedPage.scene_requested })}
+                  onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: e.target.value, illustration_requested: selectedPage.illustration_requested, scene_requested: selectedPage.scene_requested, font_family: selectedPage.font_family || activeFontFamily })}
                   rows={14}
-                  style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none", resize: "vertical", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}
+                  style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none", resize: "vertical", fontFamily: activeFontFamily, lineHeight: 1.5 }}
                 />
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 8 }}>
                   <div style={{ padding: 8, borderRadius: 10, background: "#fff" }}><strong>Linhas</strong><div>{countLines(selectedPage.text)}</div></div>
                   <div style={{ padding: 8, borderRadius: 10, background: "#fff" }}><strong>Palavras</strong><div>{countWords(selectedPage.text)}</div></div>
                   <div style={{ padding: 8, borderRadius: 10, background: "#fff" }}><strong>Nº página</strong><div>{selectedPage.pageNumber}</div></div>
+                  <div style={{ padding: 8, borderRadius: 10, background: "#fff" }}><strong>Fonte</strong><div>{activeFontFamily}</div></div>
                 </div>
 
-                <label><input type="checkbox" checked={!!selectedPage.illustration_requested} onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: selectedPage.text, illustration_requested: e.target.checked, scene_requested: selectedPage.scene_requested })} /> Ilustração pedida</label>
-                <label><input type="checkbox" checked={!!selectedPage.scene_requested} onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: selectedPage.text, illustration_requested: selectedPage.illustration_requested, scene_requested: e.target.checked })} /> Cena para série</label>
+                <label><input type="checkbox" checked={!!selectedPage.illustration_requested} onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: selectedPage.text, illustration_requested: e.target.checked, scene_requested: selectedPage.scene_requested, font_family: selectedPage.font_family || activeFontFamily })} /> Ilustração pedida</label>
+                <label><input type="checkbox" checked={!!selectedPage.scene_requested} onChange={(e) => handleUpdatePage(selectedPage.id, { title: selectedPage.title, text: selectedPage.text, illustration_requested: selectedPage.illustration_requested, scene_requested: e.target.checked, font_family: selectedPage.font_family || activeFontFamily })} /> Cena para série</label>
 
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button onClick={() => handleMovePage(selectedPage.id, "up")} style={{ padding: "8px 10px", borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", cursor: "pointer" }}>Subir</button>
@@ -313,7 +321,7 @@ export default function StoryLayoutPanel({ user }) {
 
               <div style={{ border: "1px solid #d1d5db", borderRadius: 12, padding: 12, background: "rgba(255,255,255,0.7)", display: "grid", gap: 10, justifyItems: "center" }}>
                 <div><strong>Preview visual da página</strong></div>
-                <div style={pageScaleStyle()}>
+                <div style={pageScaleStyle(activeFontFamily)}>
                   <div style={{ fontSize: 10, color: "#6b7280", textAlign: "right" }}>Página {selectedPage.pageNumber}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, textAlign: "center", color: "#1f2937" }}>{selectedPage.title || `Página ${selectedPage.pageNumber}`}</div>
                   <div style={{ fontSize: 10.5, lineHeight: 1.45, whiteSpace: "pre-wrap", color: "#111827" }}>{selectedPage.text || "(sem texto nesta página)"}</div>
@@ -322,7 +330,7 @@ export default function StoryLayoutPanel({ user }) {
                     <span>{selectedPage.scene_requested ? "Cena pedida" : "Sem cena"}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280", textAlign: "center" }}>Preview em escala reduzida. A edição manual continua a mandar no resultado final.</div>
+                <div style={{ fontSize: 12, color: "#6b7280", textAlign: "center" }}>Preview em escala reduzida com a tipografia editorial aplicada.</div>
               </div>
             </div>
           ) : null}
