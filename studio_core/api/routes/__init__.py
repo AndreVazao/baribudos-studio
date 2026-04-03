@@ -38,7 +38,6 @@ __all__ = [
     "illustration_generation",
     "illustration_provider",
     "local_ai_installer",
-    "local_ai_runtime",
     "local_engine_manager",
     "local_audio_installer",
     "local_audio_engine_manager",
