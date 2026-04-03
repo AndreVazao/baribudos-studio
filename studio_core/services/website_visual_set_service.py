@@ -7,7 +7,6 @@ from urllib import error, request
 
 from studio_core.core.storage import list_json_items, update_json_item
 from studio_core.services.credential_resolver_service import resolve_credential
-from studio_core.services.website_visual_set_reconcile_service import get_visual_set_reconcile_report
 
 SAGA_VISUAL_SETS_FILE = "data/saga_visual_sets.json"
 
