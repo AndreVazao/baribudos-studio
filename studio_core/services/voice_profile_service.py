@@ -22,6 +22,10 @@ def _safe_list(value: Any) -> List[Any]:
     return value if isinstance(value, list) else []
 
 
+def _safe_dict(value: Any) -> Dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def _validate_enum(field_name: str, value: str, allowed: set[str]) -> str:
     clean = _normalize_text(value)
     if clean and clean not in allowed:
@@ -29,9 +33,23 @@ def _validate_enum(field_name: str, value: str, allowed: set[str]) -> str:
     return clean
 
 
+def _normalize_variation_policy(payload: Dict[str, Any], current: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    current = current or {}
+    source = _safe_dict(payload.get("voice_variation_policy", current.get("voice_variation_policy")))
+    return {
+        "allow_variants": bool(source.get("allow_variants", True)),
+        "pitch_range_min": int(source.get("pitch_range_min", -2) or -2),
+        "pitch_range_max": int(source.get("pitch_range_max", 2) or 2),
+        "tone_range_min": int(source.get("tone_range_min", -2) or -2),
+        "tone_range_max": int(source.get("tone_range_max", 2) or 2),
+        "speed_range_min": float(source.get("speed_range_min", 0.9) or 0.9),
+        "speed_range_max": float(source.get("speed_range_max", 1.1) or 1.1),
+        "variant_notes": _normalize_text(source.get("variant_notes", "")),
+    }
+
+
 def _normalize_profile(payload: Dict[str, Any], current: Dict[str, Any] | None = None) -> Dict[str, Any]:
     current = current or {}
-
     display_name = _normalize_text(payload.get("display_name", current.get("display_name")))
     if not display_name:
         raise ValueError("display_name_required")
@@ -44,7 +62,7 @@ def _normalize_profile(payload: Dict[str, Any], current: Dict[str, Any] | None =
     consent_status = _validate_enum("consent_status", payload.get("consent_status", current.get("consent_status") or "pending"), ALLOWED_CONSENT_STATUS) or "pending"
     credit_visibility = _validate_enum("credit_visibility", payload.get("credit_visibility", current.get("credit_visibility") or "product_and_website"), ALLOWED_CREDIT_VISIBILITY) or "product_and_website"
 
-    normalized = {
+    return {
         "id": _normalize_text(current.get("id")) or f"voice-profile-{uuid4()}",
         "display_name": display_name,
         "owner_person_id": owner_person_id,
@@ -66,11 +84,11 @@ def _normalize_profile(payload: Dict[str, Any], current: Dict[str, Any] | None =
         "sample_audio_paths": _safe_list(payload.get("sample_audio_paths", current.get("sample_audio_paths"))),
         "reference_text": _normalize_text(payload.get("reference_text", current.get("reference_text"))),
         "notes": _normalize_text(payload.get("notes", current.get("notes"))),
+        "voice_variation_policy": _normalize_variation_policy(payload, current),
         "active": bool(payload.get("active", current.get("active", True))),
         "created_at": current.get("created_at") or now_iso(),
         "updated_at": now_iso(),
     }
-    return normalized
 
 
 def list_voice_profiles() -> List[Dict[str, Any]]:
@@ -78,8 +96,9 @@ def list_voice_profiles() -> List[Dict[str, Any]]:
 
 
 def get_voice_profile(voice_profile_id: str) -> Dict[str, Any] | None:
+    clean = _normalize_text(voice_profile_id)
     for item in list_voice_profiles():
-        if _normalize_text(item.get("id")) == _normalize_text(voice_profile_id):
+        if _normalize_text(item.get("id")) == clean:
             return item
     return None
 
