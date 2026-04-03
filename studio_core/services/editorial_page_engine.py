@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 from uuid import uuid4
 
 
@@ -16,17 +16,16 @@ def _clean_text(text: str) -> str:
 
 
 def _split_paragraphs(text: str) -> List[str]:
-    parts = [p.strip() for p in text.split("\n\n") if p.strip()]
-    return parts
+    return [p.strip() for p in text.split("\n\n") if p.strip()]
 
 
 def _estimate_page_size(age_group: str | None, genre: str | None) -> int:
     if age_group:
-        if "3" in age_group or "4" in age_group or "5" in age_group:
+        if any(x in age_group for x in ["3", "4", "5"]):
             return 3
-        if "6" in age_group or "7" in age_group:
+        if any(x in age_group for x in ["6", "7"]):
             return 4
-        if "8" in age_group or "9" in age_group or "10" in age_group:
+        if any(x in age_group for x in ["8", "9", "10"]):
             return 5
 
     if genre == "adult":
@@ -118,7 +117,7 @@ def enrich_pages_with_editorial_intelligence(
                 "pedagogical_goal": pedagogical_goal,
                 "reading_level": metadata.get("age_group", ""),
                 "editorial_flags": {
-                    "needs_illustration": True if index == 1 or len(text) < 260 else False,
+                    "needs_illustration": index == 1 or len(text) < 260,
                     "is_opening_page": index == 1,
                     "is_closing_page": index == len(pages),
                     "is_dialogue_heavy": ":" in text,
@@ -387,8 +386,8 @@ def build_book_preview_model(
                     "show_illustration_slot": bool(
                         (page.get("editorial_flags", {}) or {}).get("needs_illustration", False)
                     ),
-                    "show_badge": True if page.get("page_number") == 1 else False,
-                    "show_series_logo": True if page.get("page_number") == 1 else False,
+                    "show_badge": page.get("page_number") == 1,
+                    "show_series_logo": page.get("page_number") == 1,
                 },
                 "illustration_brief": page.get("illustration_brief", {}),
             }
