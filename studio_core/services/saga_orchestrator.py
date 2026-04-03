@@ -31,7 +31,6 @@ def _generate_multilang_story(runtime: Dict[str, Any], payload: Dict[str, Any]) 
     languages = _resolve_languages(runtime, payload)
 
     stories = {}
-
     for lang in languages:
         lang_payload = dict(payload)
         lang_payload["language"] = lang
@@ -69,23 +68,20 @@ def _build_project_structure(runtime: Dict[str, Any], stories: Dict[str, Any]) -
         "outputs": {
             "ebook": {},
             "audiobook": {},
-            "series": {}
-        }
-      }
-  def run_saga_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
+            "series": {},
+        },
+    }
+
+
+def run_saga_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
     saga_id = payload.get("saga_id", "baribudos")
-
     runtime = load_saga_runtime(saga_id)
-
     stories = _generate_multilang_story(runtime, payload)
-
     manifest = _create_editorial_manifest(runtime, stories)
-
     project = _build_project_structure(runtime, stories)
 
     return {
         "runtime": runtime,
         "manifest": manifest,
-        "project": project
-}
-    
+        "project": project,
+    }
