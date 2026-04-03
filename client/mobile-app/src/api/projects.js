@@ -19,6 +19,10 @@ export async function updateProject(projectId, payload = {}, user = {}) {
   })}`, payload)
 }
 
+export async function updateSaga(slug, payload = {}) {
+  return patch(`${getApiBase()}/sagas/${encodeURIComponent(String(slug || "").trim())}`, payload)
+}
+
 export async function listPublications() {
   return get(`${getApiBase()}/publishing`)
 }

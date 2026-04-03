@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from studio_core.services.factory_service import (
     get_factory_capabilities,
-    run_factory_for_project,
+    run_factory,
 )
 
 router = APIRouter(prefix="/factory", tags=["factory"])
@@ -19,4 +19,13 @@ def capabilities() -> dict:
 
 
 @router.post("/run/{project_id}")
-def run_factory(project_id: str, payload: dict | None = None) -> dict
+def run_factory_endpoint(project_id: str, payload: dict | None = None) -> dict:
+    try:
+        return {
+            "ok": True,
+            "result": run_factory(project_id, payload or {}),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

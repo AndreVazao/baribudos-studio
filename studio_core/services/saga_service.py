@@ -14,7 +14,12 @@ DEFAULT_SAGA = {
         "brown": "#8B5E3C"
     },
     "characters_locked": True,
-    "sponsors": []
+    "sponsors": [],
+    "typography": {
+        "font_family": "Georgia",
+        "preview_text": "Os Baribudos na floresta encantada",
+        "scope": "saga"
+    }
 }
 
 def list_sagas():
@@ -26,6 +31,41 @@ def list_sagas():
 
 def create_saga(data):
     sagas = list_sagas()
-    sagas.append(data)
+    payload = {
+        **data,
+        "typography": {
+            **DEFAULT_SAGA.get("typography", {}),
+            **(data.get("typography", {}) if isinstance(data.get("typography", {}), dict) else {}),
+        },
+    }
+    sagas.append(payload)
     write_json(SAGAS_FILE, sagas)
-    return data
+    return payload
+
+
+def update_saga(slug, payload):
+    sagas = list_sagas()
+    updated = None
+    next_items = []
+    for item in sagas:
+        if str(item.get("slug", "")).strip() != str(slug).strip():
+            next_items.append(item)
+            continue
+        merged = {
+            **item,
+            **payload,
+            "colors": {
+                **(item.get("colors", {}) if isinstance(item.get("colors", {}), dict) else {}),
+                **(payload.get("colors", {}) if isinstance(payload.get("colors", {}), dict) else {}),
+            },
+            "typography": {
+                **(item.get("typography", {}) if isinstance(item.get("typography", {}), dict) else {}),
+                **(payload.get("typography", {}) if isinstance(payload.get("typography", {}), dict) else {}),
+            },
+        }
+        next_items.append(merged)
+        updated = merged
+    if not updated:
+        raise ValueError("saga_not_found")
+    write_json(SAGAS_FILE, next_items)
+    return updated

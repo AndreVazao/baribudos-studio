@@ -1,0 +1,61 @@
+name: Studio CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/**
+      - feature/**
+      - fix/**
+      - hotfix/**
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client/mobile-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-frontend-dist
+          path: client/mobile-app/dist
+
+  backend-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile backend
+        run: python -m compileall studio_core
+
+      - name: Import FastAPI app
+        run: python -c "from studio_core.api.main import app; print(app.title)"

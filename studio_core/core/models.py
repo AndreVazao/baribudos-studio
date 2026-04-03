@@ -38,6 +38,14 @@ class User(BaseModel):
     updated_at: str = Field(default_factory=now_iso)
 
 
+DEFAULT_STAGE_MODES = {
+    "story_input_mode": "manual",
+    "illustration_mode": "manual",
+    "audio_mode": "manual",
+    "video_mode": "manual",
+}
+
+
 class ProjectCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     saga_slug: str = "baribudos"
@@ -47,6 +55,14 @@ class ProjectCreate(BaseModel):
     created_by: str = ""
     created_by_name: str = ""
     visible_to_owner_only: bool = True
+    project_mode: str = "official"
+    parent_project_id: str = ""
+    continuity_source_project_id: str = ""
+    hidden_universe_key: str = ""
+    hidden_universe_name: str = ""
+    hidden_saga_key: str = ""
+    hidden_saga_name: str = ""
+    stage_modes: Dict[str, Any] = Field(default_factory=lambda: dict(DEFAULT_STAGE_MODES))
 
 
 class ProjectPatch(BaseModel):
@@ -62,6 +78,15 @@ class ProjectPatch(BaseModel):
     cover_image: Optional[str] = None
     illustration_path: Optional[str] = None
     commercial: Optional[Dict[str, Any]] = None
+    project_mode: Optional[str] = None
+    parent_project_id: Optional[str] = None
+    continuity_source_project_id: Optional[str] = None
+    hidden_universe_key: Optional[str] = None
+    hidden_universe_name: Optional[str] = None
+    hidden_saga_key: Optional[str] = None
+    hidden_saga_name: Optional[str] = None
+    continuity: Optional[Dict[str, Any]] = None
+    stage_modes: Optional[Dict[str, Any]] = None
 
 
 class Project(BaseModel):
@@ -76,6 +101,21 @@ class Project(BaseModel):
     created_by: str = ""
     created_by_name: str = ""
     visible_to_owner_only: bool = True
+    project_mode: str = "official"
+    parent_project_id: str = ""
+    continuity_source_project_id: str = ""
+    hidden_universe_key: str = ""
+    hidden_universe_name: str = ""
+    hidden_saga_key: str = ""
+    hidden_saga_name: str = ""
+    stage_modes: Dict[str, Any] = Field(default_factory=lambda: dict(DEFAULT_STAGE_MODES))
+    continuity: Dict[str, Any] = Field(default_factory=lambda: {
+        "can_promote_to_official_ip": True,
+        "officialization_status": "hidden",
+        "suggested_title_origin": "manual_or_future_ai",
+        "continuity_character_names": [],
+        "continuity_notes": "",
+    })
     cover_image: str = ""
     illustration_path: str = ""
     commercial: Dict[str, Any] = Field(default_factory=lambda: {

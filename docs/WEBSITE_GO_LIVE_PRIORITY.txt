@@ -1,0 +1,25 @@
+WEBSITE_GO_LIVE_PRIORITY
+
+PHASE_1_NOW
+- Hero runtime do Website sem placeholders vazios
+- Visual set Baribudos funcional
+- Publish de bundles e pricing control a funcionar
+- Catálogo home e bundles públicos estáveis
+- Produção principal no Vercel verde
+
+PHASE_2_NEXT
+- Studio gere visual sets por saga por UI
+- Website consome visual sets dinamicamente
+- Fallback poster/image por asset
+- Reconcile de visual sets Studio versus Website
+
+PHASE_3_REVENUE
+- Loja/bundles mais comerciais
+- Checkout e biblioteca estabilizados
+- Páginas de saga e produto com visual próprio por saga
+- Pipeline de publicação e revisão mais rápido
+
+RULES
+- Studio manda em preço, visual sets, bundles e publicação
+- Website executa runtime público e comercial
+- Nunca misturar assets entre sagas
