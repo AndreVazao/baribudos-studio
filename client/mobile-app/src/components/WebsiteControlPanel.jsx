@@ -540,6 +540,10 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
               <div>Razões: {(publicationPolicy.reasons || []).join(", ") || "nenhuma"}</div>
             </div>
           ) : null}
+          <WebsiteReadinessCard
+           selectedProject={selectedProject}
+           publishStatus={publishStatus}
+          />
           <WebsitePublishConfidenceCard
             selectedProject={selectedProject}
             publishStatus={publishStatus}
