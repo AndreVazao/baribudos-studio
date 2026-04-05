@@ -18,6 +18,7 @@ import {
   updateWebsiteProductVisibility,
 } from "../api.js"
 import WebsitePublishConfidenceCard from "./WebsitePublishConfidenceCard.jsx"
+import WebsiteReadinessCard from "./WebsiteReadinessCard.jsx"
 
 function canPublish(user) {
   const role = String(user?.role || "").toLowerCase()
