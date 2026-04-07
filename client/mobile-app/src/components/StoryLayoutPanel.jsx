@@ -11,6 +11,7 @@ import {
   splitStoryLayoutPage,
   updateStoryLayoutPage
 } from "../api.js"
+import StoryFlowGuidanceCard from "./StoryFlowGuidanceCard.jsx"
 
 function Card({ title, children }) {
   return (
@@ -242,6 +243,13 @@ export default function StoryLayoutPanel({ user }) {
           outline: "none",
           resize: "vertical"
         }}
+      />
+
+      <StoryFlowGuidanceCard
+        storyText={rawText}
+        layoutInfo={layout}
+        lastAction={layout ? "updated" : ""}
+        stageMode={"story_input_mode"}
       />
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

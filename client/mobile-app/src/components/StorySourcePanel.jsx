@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { getStorySource, getStorySourceGate, listProjects, lockStorySource, saveStorySource } from "../api.js"
+import StoryFlowGuidanceCard from "./StoryFlowGuidanceCard.jsx"
 
 function Card({ title, children }) {
   return (
@@ -118,6 +119,13 @@ export default function StorySourcePanel({ user }) {
           <div>Texto aprovado: {gate.text_approved ? "Sim" : "Não"}</div>
         </div>
       ) : null}
+
+      <StoryFlowGuidanceCard
+        storyText={storySource.story_source_text || ""}
+        layoutInfo={null}
+        lastAction={storySource.text_locked || storySource.text_approved ? "updated" : ""}
+        stageMode={storyInputMode}
+      />
 
       <label>Origem do texto</label>
       <select value={storySource.story_source_type || allowedSourceTypes[0]} onChange={(e) => setStorySource((current) => ({ ...current, story_source_type: e.target.value }))} style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>

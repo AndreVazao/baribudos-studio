@@ -8,6 +8,7 @@ import {
   saveAudioCast
 } from "../api.js"
 import { normalizeMediaUrl } from "../utils/media.js"
+import VoiceUsageGuidanceCard from "./VoiceUsageGuidanceCard.jsx"
 
 function Card({ title, children }) {
   return (
@@ -50,7 +51,14 @@ function findVoiceMeta(ref, profiles, samples) {
     const item = profiles.find((p) => p.id === clean.slice(8))
     if (!item) return null
     return {
-      label: item.display_name,
+      id: item.id,
+      display_name: item.display_name,
+      real_owner_name: item.owner_person_name || item.owner_person_id || "-",
+      owner_person_name: item.owner_person_name || item.owner_person_id || "-",
+      credited_name: item.credited_name || item.owner_person_name || item.display_name || "-",
+      name: item.display_name,
+      is_variant: item.voice_variation_policy?.allow_variants !== false,
+      original_profile_id: item.owner_person_id || "",
       owner: item.owner_person_name || item.owner_person_id || "-",
       credit: item.credited_name || item.owner_person_name || item.display_name || "-",
       variantsAllowed: item.voice_variation_policy?.allow_variants !== false,
@@ -61,7 +69,14 @@ function findVoiceMeta(ref, profiles, samples) {
     const item = samples.find((s) => s.id === clean.slice(7))
     if (!item) return null
     return {
-      label: item.name,
+      id: item.id,
+      display_name: item.name,
+      real_owner_name: item.owner_person_name || "sample antiga",
+      owner_person_name: item.owner_person_name || "sample antiga",
+      credited_name: item.credited_name || item.owner_person_name || item.name || "-",
+      name: item.name,
+      is_variant: false,
+      original_profile_id: "",
       owner: item.owner_person_name || "sample antiga",
       credit: item.credited_name || item.owner_person_name || item.name || "-",
       variantsAllowed: false,
@@ -181,12 +196,15 @@ export default function AudioCastPanel({ user }) {
       </select>
 
       {narratorMeta ? (
-        <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 4 }}>
-          <div><strong>Narrador selecionado:</strong> {narratorMeta.label}</div>
-          <div><strong>Dono real:</strong> {narratorMeta.owner}</div>
-          <div><strong>Crédito automático:</strong> {narratorMeta.credit}</div>
-          <div><strong>Variações:</strong> {narratorMeta.variationLabel}</div>
-        </div>
+        <>
+          <VoiceUsageGuidanceCard profile={narratorMeta} />
+          <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 4 }}>
+            <div><strong>Narrador selecionado:</strong> {narratorMeta.display_name || narratorMeta.label}</div>
+            <div><strong>Dono real:</strong> {narratorMeta.owner}</div>
+            <div><strong>Crédito automático:</strong> {narratorMeta.credit}</div>
+            <div><strong>Variações:</strong> {narratorMeta.variationLabel}</div>
+          </div>
+        </>
       ) : null}
 
       <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 10 }}>
@@ -207,11 +225,14 @@ export default function AudioCastPanel({ user }) {
               </select>
 
               {rowMeta ? (
-                <div style={{ padding: 10, borderRadius: 10, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", display: "grid", gap: 4 }}>
-                  <div><strong>Dono real:</strong> {rowMeta.owner}</div>
-                  <div><strong>Crédito automático:</strong> {rowMeta.credit}</div>
-                  <div><strong>Variações:</strong> {rowMeta.variationLabel}</div>
-                </div>
+                <>
+                  <VoiceUsageGuidanceCard profile={rowMeta} />
+                  <div style={{ padding: 10, borderRadius: 10, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", display: "grid", gap: 4 }}>
+                    <div><strong>Dono real:</strong> {rowMeta.owner}</div>
+                    <div><strong>Crédito automático:</strong> {rowMeta.credit}</div>
+                    <div><strong>Variações:</strong> {rowMeta.variationLabel}</div>
+                  </div>
+                </>
               ) : null}
 
               <textarea value={row.notes || ""} onChange={(e) => updateRow(index, { notes: e.target.value })} rows={2} placeholder="Notas" style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />

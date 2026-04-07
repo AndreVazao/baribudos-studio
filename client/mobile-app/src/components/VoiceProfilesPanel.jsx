@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { createVoiceProfile, listIps, listVoiceProfiles, updateVoiceProfile, validateVoiceProfile } from "../api.js"
+import VoiceUsageGuidanceCard from "./VoiceUsageGuidanceCard.jsx"
 
 function Card({ title, children }) {
   return (
@@ -122,6 +123,19 @@ export default function VoiceProfilesPanel({ user }) {
         <div><strong>Criar perfil vocal</strong></div>
         <div style={{ color: "#475569", fontSize: 13 }}>O clone e quaisquer variações ficam sempre ligados ao dono real da voz original para créditos automáticos.</div>
 
+        <VoiceUsageGuidanceCard
+          profile={{
+            real_owner_name: form.owner_person_name,
+            owner_person_name: form.owner_person_name,
+            credited_name: form.credited_name,
+            name: form.display_name,
+            voice_type: form.voice_type,
+            source_type: form.source_type,
+            original_profile_id: form.source_type === "cloned_voice" ? form.owner_person_id : "",
+            is_variant: Boolean(form.voice_variation_policy?.allow_variants && form.source_type === "cloned_voice"),
+          }}
+        />
+
         <input value={form.display_name} onChange={(e) => updateForm({ display_name: e.target.value })} placeholder="Nome do perfil vocal" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <input value={form.owner_person_id} onChange={(e) => updateForm({ owner_person_id: e.target.value })} placeholder="ID da pessoa dona da voz" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <input value={form.owner_person_name} onChange={(e) => updateForm({ owner_person_name: e.target.value })} placeholder="Nome da pessoa dona da voz" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
@@ -196,8 +210,9 @@ export default function VoiceProfilesPanel({ user }) {
 
       <div style={{ display: "grid", gap: 10 }}>
         {items.map((item) => (
-          <div key={item.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 6 }}>
+          <div key={item.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 10 }}>
             <div><strong>{item.display_name}</strong> — {item.voice_type}</div>
+            <VoiceUsageGuidanceCard profile={item} />
             <div>Owner real: {item.owner_person_name || item.owner_person_id || "-"}</div>
             <div>Crédito automático: {item.credited_name || item.owner_person_name || "-"}</div>
             <div>Consentimento: {item.consent_status} · Ativa: {item.active ? "Sim" : "Não"}</div>
