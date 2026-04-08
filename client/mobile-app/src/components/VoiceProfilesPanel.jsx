@@ -121,7 +121,6 @@ export default function VoiceProfilesPanel({ user }) {
     <Card title="Voice Profiles / Clones de Voz">
       <div style={{ display: "grid", gap: 10, padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}>
         <div><strong>Criar perfil vocal</strong></div>
-        <div style={{ color: "#475569", fontSize: 13 }}>O clone e quaisquer variações ficam sempre ligados ao dono real da voz original para créditos automáticos.</div>
 
         <VoiceUsageGuidanceCard
           profile={{
@@ -135,6 +134,10 @@ export default function VoiceProfilesPanel({ user }) {
             is_variant: Boolean(form.voice_variation_policy?.allow_variants && form.source_type === "cloned_voice"),
           }}
         />
+
+        <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", color: "#334155" }}>
+          O cartão acima resume dono real, crédito automático e uso das variações. Os campos abaixo mantêm os dados brutos do perfil vocal e do respetivo consentimento.
+        </div>
 
         <input value={form.display_name} onChange={(e) => updateForm({ display_name: e.target.value })} placeholder="Nome do perfil vocal" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
         <input value={form.owner_person_id} onChange={(e) => updateForm({ owner_person_id: e.target.value })} placeholder="ID da pessoa dona da voz" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />

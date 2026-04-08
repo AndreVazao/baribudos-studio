@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react"
 import {
   getDbControlReadiness,
   getDbControlStatus,
-  getDeployControlVercelDeployments,
   getDeployControlVercelSummary,
   getWebsiteControlCatalog,
   getWebsiteControlDivergence,
@@ -119,12 +118,10 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
   const [summary, setSummary] = useState(null)
   const [catalog, setCatalog] = useState(null)
   const [deploySummary, setDeploySummary] = useState(null)
-  const [deployments, setDeployments] = useState([])
   const [dbStatus, setDbStatus] = useState(null)
   const [dbReadiness, setDbReadiness] = useState(null)
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [publishStatus, setPublishStatus] = useState(null)
-  const [publishEnvelope, setPublishEnvelope] = useState(null)
   const [selectedPublicationId, setSelectedPublicationId] = useState("")
   const [publicationDetail, setPublicationDetail] = useState(null)
   const [divergence, setDivergence] = useState(null)
@@ -155,12 +152,11 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
     setLastError("")
 
     try {
-      const [healthRes, summaryRes, catalogRes, deploySummaryRes, deploymentsRes, dbStatusRes, dbReadinessRes] = await Promise.all([
+      const [healthRes, summaryRes, catalogRes, deploySummaryRes, dbStatusRes, dbReadinessRes] = await Promise.all([
         getWebsiteControlHealth(),
         getWebsiteControlSummary(),
         getWebsiteControlCatalog({ limit: 12, activeOnly: false }),
         getDeployControlVercelSummary(),
-        getDeployControlVercelDeployments({ limit: 8 }),
         getDbControlStatus(),
         getDbControlReadiness(),
       ])
@@ -169,7 +165,6 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
       setSummary(summaryRes?.website?.summary || summaryRes?.website || summaryRes || null)
       setCatalog(catalogRes?.website || catalogRes || null)
       setDeploySummary(deploySummaryRes?.deploy || deploySummaryRes || null)
-      setDeployments(deploymentsRes?.deploy?.deployments || deploymentsRes?.deployments || [])
       setDbStatus(dbStatusRes?.database || dbStatusRes || null)
       setDbReadiness(dbReadinessRes?.database || dbReadinessRes || null)
     } catch (error) {
@@ -193,7 +188,6 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
       ])
 
       setPublishStatus(statusRes || null)
-      setPublishEnvelope(envelopeRes?.envelope || null)
 
       const publicationId = statusRes?.website_sync?.publication_id || envelopeRes?.envelope?.publication_id || ""
 
@@ -222,7 +216,6 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
       }
     } catch (error) {
       setPublishStatus(null)
-      setPublishEnvelope(null)
       setPublicationDetail(null)
       setDivergence(null)
       setLastError(error?.message || "Falha ao carregar estado de publicação.")
@@ -428,6 +421,7 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
   const projectInfo = deploySummary?.project || {}
   const dbProbeOk = Boolean(dbStatus?.network_probe?.ok)
   const dbReady = Boolean(dbReadiness?.ready)
+  const hasWebsiteControlContext = Boolean(publicationPolicy || publicationDetail || divergence || currentSync)
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -533,13 +527,19 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
               }}
             >
               <div><strong>Política de publicação</strong></div>
-              <div>{publicationPolicy.label}</div>
               <div>Ready for publish: {publicationPolicy.ready_for_publish ? "Sim" : "Não"}</div>
               <div>Package congelado: {publicationPolicy.has_frozen_package ? "Sim" : "Não"}</div>
-              <div>Contrato Website: {publicationPolicy.contract?.status || "-"} · score {publicationPolicy.contract?.score_percent || 0}%</div>
+              <div>Contrato: {publicationPolicy.contract?.status || "-"} · score {publicationPolicy.contract?.score_percent || 0}%</div>
               <div>Razões: {(publicationPolicy.reasons || []).join(", ") || "nenhuma"}</div>
             </div>
           ) : null}
+
+          {hasWebsiteControlContext ? (
+            <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", color: "#334155" }}>
+              Os cartões abaixo resumem prontidão, significado e confiança. Os blocos seguintes mantêm os factos brutos do Website para validação operacional.
+            </div>
+          ) : null}
+
           <WebsiteReadinessCard
            selectedProject={selectedProject}
            publishStatus={publishStatus}

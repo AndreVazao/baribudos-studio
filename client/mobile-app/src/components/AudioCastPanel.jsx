@@ -97,9 +97,8 @@ export default function AudioCastPanel({ user }) {
   const [voiceSamples, setVoiceSamples] = useState([])
   const [voiceProfiles, setVoiceProfiles] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState("")
-  const [characterNames, setCharacterNames] = useState([])
-  const [narratorVoiceRef, setNarratorVoiceRef] = useState("")
   const [rows, setRows] = useState([])
+  const [narratorVoiceRef, setNarratorVoiceRef] = useState("")
   const [previewText, setPreviewText] = useState("Olá. Este é um teste de personagem.")
   const [previewProvider, setPreviewProvider] = useState("xtts")
   const [previewResult, setPreviewResult] = useState(null)
@@ -123,14 +122,12 @@ export default function AudioCastPanel({ user }) {
       const res = await getAudioCast(projectId)
       const cast = res?.audio_cast || {}
       const names = res?.character_names || []
-      setCharacterNames(names)
       setNarratorVoiceRef(packVoiceSelection(cast?.narrator || {}))
       setRows(names.map((name) => {
         const found = (cast?.characters || []).find((item) => item.name === name)
         return { name, voice_ref: packVoiceSelection(found || {}), provider: found?.provider || "xtts", notes: found?.notes || "" }
       }))
     } catch {
-      setCharacterNames([])
       setNarratorVoiceRef("")
       setRows([])
     }
@@ -162,9 +159,9 @@ export default function AudioCastPanel({ user }) {
     }
   }
 
-  const previewUrl = normalizeMediaUrl(previewResult?.file_path)
   const approvedVoiceProfiles = useMemo(() => voiceProfiles.filter((item) => item?.active && item?.consent_status === "approved"), [voiceProfiles])
   const narratorMeta = useMemo(() => findVoiceMeta(narratorVoiceRef, approvedVoiceProfiles, voiceSamples), [narratorVoiceRef, approvedVoiceProfiles, voiceSamples])
+  const previewUrl = normalizeMediaUrl(previewResult?.file_path)
 
   return (
     <Card title="Audio Cast por Personagem">
@@ -206,6 +203,10 @@ export default function AudioCastPanel({ user }) {
           </div>
         </>
       ) : null}
+
+      <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", color: "#334155" }}>
+        Os cartões resumem dono real, crédito automático e uso das variações. Os blocos abaixo mantêm a atribuição concreta de narrador e personagens para o casting final.
+      </div>
 
       <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 10 }}>
         <strong>Personagens detetadas</strong>
