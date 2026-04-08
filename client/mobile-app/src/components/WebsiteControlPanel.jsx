@@ -18,7 +18,6 @@ import {
 } from "../api.js"
 import WebsitePublishConfidenceCard from "./WebsitePublishConfidenceCard.jsx"
 import WebsiteReadinessCard from "./WebsiteReadinessCard.jsx"
-import WebsiteControlMeaningCard from "./WebsiteControlMeaningCard.jsx"
 
 function canPublish(user) {
   const role = String(user?.role || "").toLowerCase()
@@ -175,7 +174,6 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
       setBusyLabel("")
     }
   }
-
   async function refreshProjectStatus(projectId) {
     if (!projectId) return
 
@@ -372,7 +370,6 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
       setBusyLabel("")
     }
   }
-
   async function handleUpdateProductPricing(item) {
     if (!isStructuralOwner(user)) return alert("Pricing estrutural reservado ao owner / super admin.")
 
@@ -544,17 +541,9 @@ export default function WebsiteControlPanel({ user, projects = [], onReload }) {
           ) : null}
 
           <WebsiteReadinessCard
-            selectedProject={selectedProject}
-            publishStatus={publishStatus}
+           selectedProject={selectedProject}
+           publishStatus={publishStatus}
           />
-
-          <WebsiteControlMeaningCard
-            health={health}
-            publicationDetail={publicationDetail}
-            divergence={divergence}
-            lastError={lastError}
-          />
-
           <WebsitePublishConfidenceCard
             selectedProject={selectedProject}
             publishStatus={publishStatus}
