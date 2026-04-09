@@ -200,7 +200,11 @@ export default function WebsiteMarketingControlPanel({ user }) {
       teaser_gallery: gallery,
       teaser_trailer_url: trailer,
       teaser_headline: marketing.teaser_headline || selectedProject?.title || "",
-      teaser_subtitle: marketing.teaser_subtitle || selectedProject?.summary || selectedProject?.description || `Uma nova criação do universo ${selectedProject?.saga_name || "Baribudos"} está a ganhar forma.`,
+      teaser_subtitle:
+        marketing.teaser_subtitle ||
+        selectedProject?.summary ||
+        selectedProject?.description ||
+        `Uma nova criação do universo ${selectedProject?.saga_name || "Baribudos"} está a ganhar forma.`,
       teaser_excerpt: marketing.teaser_excerpt || selectedProject?.story || selectedProject?.summary || "",
     })
   }
@@ -237,14 +241,18 @@ export default function WebsiteMarketingControlPanel({ user }) {
     setBusy(true)
     setBusyLabel("A publicar pré-lançamento no Website...")
     try {
-      await updateProjectCommercial(selectedProjectId, {
-        ...commercial,
-        website_marketing: {
-          ...marketing,
-          public_state: "prelaunch_public",
-          prelaunch_enabled: true,
+      await updateProjectCommercial(
+        selectedProjectId,
+        {
+          ...commercial,
+          website_marketing: {
+            ...marketing,
+            public_state: "prelaunch_public",
+            prelaunch_enabled: true,
+          },
         },
-      }, user)
+        user
+      )
       await publishProjectToWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
       alert("Pré-lançamento empurrado para o Website.")
@@ -261,14 +269,18 @@ export default function WebsiteMarketingControlPanel({ user }) {
     setBusy(true)
     setBusyLabel("A promover para lançamento...")
     try {
-      await updateProjectCommercial(selectedProjectId, {
-        ...commercial,
-        website_marketing: {
-          ...marketing,
-          public_state: "published",
-          prelaunch_enabled: false,
+      await updateProjectCommercial(
+        selectedProjectId,
+        {
+          ...commercial,
+          website_marketing: {
+            ...marketing,
+            public_state: "published",
+            prelaunch_enabled: false,
+          },
         },
-      }, user)
+        user
+      )
       await publishProjectToWebsite(selectedProjectId)
       await revalidateProjectOnWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
@@ -286,14 +298,18 @@ export default function WebsiteMarketingControlPanel({ user }) {
     setBusy(true)
     setBusyLabel("A retirar superfície pública...")
     try {
-      await updateProjectCommercial(selectedProjectId, {
-        ...commercial,
-        website_marketing: {
-          ...marketing,
-          public_state: "private",
-          prelaunch_enabled: false,
+      await updateProjectCommercial(
+        selectedProjectId,
+        {
+          ...commercial,
+          website_marketing: {
+            ...marketing,
+            public_state: "private",
+            prelaunch_enabled: false,
+          },
         },
-      }, user)
+        user
+      )
       await unpublishProjectOnWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
       alert("Superfície pública retirada do Website.")
@@ -308,7 +324,11 @@ export default function WebsiteMarketingControlPanel({ user }) {
   return (
     <Card
       title="Website Marketing Control"
-      extra={<ActionButton onClick={() => refreshProject(selectedProjectId)} disabled={busy || !selectedProjectId} tone="secondary">{busy ? busyLabel || "A atualizar..." : "Atualizar"}</ActionButton>}
+      extra={
+        <ActionButton onClick={() => refreshProject(selectedProjectId)} disabled={busy || !selectedProjectId} tone="secondary">
+          {busy ? busyLabel || "A atualizar..." : "Atualizar"}
+        </ActionButton>
+      }
     >
       <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", color: "#334155" }}>
         O Studio decide o que fica privado, teaser, pré-lançamento ou lançamento final. O Website só expõe a superfície pública escolhida aqui. Nesta versão, já podes puxar sugestões automáticas a partir dos assets reais do projeto.
@@ -318,7 +338,9 @@ export default function WebsiteMarketingControlPanel({ user }) {
       <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
         <option value="">Selecionar projeto</option>
         {projects.map((project) => (
-          <option key={project.id} value={project.id}>{project.title} — {project.saga_name}</option>
+          <option key={project.id} value={project.id}>
+            {project.title} — {project.saga_name}
+          </option>
         ))}
       </select>
 
@@ -342,7 +364,9 @@ export default function WebsiteMarketingControlPanel({ user }) {
 
       <label>Estado público</label>
       <select value={marketing.public_state} onChange={(e) => updateMarketing({ public_state: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
-        {PUBLIC_STATES.map((value) => <option key={value} value={value}>{value}</option>)}
+        {PUBLIC_STATES.map((value) => (
+          <option key={value} value={value}>{value}</option>
+        ))}
       </select>
 
       <label><input type="checkbox" checked={!!marketing.prelaunch_enabled} onChange={(e) => updateMarketing({ prelaunch_enabled: e.target.checked })} /> Pré-lançamento público ativo</label>
