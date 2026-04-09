@@ -49,6 +49,7 @@ function Card({ title, children, extra = null }) {
         boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
       }}
     >
+    <div style={{ border: "1px solid rgba(255,255,255,0.25)", borderRadius: 16, background: "rgba(255,255,255,0.84)", backdropFilter: "blur(8px)", padding: 16, display: "grid", gap: 12, boxShadow: "0 10px 24px rgba(0,0,0,0.10)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <h3 style={{ margin: 0, color: "#2F5E2E" }}>{title}</h3>
         {extra}
@@ -145,6 +146,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
     if (selectedProjectId) {
       refreshProject(selectedProjectId)
     }
+    if (selectedProjectId) refreshProject(selectedProjectId)
   }, [selectedProjectId])
 
   const selectedProject = useMemo(
@@ -162,6 +164,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
     if (!selectedProjectId && list.length) {
       setSelectedProjectId(list[0].id)
     }
+    if (!selectedProjectId && list.length) setSelectedProjectId(list[0].id)
   }
 
   async function refreshProject(projectId) {
@@ -257,6 +260,25 @@ export default function WebsiteMarketingControlPanel({ user }) {
       )
       await refreshProject(selectedProjectId)
       if (successMessage) alert(successMessage)
+  async function handleSaveMarketing() {
+    if (!selectedProjectId) return
+
+    setBusy(true)
+    setBusyLabel("A guardar controlo de marketing...")
+    try {
+      const payload = {
+        ...commercial,
+        website_marketing: {
+          ...marketing,
+          teaser_gallery: Array.isArray(marketing.teaser_gallery)
+            ? marketing.teaser_gallery
+            : parseLines(marketing.teaser_gallery),
+        },
+      }
+
+      await updateProjectCommercial(selectedProjectId, payload, user)
+      await refreshProject(selectedProjectId)
+      alert("Controlo de marketing do Website guardado.")
     } catch (error) {
       alert(error?.message || "Erro ao guardar controlo de marketing.")
     } finally {
@@ -287,6 +309,14 @@ export default function WebsiteMarketingControlPanel({ user }) {
         },
         user
       )
+      await updateProjectCommercial(selectedProjectId, {
+        ...commercial,
+        website_marketing: {
+          ...marketing,
+          public_state: "prelaunch_public",
+          prelaunch_enabled: true,
+        },
+      }, user)
       await publishProjectToWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
       alert("Pré-lançamento empurrado para o Website.")
@@ -316,6 +346,14 @@ export default function WebsiteMarketingControlPanel({ user }) {
         },
         user
       )
+      await updateProjectCommercial(selectedProjectId, {
+        ...commercial,
+        website_marketing: {
+          ...marketing,
+          public_state: "published",
+          prelaunch_enabled: false,
+        },
+      }, user)
       await publishProjectToWebsite(selectedProjectId)
       await revalidateProjectOnWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
@@ -346,6 +384,14 @@ export default function WebsiteMarketingControlPanel({ user }) {
         },
         user
       )
+      await updateProjectCommercial(selectedProjectId, {
+        ...commercial,
+        website_marketing: {
+          ...marketing,
+          public_state: "private",
+          prelaunch_enabled: false,
+        },
+      }, user)
       await unpublishProjectOnWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
       alert("Superfície pública retirada do Website.")
@@ -385,6 +431,22 @@ export default function WebsiteMarketingControlPanel({ user }) {
           <option key={project.id} value={project.id}>
             {project.title} — {project.saga_name}
           </option>
+  const websiteSync = publishStatus?.website_sync || selectedProject?.website_sync || null
+
+  return (
+    <Card
+      title="Website Marketing Control"
+      extra={<ActionButton onClick={() => refreshProject(selectedProjectId)} disabled={busy || !selectedProjectId} tone="secondary">{busy ? busyLabel || "A atualizar..." : "Atualizar"}</ActionButton>}
+    >
+      <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", color: "#334155" }}>
+        O Studio decide o que fica privado, teaser, pré-lançamento ou lançamento final. O Website só expõe a superfície pública escolhida aqui.
+      </div>
+
+      <label>Projeto</label>
+      <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
+        <option value="">Selecionar projeto</option>
+        {projects.map((project) => (
+          <option key={project.id} value={project.id}>{project.title} — {project.saga_name}</option>
         ))}
       </select>
 
@@ -455,6 +517,13 @@ export default function WebsiteMarketingControlPanel({ user }) {
           </div>
         </div>
       ) : null}
+      <label>Estado público</label>
+      <select value={marketing.public_state} onChange={(e) => updateMarketing({ public_state: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
+        {PUBLIC_STATES.map((value) => <option key={value} value={value}>{value}</option>)}
+      </select>
+
+      <label><input type="checkbox" checked={!!marketing.prelaunch_enabled} onChange={(e) => updateMarketing({ prelaunch_enabled: e.target.checked })} /> Pré-lançamento público ativo</label>
+      <label><input type="checkbox" checked={marketing.share_preview_images_during_production !== false} onChange={(e) => updateMarketing({ share_preview_images_during_production: e.target.checked })} /> Permitir partilhar imagens teaser durante produção</label>
 
       <label>Badge teaser</label>
       <input value={marketing.teaser_badge || ""} onChange={(e) => updateMarketing({ teaser_badge: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
@@ -502,6 +571,11 @@ export default function WebsiteMarketingControlPanel({ user }) {
           {(marketing.teaser_gallery || []).length ? <div style={{ color: "#64748b" }}>Galeria: {(marketing.teaser_gallery || []).length} imagem(ns)</div> : null}
           {marketing.teaser_release_label ? <div style={{ color: "#64748b" }}>{marketing.teaser_release_label}</div> : null}
         </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <ActionButton onClick={handleSaveMarketing} disabled={busy || !selectedProjectId}>Guardar controlo marketing</ActionButton>
+        <ActionButton onClick={handlePublishTeaser} disabled={busy || !selectedProjectId} tone="secondary">Publicar pré-lançamento</ActionButton>
+        <ActionButton onClick={handlePromoteLaunch} disabled={busy || !selectedProjectId}>Promover para lançamento</ActionButton>
+        <ActionButton onClick={handleWithdrawPublicSurface} disabled={busy || !selectedProjectId} tone="danger">Retirar do Website</ActionButton>
       </div>
 
       {websiteSync ? (
