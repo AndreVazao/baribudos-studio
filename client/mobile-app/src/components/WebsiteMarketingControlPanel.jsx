@@ -85,6 +85,38 @@ function toTextarea(value) {
   return Array.isArray(value) ? value.join("\n") : ""
 }
 
+function looksLikeImage(value) {
+  return /\.(png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(String(value || ""))
+}
+
+function looksLikeVideo(value) {
+  return /\.(mp4|webm|mov|m4v)$/i.test(String(value || ""))
+}
+
+function collectAssetCandidates(project) {
+  const found = new Set()
+
+  function walk(node) {
+    if (!node) return
+    if (typeof node === "string") {
+      if (looksLikeImage(node) || looksLikeVideo(node)) found.add(node)
+      return
+    }
+    if (Array.isArray(node)) {
+      node.forEach(walk)
+      return
+    }
+    if (typeof node === "object") {
+      Object.values(node).forEach(walk)
+    }
+  }
+
+  walk(project?.cover_image)
+  walk(project?.illustration_path)
+  walk(project?.outputs)
+  return Array.from(found)
+}
+
 export default function WebsiteMarketingControlPanel({ user }) {
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState("")
@@ -106,6 +138,11 @@ export default function WebsiteMarketingControlPanel({ user }) {
     () => projects.find((item) => item.id === selectedProjectId) || null,
     [projects, selectedProjectId]
   )
+
+  const assetCandidates = useMemo(() => collectAssetCandidates(selectedProject), [selectedProject])
+  const suggestedImages = useMemo(() => assetCandidates.filter(looksLikeImage), [assetCandidates])
+  const suggestedVideos = useMemo(() => assetCandidates.filter(looksLikeVideo), [assetCandidates])
+  const websiteSync = publishStatus?.website_sync || selectedProject?.website_sync || null
 
   async function loadProjects() {
     const res = await listProjects(user)
@@ -140,6 +177,32 @@ export default function WebsiteMarketingControlPanel({ user }) {
 
   function updateMarketing(patch) {
     setMarketing((current) => ({ ...current, ...patch }))
+  }
+
+  function useAsTeaserCover(value) {
+    updateMarketing({ teaser_cover_url: value })
+  }
+
+  function addToTeaserGallery(value) {
+    updateMarketing({ teaser_gallery: Array.from(new Set([...(marketing.teaser_gallery || []), value])) })
+  }
+
+  function useAsTeaserTrailer(value) {
+    updateMarketing({ teaser_trailer_url: value })
+  }
+
+  function autofillFromProject() {
+    const cover = marketing.teaser_cover_url || suggestedImages[0] || selectedProject?.cover_image || selectedProject?.illustration_path || ""
+    const gallery = (marketing.teaser_gallery || []).length ? marketing.teaser_gallery : suggestedImages.slice(0, 6)
+    const trailer = marketing.teaser_trailer_url || suggestedVideos[0] || ""
+    updateMarketing({
+      teaser_cover_url: cover,
+      teaser_gallery: gallery,
+      teaser_trailer_url: trailer,
+      teaser_headline: marketing.teaser_headline || selectedProject?.title || "",
+      teaser_subtitle: marketing.teaser_subtitle || selectedProject?.summary || selectedProject?.description || `Uma nova criação do universo ${selectedProject?.saga_name || "Baribudos"} está a ganhar forma.`,
+      teaser_excerpt: marketing.teaser_excerpt || selectedProject?.story || selectedProject?.summary || "",
+    })
   }
 
   async function handleSaveMarketing() {
@@ -242,15 +305,13 @@ export default function WebsiteMarketingControlPanel({ user }) {
     }
   }
 
-  const websiteSync = publishStatus?.website_sync || selectedProject?.website_sync || null
-
   return (
     <Card
       title="Website Marketing Control"
       extra={<ActionButton onClick={() => refreshProject(selectedProjectId)} disabled={busy || !selectedProjectId} tone="secondary">{busy ? busyLabel || "A atualizar..." : "Atualizar"}</ActionButton>}
     >
       <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", color: "#334155" }}>
-        O Studio decide o que fica privado, teaser, pré-lançamento ou lançamento final. O Website só expõe a superfície pública escolhida aqui.
+        O Studio decide o que fica privado, teaser, pré-lançamento ou lançamento final. O Website só expõe a superfície pública escolhida aqui. Nesta versão, já podes puxar sugestões automáticas a partir dos assets reais do projeto.
       </div>
 
       <label>Projeto</label>
@@ -271,6 +332,14 @@ export default function WebsiteMarketingControlPanel({ user }) {
         </div>
       ) : null}
 
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <ActionButton onClick={autofillFromProject} disabled={busy || !selectedProjectId} tone="secondary">Preencher a partir da produção</ActionButton>
+        <ActionButton onClick={handleSaveMarketing} disabled={busy || !selectedProjectId}>Guardar controlo marketing</ActionButton>
+        <ActionButton onClick={handlePublishTeaser} disabled={busy || !selectedProjectId} tone="secondary">Publicar pré-lançamento</ActionButton>
+        <ActionButton onClick={handlePromoteLaunch} disabled={busy || !selectedProjectId}>Promover para lançamento</ActionButton>
+        <ActionButton onClick={handleWithdrawPublicSurface} disabled={busy || !selectedProjectId} tone="danger">Retirar do Website</ActionButton>
+      </div>
+
       <label>Estado público</label>
       <select value={marketing.public_state} onChange={(e) => updateMarketing({ public_state: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
         {PUBLIC_STATES.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -278,6 +347,25 @@ export default function WebsiteMarketingControlPanel({ user }) {
 
       <label><input type="checkbox" checked={!!marketing.prelaunch_enabled} onChange={(e) => updateMarketing({ prelaunch_enabled: e.target.checked })} /> Pré-lançamento público ativo</label>
       <label><input type="checkbox" checked={marketing.share_preview_images_during_production !== false} onChange={(e) => updateMarketing({ share_preview_images_during_production: e.target.checked })} /> Permitir partilhar imagens teaser durante produção</label>
+
+      {assetCandidates.length ? (
+        <div style={{ padding: 12, borderRadius: 12, border: "1px solid #dbe4d8", background: "rgba(240,253,244,0.85)", display: "grid", gap: 8 }}>
+          <strong>Assets sugeridos do projeto</strong>
+          <div style={{ color: "#475569" }}>Foram detetados assets reais em capa, ilustração ou outputs. Podes usá-los sem escrever tudo à mão.</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {assetCandidates.slice(0, 10).map((item) => (
+              <div key={item} style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", background: "#fff", display: "grid", gap: 8 }}>
+                <div style={{ wordBreak: "break-all" }}>{item}</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {looksLikeImage(item) ? <ActionButton onClick={() => useAsTeaserCover(item)} tone="secondary">Usar como cover teaser</ActionButton> : null}
+                  {looksLikeImage(item) ? <ActionButton onClick={() => addToTeaserGallery(item)} tone="secondary">Adicionar à galeria</ActionButton> : null}
+                  {looksLikeVideo(item) ? <ActionButton onClick={() => useAsTeaserTrailer(item)} tone="secondary">Usar como trailer teaser</ActionButton> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <label>Badge teaser</label>
       <input value={marketing.teaser_badge || ""} onChange={(e) => updateMarketing({ teaser_badge: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
@@ -309,11 +397,16 @@ export default function WebsiteMarketingControlPanel({ user }) {
       <label>Notas de visibilidade</label>
       <textarea value={marketing.teaser_visibility_notes || ""} onChange={(e) => updateMarketing({ teaser_visibility_notes: e.target.value })} rows={3} style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <ActionButton onClick={handleSaveMarketing} disabled={busy || !selectedProjectId}>Guardar controlo marketing</ActionButton>
-        <ActionButton onClick={handlePublishTeaser} disabled={busy || !selectedProjectId} tone="secondary">Publicar pré-lançamento</ActionButton>
-        <ActionButton onClick={handlePromoteLaunch} disabled={busy || !selectedProjectId}>Promover para lançamento</ActionButton>
-        <ActionButton onClick={handleWithdrawPublicSurface} disabled={busy || !selectedProjectId} tone="danger">Retirar do Website</ActionButton>
+      <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 8 }}>
+        <div><strong>Preview rápido do teaser</strong></div>
+        <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, background: "#fff", border: "1px solid #e5e7eb" }}>
+          <div style={{ display: "inline-flex", width: "fit-content", padding: "6px 10px", borderRadius: 999, background: "rgba(212,167,60,0.18)", color: "#7c5a00", fontWeight: 700 }}>{marketing.teaser_badge || "Em breve"}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#1f2937" }}>{marketing.teaser_headline || selectedProject?.title || "Headline teaser"}</div>
+          <div style={{ color: "#475569" }}>{marketing.teaser_subtitle || "Subheadline teaser"}</div>
+          {marketing.teaser_cover_url ? <div style={{ wordBreak: "break-all", color: "#64748b" }}>Cover: {marketing.teaser_cover_url}</div> : null}
+          {(marketing.teaser_gallery || []).length ? <div style={{ color: "#64748b" }}>Galeria: {(marketing.teaser_gallery || []).length} imagem(ns)</div> : null}
+          {marketing.teaser_release_label ? <div style={{ color: "#64748b" }}>{marketing.teaser_release_label}</div> : null}
+        </div>
       </div>
 
       {websiteSync ? (
