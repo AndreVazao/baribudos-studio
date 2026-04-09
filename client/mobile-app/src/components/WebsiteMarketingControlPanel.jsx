@@ -78,6 +78,8 @@ export default function WebsiteMarketingControlPanel({ user }) {
   const useCover = (v) => setPatch({ teaser_cover_url:v })
   const useTrailer = (v) => setPatch({ teaser_trailer_url:v })
   const addGallery = (v) => setPatch({ teaser_gallery:Array.from(new Set([...(marketing.teaser_gallery || []), v])) })
+  const useFirstThreeGallery = () => setPatch({ teaser_gallery:imageAssets.slice(0,3) })
+  const useFirstSixGallery = () => setPatch({ teaser_gallery:imageAssets.slice(0,6) })
 
   function autofill() {
     setPatch({
@@ -96,50 +98,9 @@ export default function WebsiteMarketingControlPanel({ user }) {
     const cover = marketing.teaser_cover_url || imageAssets[0] || selectedProject?.cover_image || selectedProject?.illustration_path || ""
     const gallery = marketing.teaser_gallery?.length ? marketing.teaser_gallery : imageAssets.slice(0, mode === "quick" ? 3 : 6)
     const trailer = marketing.teaser_trailer_url || videoAssets[0] || ""
-
-    if (mode === "quick") {
-      setPatch({
-        public_state: "teaser_ready",
-        prelaunch_enabled: false,
-        teaser_badge: "Em breve",
-        teaser_headline: marketing.teaser_headline || baseTitle,
-        teaser_subtitle: marketing.teaser_subtitle || `Primeiro olhar sobre uma nova peça do universo ${sagaName}.`,
-        teaser_cta_label: "Ver teaser",
-        teaser_release_label: marketing.teaser_release_label || "Primeiras imagens",
-        teaser_cover_url: cover,
-        teaser_gallery: gallery,
-      })
-      return
-    }
-
-    if (mode === "prelaunch") {
-      setPatch({
-        public_state: "prelaunch_public",
-        prelaunch_enabled: true,
-        teaser_badge: "Pré-lançamento",
-        teaser_headline: marketing.teaser_headline || baseTitle,
-        teaser_subtitle: marketing.teaser_subtitle || `Página pública pronta para aquecer o lançamento de ${baseTitle}.`,
-        teaser_cta_label: "Acompanhar lançamento",
-        teaser_release_label: marketing.teaser_release_label || "Lançamento em breve",
-        teaser_cover_url: cover,
-        teaser_gallery: gallery,
-        teaser_trailer_url: trailer,
-      })
-      return
-    }
-
-    setPatch({
-      public_state: "published",
-      prelaunch_enabled: false,
-      teaser_badge: "Já disponível",
-      teaser_headline: marketing.teaser_headline || baseTitle,
-      teaser_subtitle: marketing.teaser_subtitle || `${baseTitle} já está pronto para descoberta e compra no Website.`,
-      teaser_cta_label: "Comprar agora",
-      teaser_release_label: marketing.teaser_release_label || "Disponível agora",
-      teaser_cover_url: cover,
-      teaser_gallery: gallery,
-      teaser_trailer_url: trailer,
-    })
+    if (mode === "quick") return setPatch({ public_state:"teaser_ready", prelaunch_enabled:false, teaser_badge:"Em breve", teaser_headline:marketing.teaser_headline || baseTitle, teaser_subtitle:marketing.teaser_subtitle || `Primeiro olhar sobre uma nova peça do universo ${sagaName}.`, teaser_cta_label:"Ver teaser", teaser_release_label:marketing.teaser_release_label || "Primeiras imagens", teaser_cover_url:cover, teaser_gallery:gallery })
+    if (mode === "prelaunch") return setPatch({ public_state:"prelaunch_public", prelaunch_enabled:true, teaser_badge:"Pré-lançamento", teaser_headline:marketing.teaser_headline || baseTitle, teaser_subtitle:marketing.teaser_subtitle || `Página pública pronta para aquecer o lançamento de ${baseTitle}.`, teaser_cta_label:"Acompanhar lançamento", teaser_release_label:marketing.teaser_release_label || "Lançamento em breve", teaser_cover_url:cover, teaser_gallery:gallery, teaser_trailer_url:trailer })
+    return setPatch({ public_state:"published", prelaunch_enabled:false, teaser_badge:"Já disponível", teaser_headline:marketing.teaser_headline || baseTitle, teaser_subtitle:marketing.teaser_subtitle || `${baseTitle} já está pronto para descoberta e compra no Website.`, teaser_cta_label:"Comprar agora", teaser_release_label:marketing.teaser_release_label || "Disponível agora", teaser_cover_url:cover, teaser_gallery:gallery, teaser_trailer_url:trailer })
   }
 
   async function save(nextMarketing, msg) {
@@ -212,7 +173,8 @@ export default function WebsiteMarketingControlPanel({ user }) {
     </select>
     <label><input type="checkbox" checked={!!marketing.prelaunch_enabled} onChange={(e) => setPatch({ prelaunch_enabled:e.target.checked })} /> Pré-lançamento público ativo</label>
     <label><input type="checkbox" checked={marketing.share_preview_images_during_production !== false} onChange={(e) => setPatch({ share_preview_images_during_production:e.target.checked })} /> Permitir partilhar imagens teaser durante produção</label>
-    {assets.length ? <div style={{ padding:12, borderRadius:12, border:"1px solid #dbe4d8", background:"rgba(240,253,244,0.85)", display:"grid", gap:8 }}><strong>Assets sugeridos do projeto</strong><div style={{ display:"grid", gap:8 }}>{assets.slice(0,10).map((item) => <div key={item} style={{ padding:10, borderRadius:10, border:"1px solid #d1d5db", background:"#fff", display:"grid", gap:8 }}><div style={{ display:"grid", gap:8, gridTemplateColumns: img(item) ? "92px 1fr" : "1fr" }}><div>{img(item) ? <img src={item} alt="asset preview" style={{ width:92, height:92, objectFit:"cover", borderRadius:10, border:"1px solid #e5e7eb" }} /> : vid(item) ? <div style={{ width:92, height:92, display:"grid", placeItems:"center", borderRadius:10, border:"1px solid #e5e7eb", background:"#111827", color:"#fff", fontWeight:700 }}>Vídeo</div> : null}</div><div style={{ wordBreak:"break-all" }}>{item}</div></div><div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>{img(item) ? <Button onClick={() => useCover(item)} tone="secondary">Usar como cover</Button> : null}{img(item) ? <Button onClick={() => addGallery(item)} tone="secondary">Adicionar galeria</Button> : null}{vid(item) ? <Button onClick={() => useTrailer(item)} tone="secondary">Usar como trailer</Button> : null}</div></div>)}</div></div> : null}
+    {imageAssets.length ? <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}><Button onClick={() => useCover(imageAssets[0])} disabled={busy || !selectedProjectId} tone="secondary">Usar 1ª imagem como cover</Button><Button onClick={useFirstThreeGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 3 primeiras na galeria</Button><Button onClick={useFirstSixGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 6 primeiras na galeria</Button></div> : null}
+    {assets.length ? <div style={{ padding:12, borderRadius:12, border:"1px solid #dbe4d8", background:"rgba(240,253,244,0.85)", display:"grid", gap:8 }}><strong>Assets sugeridos do projeto</strong><div style={{ display:"grid", gap:8 }}>{assets.slice(0,10).map((item) => <div key={item} style={{ padding:10, borderRadius:10, border: item === marketing.teaser_cover_url || item === marketing.teaser_trailer_url || (marketing.teaser_gallery || []).includes(item) ? "2px solid #2F5E2E" : "1px solid #d1d5db", background:"#fff", display:"grid", gap:8 }}><div style={{ display:"grid", gap:8, gridTemplateColumns: img(item) ? "92px 1fr" : "1fr" }}><div>{img(item) ? <img src={item} alt="asset preview" style={{ width:92, height:92, objectFit:"cover", borderRadius:10, border:"1px solid #e5e7eb" }} /> : vid(item) ? <div style={{ width:92, height:92, display:"grid", placeItems:"center", borderRadius:10, border:"1px solid #e5e7eb", background:"#111827", color:"#fff", fontWeight:700 }}>Vídeo</div> : null}</div><div style={{ wordBreak:"break-all" }}>{item}</div></div><div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>{img(item) ? <Button onClick={() => useCover(item)} tone="secondary">Usar como cover</Button> : null}{img(item) ? <Button onClick={() => addGallery(item)} tone="secondary">Adicionar galeria</Button> : null}{vid(item) ? <Button onClick={() => useTrailer(item)} tone="secondary">Usar como trailer</Button> : null}</div></div>)}</div></div> : null}
     <label>Badge teaser</label><input value={marketing.teaser_badge || ""} onChange={(e) => setPatch({ teaser_badge:e.target.value })} style={{ padding:12, borderRadius:12, border:"1px solid #d1d5db", outline:"none" }} />
     <label>Headline teaser</label><input value={marketing.teaser_headline || ""} onChange={(e) => setPatch({ teaser_headline:e.target.value })} style={{ padding:12, borderRadius:12, border:"1px solid #d1d5db", outline:"none" }} />
     <label>Subheadline teaser</label><textarea value={marketing.teaser_subtitle || ""} onChange={(e) => setPatch({ teaser_subtitle:e.target.value })} rows={3} style={{ width:"100%", padding:12, borderRadius:12, border:"1px solid #d1d5db", outline:"none", resize:"vertical" }} />
