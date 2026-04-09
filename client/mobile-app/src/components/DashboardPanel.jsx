@@ -57,6 +57,7 @@ import VisualSetsPanel from "./VisualSetsPanel.jsx"
 import VoiceCloningPanel from "./VoiceCloningPanel.jsx"
 import VoiceProfilesPanel from "./VoiceProfilesPanel.jsx"
 import WebsiteControlPanel from "./WebsiteControlPanel.jsx"
+import WebsiteMarketingControlPanel from "./WebsiteMarketingControlPanel.jsx"
 
 const DEFAULT_LANGUAGES = ["pt-PT", "pt-BR", "en", "es", "fr", "de", "it", "nl", "zh", "ja"]
 const DEFAULT_STAGE_MODES = {
@@ -183,6 +184,7 @@ export default function DashboardPanel({ user }) {
     <Card title="Sistema"><div><strong>App:</strong> {diagnostic?.app_name || "-"}</div><div><strong>Python:</strong> {diagnostic?.system?.python_version || "-"}</div><div><strong>Storage:</strong> {diagnostic?.storage_root || "-"}</div><div><strong>FFmpeg:</strong> {diagnostic?.commands?.ffmpeg?.ok ? "OK" : "FALTA"}</div><div><strong>eSpeak:</strong> {diagnostic?.commands?.espeak?.ok ? "OK" : "FALTA"}</div></Card>
     <Card title="Factory Capabilities"><div><strong>Engine:</strong> {factoryCaps?.engine || "-"}</div><div><strong>Línguas:</strong> {(factoryCaps?.supported_languages || []).join(", ")}</div></Card>
     <WebsiteControlPanel user={user} projects={projects} onReload={loadAll} />
+    <WebsiteMarketingControlPanel user={user} />
     <CommerceGroupsPanel user={user} />
     <VisualSetsPanel user={user} />
     <VaultPanel user={user} />
