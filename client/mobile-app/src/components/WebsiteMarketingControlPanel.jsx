@@ -37,7 +37,18 @@ const EMPTY_MARKETING = {
 
 function Card({ title, children, extra = null }) {
   return (
-    <div style={{ border: "1px solid rgba(255,255,255,0.25)", borderRadius: 16, background: "rgba(255,255,255,0.84)", backdropFilter: "blur(8px)", padding: 16, display: "grid", gap: 12, boxShadow: "0 10px 24px rgba(0,0,0,0.10)" }}>
+    <div
+      style={{
+        border: "1px solid rgba(255,255,255,0.25)",
+        borderRadius: 16,
+        background: "rgba(255,255,255,0.84)",
+        backdropFilter: "blur(8px)",
+        padding: 16,
+        display: "grid",
+        gap: 12,
+        boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
+      }}
+    >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <h3 style={{ margin: 0, color: "#2F5E2E" }}>{title}</h3>
         {extra}
@@ -131,7 +142,9 @@ export default function WebsiteMarketingControlPanel({ user }) {
   }, [])
 
   useEffect(() => {
-    if (selectedProjectId) refreshProject(selectedProjectId)
+    if (selectedProjectId) {
+      refreshProject(selectedProjectId)
+    }
   }, [selectedProjectId])
 
   const selectedProject = useMemo(
@@ -140,15 +153,15 @@ export default function WebsiteMarketingControlPanel({ user }) {
   )
 
   const assetCandidates = useMemo(() => collectAssetCandidates(selectedProject), [selectedProject])
-  const suggestedImages = useMemo(() => assetCandidates.filter(looksLikeImage), [assetCandidates])
-  const suggestedVideos = useMemo(() => assetCandidates.filter(looksLikeVideo), [assetCandidates])
   const websiteSync = publishStatus?.website_sync || selectedProject?.website_sync || null
 
   async function loadProjects() {
     const res = await listProjects(user)
     const list = res?.projects || []
     setProjects(list)
-    if (!selectedProjectId && list.length) setSelectedProjectId(list[0].id)
+    if (!selectedProjectId && list.length) {
+      setSelectedProjectId(list[0].id)
+    }
   }
 
   async function refreshProject(projectId) {
@@ -184,7 +197,9 @@ export default function WebsiteMarketingControlPanel({ user }) {
   }
 
   function addToTeaserGallery(value) {
-    updateMarketing({ teaser_gallery: Array.from(new Set([...(marketing.teaser_gallery || []), value])) })
+    updateMarketing({
+      teaser_gallery: Array.from(new Set([...(marketing.teaser_gallery || []), value])),
+    })
   }
 
   function useAsTeaserTrailer(value) {
@@ -192,9 +207,22 @@ export default function WebsiteMarketingControlPanel({ user }) {
   }
 
   function autofillFromProject() {
-    const cover = marketing.teaser_cover_url || suggestedImages[0] || selectedProject?.cover_image || selectedProject?.illustration_path || ""
-    const gallery = (marketing.teaser_gallery || []).length ? marketing.teaser_gallery : suggestedImages.slice(0, 6)
+    const suggestedImages = assetCandidates.filter(looksLikeImage)
+    const suggestedVideos = assetCandidates.filter(looksLikeVideo)
+
+    const cover =
+      marketing.teaser_cover_url ||
+      suggestedImages[0] ||
+      selectedProject?.cover_image ||
+      selectedProject?.illustration_path ||
+      ""
+
+    const gallery = (marketing.teaser_gallery || []).length
+      ? marketing.teaser_gallery
+      : suggestedImages.slice(0, 6)
+
     const trailer = marketing.teaser_trailer_url || suggestedVideos[0] || ""
+
     updateMarketing({
       teaser_cover_url: cover,
       teaser_gallery: gallery,
@@ -209,25 +237,26 @@ export default function WebsiteMarketingControlPanel({ user }) {
     })
   }
 
-  async function handleSaveMarketing() {
+  async function saveMarketingWith(payloadMarketing, successMessage) {
     if (!selectedProjectId) return
-
     setBusy(true)
     setBusyLabel("A guardar controlo de marketing...")
     try {
-      const payload = {
-        ...commercial,
-        website_marketing: {
-          ...marketing,
-          teaser_gallery: Array.isArray(marketing.teaser_gallery)
-            ? marketing.teaser_gallery
-            : parseLines(marketing.teaser_gallery),
+      await updateProjectCommercial(
+        selectedProjectId,
+        {
+          ...commercial,
+          website_marketing: {
+            ...payloadMarketing,
+            teaser_gallery: Array.isArray(payloadMarketing.teaser_gallery)
+              ? payloadMarketing.teaser_gallery
+              : parseLines(payloadMarketing.teaser_gallery),
+          },
         },
-      }
-
-      await updateProjectCommercial(selectedProjectId, payload, user)
+        user
+      )
       await refreshProject(selectedProjectId)
-      alert("Controlo de marketing do Website guardado.")
+      if (successMessage) alert(successMessage)
     } catch (error) {
       alert(error?.message || "Erro ao guardar controlo de marketing.")
     } finally {
@@ -236,20 +265,25 @@ export default function WebsiteMarketingControlPanel({ user }) {
     }
   }
 
+  async function handleSaveMarketing() {
+    await saveMarketingWith(marketing, "Controlo de marketing do Website guardado.")
+  }
+
   async function handlePublishTeaser() {
     if (!selectedProjectId) return
     setBusy(true)
     setBusyLabel("A publicar pré-lançamento no Website...")
     try {
+      const nextMarketing = {
+        ...marketing,
+        public_state: "prelaunch_public",
+        prelaunch_enabled: true,
+      }
       await updateProjectCommercial(
         selectedProjectId,
         {
           ...commercial,
-          website_marketing: {
-            ...marketing,
-            public_state: "prelaunch_public",
-            prelaunch_enabled: true,
-          },
+          website_marketing: nextMarketing,
         },
         user
       )
@@ -269,15 +303,16 @@ export default function WebsiteMarketingControlPanel({ user }) {
     setBusy(true)
     setBusyLabel("A promover para lançamento...")
     try {
+      const nextMarketing = {
+        ...marketing,
+        public_state: "published",
+        prelaunch_enabled: false,
+      }
       await updateProjectCommercial(
         selectedProjectId,
         {
           ...commercial,
-          website_marketing: {
-            ...marketing,
-            public_state: "published",
-            prelaunch_enabled: false,
-          },
+          website_marketing: nextMarketing,
         },
         user
       )
@@ -298,15 +333,16 @@ export default function WebsiteMarketingControlPanel({ user }) {
     setBusy(true)
     setBusyLabel("A retirar superfície pública...")
     try {
+      const nextMarketing = {
+        ...marketing,
+        public_state: "private",
+        prelaunch_enabled: false,
+      }
       await updateProjectCommercial(
         selectedProjectId,
         {
           ...commercial,
-          website_marketing: {
-            ...marketing,
-            public_state: "private",
-            prelaunch_enabled: false,
-          },
+          website_marketing: nextMarketing,
         },
         user
       )
@@ -325,7 +361,11 @@ export default function WebsiteMarketingControlPanel({ user }) {
     <Card
       title="Website Marketing Control"
       extra={
-        <ActionButton onClick={() => refreshProject(selectedProjectId)} disabled={busy || !selectedProjectId} tone="secondary">
+        <ActionButton
+          onClick={() => refreshProject(selectedProjectId)}
+          disabled={busy || !selectedProjectId}
+          tone="secondary"
+        >
           {busy ? busyLabel || "A atualizar..." : "Atualizar"}
         </ActionButton>
       }
@@ -335,7 +375,11 @@ export default function WebsiteMarketingControlPanel({ user }) {
       </div>
 
       <label>Projeto</label>
-      <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
+      <select
+        value={selectedProjectId}
+        onChange={(e) => setSelectedProjectId(e.target.value)}
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      >
         <option value="">Selecionar projeto</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>
@@ -363,19 +407,40 @@ export default function WebsiteMarketingControlPanel({ user }) {
       </div>
 
       <label>Estado público</label>
-      <select value={marketing.public_state} onChange={(e) => updateMarketing({ public_state: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>
+      <select
+        value={marketing.public_state}
+        onChange={(e) => updateMarketing({ public_state: e.target.value })}
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
+      >
         {PUBLIC_STATES.map((value) => (
           <option key={value} value={value}>{value}</option>
         ))}
       </select>
 
-      <label><input type="checkbox" checked={!!marketing.prelaunch_enabled} onChange={(e) => updateMarketing({ prelaunch_enabled: e.target.checked })} /> Pré-lançamento público ativo</label>
-      <label><input type="checkbox" checked={marketing.share_preview_images_during_production !== false} onChange={(e) => updateMarketing({ share_preview_images_during_production: e.target.checked })} /> Permitir partilhar imagens teaser durante produção</label>
+      <label>
+        <input
+          type="checkbox"
+          checked={!!marketing.prelaunch_enabled}
+          onChange={(e) => updateMarketing({ prelaunch_enabled: e.target.checked })}
+        />{" "}
+        Pré-lançamento público ativo
+      </label>
+
+      <label>
+        <input
+          type="checkbox"
+          checked={marketing.share_preview_images_during_production !== false}
+          onChange={(e) => updateMarketing({ share_preview_images_during_production: e.target.checked })}
+        />{" "}
+        Permitir partilhar imagens teaser durante produção
+      </label>
 
       {assetCandidates.length ? (
         <div style={{ padding: 12, borderRadius: 12, border: "1px solid #dbe4d8", background: "rgba(240,253,244,0.85)", display: "grid", gap: 8 }}>
           <strong>Assets sugeridos do projeto</strong>
-          <div style={{ color: "#475569" }}>Foram detetados assets reais em capa, ilustração ou outputs. Podes usá-los sem escrever tudo à mão.</div>
+          <div style={{ color: "#475569" }}>
+            Foram detetados assets reais em capa, ilustração ou outputs. Podes usá-los sem escrever tudo à mão.
+          </div>
           <div style={{ display: "grid", gap: 8 }}>
             {assetCandidates.slice(0, 10).map((item) => (
               <div key={item} style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db", background: "#fff", display: "grid", gap: 8 }}>
@@ -424,9 +489,15 @@ export default function WebsiteMarketingControlPanel({ user }) {
       <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 8 }}>
         <div><strong>Preview rápido do teaser</strong></div>
         <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, background: "#fff", border: "1px solid #e5e7eb" }}>
-          <div style={{ display: "inline-flex", width: "fit-content", padding: "6px 10px", borderRadius: 999, background: "rgba(212,167,60,0.18)", color: "#7c5a00", fontWeight: 700 }}>{marketing.teaser_badge || "Em breve"}</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#1f2937" }}>{marketing.teaser_headline || selectedProject?.title || "Headline teaser"}</div>
-          <div style={{ color: "#475569" }}>{marketing.teaser_subtitle || "Subheadline teaser"}</div>
+          <div style={{ display: "inline-flex", width: "fit-content", padding: "6px 10px", borderRadius: 999, background: "rgba(212,167,60,0.18)", color: "#7c5a00", fontWeight: 700 }}>
+            {marketing.teaser_badge || "Em breve"}
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#1f2937" }}>
+            {marketing.teaser_headline || selectedProject?.title || "Headline teaser"}
+          </div>
+          <div style={{ color: "#475569" }}>
+            {marketing.teaser_subtitle || "Subheadline teaser"}
+          </div>
           {marketing.teaser_cover_url ? <div style={{ wordBreak: "break-all", color: "#64748b" }}>Cover: {marketing.teaser_cover_url}</div> : null}
           {(marketing.teaser_gallery || []).length ? <div style={{ color: "#64748b" }}>Galeria: {(marketing.teaser_gallery || []).length} imagem(ns)</div> : null}
           {marketing.teaser_release_label ? <div style={{ color: "#64748b" }}>{marketing.teaser_release_label}</div> : null}
