@@ -1,0 +1,45 @@
+name: Manual Build Android Debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android-debug:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client/mobile-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build web and sync Android
+        run: npm run android:build
+
+      - name: Build Android debug APK
+        working-directory: client/mobile-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: baribudos-studio-android-debug-apk
+          path: client/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
