@@ -35,6 +35,33 @@ const EMPTY = {
   share_preview_images_during_production: true,
 }
 
+const DISTRIBUTION_DESTINATIONS = [
+  {
+    id: "website",
+    label: "Website próprio",
+    description: "Destino ativo agora. Recebe teaser, pré-lançamento, lançamento e revalidate.",
+    status: "ativo",
+  },
+  {
+    id: "amazon",
+    label: "Amazon KDP / futuras integrações",
+    description: "Destino futuro para ebooks e publicações comerciais controladas pelo Studio.",
+    status: "planeado",
+  },
+  {
+    id: "youtube",
+    label: "YouTube / YouTube Kids",
+    description: "Destino futuro para séries, trailers, shorts e distribuição audiovisual controlada pelo Studio.",
+    status: "planeado",
+  },
+  {
+    id: "audio",
+    label: "Audiobook / outras plataformas",
+    description: "Destino futuro para expansão de distribuição fora do Website próprio.",
+    status: "planeado",
+  },
+]
+
 function Button({ children, onClick, disabled = false, tone = "primary" }) {
   const style =
     tone === "secondary"
@@ -512,6 +539,53 @@ export default function WebsiteMarketingControlPanel({ user }) {
           <div>Assets detetados: {assets.length}</div>
         </div>
       ) : null}
+
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 12,
+          border: "1px solid #e5e7eb",
+          background: "rgba(255,255,255,0.55)",
+          display: "grid",
+          gap: 8,
+        }}
+      >
+        <div><strong>Destinos de distribuição controlados pelo Studio</strong></div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {DISTRIBUTION_DESTINATIONS.map((destination) => (
+            <div
+              key={destination.id}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                border: "1px solid #d1d5db",
+                background: "#fff",
+                display: "grid",
+                gap: 6,
+              }}
+            >
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <strong>{destination.label}</strong>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    width: "fit-content",
+                    padding: "4px 8px",
+                    borderRadius: 999,
+                    background: destination.status === "ativo" ? "rgba(34,197,94,0.15)" : "rgba(148,163,184,0.18)",
+                    color: destination.status === "ativo" ? "#166534" : "#475569",
+                    fontWeight: 700,
+                    fontSize: 12,
+                  }}
+                >
+                  {destination.status}
+                </span>
+              </div>
+              <div style={{ color: "#475569" }}>{destination.description}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button onClick={autofill} disabled={busy || !selectedProjectId}>
