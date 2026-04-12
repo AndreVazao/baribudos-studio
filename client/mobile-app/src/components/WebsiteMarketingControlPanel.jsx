@@ -38,7 +38,12 @@ const EMPTY = {
 function getDistributionDestinations(project, marketing, websiteSync) {
   const publicState = marketing?.public_state || "private"
   const ready = !!project?.ready_for_publish
-  const hasWebsiteActivity = !!(websiteSync?.published_at || websiteSync?.last_revalidate_at || websiteSync?.publication_id)
+  const hasWebsiteActivity = !!(
+    websiteSync?.published_at ||
+    websiteSync?.last_revalidate_at ||
+    websiteSync?.publication_id
+  )
+
   const websiteStatus = publicState === "published"
     ? "published"
     : publicState === "prelaunch_public" || publicState === "teaser_ready"
@@ -72,7 +77,7 @@ function getDistributionDestinations(project, marketing, websiteSync) {
       description: "Destino futuro para séries, trailers, shorts e distribuição audiovisual controlada pelo Studio.",
       status: marketing?.teaser_trailer_url ? "ready" : "planned",
       detail: marketing?.teaser_trailer_url
-        ? "Já existe trailer/asset de vídeo que pode alimentar um fluxo futuro."
+        ? "Já existe trailer ou asset de vídeo que pode alimentar um fluxo futuro."
         : "Ainda sem asset de vídeo principal associado ao fluxo público.",
     },
     {
@@ -101,6 +106,88 @@ function getStatusMeta(status) {
     return { label: "planned", bg: "rgba(148,163,184,0.18)", color: "#475569" }
   }
   return { label: "draft", bg: "rgba(100,116,139,0.12)", color: "#475569" }
+}
+
+function getSalesReadiness(project, marketing, websiteSync) {
+  const checks = [
+    {
+      key: "headline",
+      label: "Headline forte",
+      ok: !!String(marketing?.teaser_headline || "").trim(),
+    },
+    {
+      key: "subtitle",
+      label: "Subtítulo claro",
+      ok: !!String(marketing?.teaser_subtitle || "").trim(),
+    },
+    {
+      key: "cta",
+      label: "CTA definido",
+      ok: !!String(marketing?.teaser_cta_label || "").trim(),
+    },
+    {
+      key: "cover",
+      label: "Cover principal",
+      ok: !!String(marketing?.teaser_cover_url || project?.cover_image || "").trim(),
+    },
+    {
+      key: "gallery",
+      label: "Galeria mínima",
+      ok: Array.isArray(marketing?.teaser_gallery) && marketing.teaser_gallery.length > 0,
+    },
+    {
+      key: "state",
+      label: "Estado público coerente",
+      ok: ["teaser_ready", "prelaunch_public", "launch_ready", "published"].includes(marketing?.public_state),
+    },
+    {
+      key: "project-ready",
+      label: "Projeto pronto para publicação",
+      ok: !!project?.ready_for_publish,
+    },
+    {
+      key: "website-sync",
+      label: "Sync Website conhecido",
+      ok: !!(websiteSync?.publication_id || websiteSync?.published_at || websiteSync?.last_revalidate_at),
+    },
+  ]
+
+  const completed = checks.filter((item) => item.ok).length
+  const total = checks.length
+  const ratio = total ? completed / total : 0
+
+  let level = "draft"
+  let label = "Ainda não deve avançar"
+  let color = "#991b1b"
+  let bg = "rgba(239,68,68,0.10)"
+
+  if (ratio >= 1) {
+    level = "sell-now"
+    label = "Pronto para vender"
+    color = "#166534"
+    bg = "rgba(34,197,94,0.12)"
+  } else if (ratio >= 0.75) {
+    level = "almost-ready"
+    label = "Quase pronto para vender"
+    color = "#1d4ed8"
+    bg = "rgba(59,130,246,0.12)"
+  } else if (ratio >= 0.5) {
+    level = "needs-work"
+    label = "Precisa de fechar mais base comercial"
+    color = "#92400e"
+    bg = "rgba(245,158,11,0.14)"
+  }
+
+  return {
+    checks,
+    completed,
+    total,
+    ratio,
+    level,
+    label,
+    color,
+    bg,
+  }
 }
 
 function Button({ children, onClick, disabled = false, tone = "primary" }) {
@@ -231,6 +318,10 @@ export default function WebsiteMarketingControlPanel({ user }) {
   const websiteSync = publishStatus?.website_sync || selectedProject?.website_sync || null
   const distributionDestinations = useMemo(
     () => getDistributionDestinations(selectedProject, marketing, websiteSync),
+    [selectedProject, marketing, websiteSync]
+  )
+  const salesReadiness = useMemo(
+    () => getSalesReadiness(selectedProject, marketing, websiteSync),
     [selectedProject, marketing, websiteSync]
   )
 
@@ -507,7 +598,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
         user
       )
 
-      await unpublishProjectOnWebsite(selectedProjectId)
+      await unpublishProjectToWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
       alert("Superfície pública retirada do Website.")
     } catch (error) {
@@ -584,6 +675,83 @@ export default function WebsiteMarketingControlPanel({ user }) {
           <div>Assets detetados: {assets.length}</div>
         </div>
       ) : null}
+
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 12,
+          border: `1px solid ${salesReadiness.color}`,
+          background: salesReadiness.bg,
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <strong>Sales readiness</strong>
+          <span
+            style={{
+              display: "inline-flex",
+              width: "fit-content",
+              padding: "4px 8px",
+              borderRadius: 999,
+              background: "#fff",
+              color: salesReadiness.color,
+              fontWeight: 700,
+              fontSize: 12,
+            }}
+          >
+            {salesReadiness.label}
+          </span>
+          <span style={{ color: salesReadiness.color, fontWeight: 700 }}>
+            {salesReadiness.completed}/{salesReadiness.total}
+          </span>
+        </div>
+
+        <div
+          style={{
+            height: 10,
+            borderRadius: 999,
+            overflow: "hidden",
+            background: "rgba(255,255,255,0.65)",
+          }}
+        >
+          <div
+            style={{
+              width: `${Math.round(salesReadiness.ratio * 100)}%`,
+              height: "100%",
+              background: salesReadiness.color,
+            }}
+          />
+        </div>
+
+        <div style={{ display: "grid", gap: 8 }}>
+          {salesReadiness.checks.map((item) => (
+            <div
+              key={item.key}
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                border: "1px solid rgba(148,163,184,0.3)",
+                background: "rgba(255,255,255,0.78)",
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <span>{item.label}</span>
+              <span
+                style={{
+                  color: item.ok ? "#166534" : "#991b1b",
+                  fontWeight: 700,
+                }}
+              >
+                {item.ok ? "OK" : "Falta"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div
         style={{
