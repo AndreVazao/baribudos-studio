@@ -35,32 +35,73 @@ const EMPTY = {
   share_preview_images_during_production: true,
 }
 
-const DISTRIBUTION_DESTINATIONS = [
-  {
-    id: "website",
-    label: "Website próprio",
-    description: "Destino ativo agora. Recebe teaser, pré-lançamento, lançamento e revalidate.",
-    status: "ativo",
-  },
-  {
-    id: "amazon",
-    label: "Amazon KDP / futuras integrações",
-    description: "Destino futuro para ebooks e publicações comerciais controladas pelo Studio.",
-    status: "planeado",
-  },
-  {
-    id: "youtube",
-    label: "YouTube / YouTube Kids",
-    description: "Destino futuro para séries, trailers, shorts e distribuição audiovisual controlada pelo Studio.",
-    status: "planeado",
-  },
-  {
-    id: "audio",
-    label: "Audiobook / outras plataformas",
-    description: "Destino futuro para expansão de distribuição fora do Website próprio.",
-    status: "planeado",
-  },
-]
+function getDistributionDestinations(project, marketing, websiteSync) {
+  const publicState = marketing?.public_state || "private"
+  const ready = !!project?.ready_for_publish
+  const hasWebsiteActivity = !!(websiteSync?.published_at || websiteSync?.last_revalidate_at || websiteSync?.publication_id)
+  const websiteStatus = publicState === "published"
+    ? "published"
+    : publicState === "prelaunch_public" || publicState === "teaser_ready"
+      ? "ready"
+      : ready
+        ? "queued"
+        : "draft"
+
+  return [
+    {
+      id: "website",
+      label: "Website próprio",
+      description: "Destino ativo agora. Recebe teaser, pré-lançamento, lançamento e revalidate.",
+      status: websiteStatus,
+      detail: hasWebsiteActivity
+        ? `Sync conhecido: ${websiteSync?.published_at || websiteSync?.last_revalidate_at || websiteSync?.publication_id}`
+        : "Sem publicação conhecida ainda.",
+    },
+    {
+      id: "amazon",
+      label: "Amazon KDP / futuras integrações",
+      description: "Destino futuro para ebooks e publicações comerciais controladas pelo Studio.",
+      status: ready ? "planned" : "draft",
+      detail: ready
+        ? "Projeto tecnicamente perto de ficar pronto para preparação de distribuição."
+        : "Falta fechar mais dados editoriais antes de distribuição externa.",
+    },
+    {
+      id: "youtube",
+      label: "YouTube / YouTube Kids",
+      description: "Destino futuro para séries, trailers, shorts e distribuição audiovisual controlada pelo Studio.",
+      status: marketing?.teaser_trailer_url ? "ready" : "planned",
+      detail: marketing?.teaser_trailer_url
+        ? "Já existe trailer/asset de vídeo que pode alimentar um fluxo futuro."
+        : "Ainda sem asset de vídeo principal associado ao fluxo público.",
+    },
+    {
+      id: "audio",
+      label: "Audiobook / outras plataformas",
+      description: "Destino futuro para expansão de distribuição fora do Website próprio.",
+      status: marketing?.teaser_excerpt ? "planned" : "draft",
+      detail: marketing?.teaser_excerpt
+        ? "Já existe copy pública que ajuda a preparar metadados de distribuição."
+        : "Ainda sem base pública suficiente para distribuição editorial externa.",
+    },
+  ]
+}
+
+function getStatusMeta(status) {
+  if (status === "published") {
+    return { label: "published", bg: "rgba(34,197,94,0.15)", color: "#166534" }
+  }
+  if (status === "ready") {
+    return { label: "ready", bg: "rgba(59,130,246,0.15)", color: "#1d4ed8" }
+  }
+  if (status === "queued") {
+    return { label: "queued", bg: "rgba(245,158,11,0.18)", color: "#92400e" }
+  }
+  if (status === "planned") {
+    return { label: "planned", bg: "rgba(148,163,184,0.18)", color: "#475569" }
+  }
+  return { label: "draft", bg: "rgba(100,116,139,0.12)", color: "#475569" }
+}
 
 function Button({ children, onClick, disabled = false, tone = "primary" }) {
   const style =
@@ -188,6 +229,10 @@ export default function WebsiteMarketingControlPanel({ user }) {
   const imageAssets = useMemo(() => assets.filter(isImage), [assets])
   const videoAssets = useMemo(() => assets.filter(isVideo), [assets])
   const websiteSync = publishStatus?.website_sync || selectedProject?.website_sync || null
+  const distributionDestinations = useMemo(
+    () => getDistributionDestinations(selectedProject, marketing, websiteSync),
+    [selectedProject, marketing, websiteSync]
+  )
 
   async function loadProjects() {
     const res = await listProjects(user)
@@ -550,40 +595,47 @@ export default function WebsiteMarketingControlPanel({ user }) {
           gap: 8,
         }}
       >
-        <div><strong>Destinos de distribuição controlados pelo Studio</strong></div>
+        <div><strong>Distribution Hub snapshot</strong></div>
+        <div style={{ color: "#475569" }}>
+          O Studio é o centro de comando. O Website é só um destino. Amazon, YouTube e outros canais entram aqui como próximos destinos operacionais.
+        </div>
         <div style={{ display: "grid", gap: 8 }}>
-          {DISTRIBUTION_DESTINATIONS.map((destination) => (
-            <div
-              key={destination.id}
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid #d1d5db",
-                background: "#fff",
-                display: "grid",
-                gap: 6,
-              }}
-            >
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <strong>{destination.label}</strong>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    width: "fit-content",
-                    padding: "4px 8px",
-                    borderRadius: 999,
-                    background: destination.status === "ativo" ? "rgba(34,197,94,0.15)" : "rgba(148,163,184,0.18)",
-                    color: destination.status === "ativo" ? "#166534" : "#475569",
-                    fontWeight: 700,
-                    fontSize: 12,
-                  }}
-                >
-                  {destination.status}
-                </span>
+          {distributionDestinations.map((destination) => {
+            const meta = getStatusMeta(destination.status)
+            return (
+              <div
+                key={destination.id}
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  display: "grid",
+                  gap: 6,
+                }}
+              >
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <strong>{destination.label}</strong>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      width: "fit-content",
+                      padding: "4px 8px",
+                      borderRadius: 999,
+                      background: meta.bg,
+                      color: meta.color,
+                      fontWeight: 700,
+                      fontSize: 12,
+                    }}
+                  >
+                    {meta.label}
+                  </span>
+                </div>
+                <div style={{ color: "#475569" }}>{destination.description}</div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>{destination.detail}</div>
               </div>
-              <div style={{ color: "#475569" }}>{destination.description}</div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
