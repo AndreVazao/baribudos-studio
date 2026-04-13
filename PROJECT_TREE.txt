@@ -1,0 +1,395 @@
+baribudos-studio/
+├─ .github/
+│  ├─ workflows/
+│  │  ├─ android-apk.yml
+│  │  ├─ manual-build-android-debug.yml
+│  │  ├─ manual-build-windows-exe.yml
+│  │  ├─ studio-ci.yml
+│  │  └─ windows-exe.yml
+│  └─ pull_request_template.md
+├─ client/
+│  └─ mobile-app/
+│     ├─ src/
+│     │  ├─ api/
+│     │  │  ├─ assets.js
+│     │  │  ├─ commerce-groups.js
+│     │  │  ├─ connection.js
+│     │  │  ├─ core.js
+│     │  │  ├─ editorial.js
+│     │  │  ├─ illustration.js
+│     │  │  ├─ index.js
+│     │  │  ├─ ip.js
+│     │  │  ├─ pairing.js
+│     │  │  ├─ product-credits.js
+│     │  │  ├─ projects.js
+│     │  │  ├─ runtime.js
+│     │  │  ├─ story-source.js
+│     │  │  ├─ story-translation.js
+│     │  │  ├─ vaults.js
+│     │  │  ├─ visual-sets.js
+│     │  │  ├─ voice-profiles.js
+│     │  │  └─ website.js
+│     │  ├─ components/
+│     │  │  ├─ AppShell.jsx
+│     │  │  ├─ AudioCastPanel.jsx
+│     │  │  ├─ BrandHeader.jsx
+│     │  │  ├─ CommerceGroupsPanel.jsx
+│     │  │  ├─ ContinuityTypographyPanel.jsx
+│     │  │  ├─ DashboardPanel.jsx
+│     │  │  ├─ EditorialStudioPanel.jsx
+│     │  │  ├─ GuidedWorkflowPanel.jsx
+│     │  │  ├─ IllustrationPipelinePanel.jsx
+│     │  │  ├─ IpBrandingEditorPanel.jsx
+│     │  │  ├─ IpCanonsEditorPanel.jsx
+│     │  │  ├─ IpCharactersEditorPanel.jsx
+│     │  │  ├─ IpCoverBuilderPanel.jsx
+│     │  │  ├─ IpCreatorPanel.jsx
+│     │  │  ├─ IpMetadataEditorPanel.jsx
+│     │  │  ├─ IpPaletteEditorPanel.jsx
+│     │  │  ├─ LocalAiInstallerPanel.jsx
+│     │  │  ├─ LocalAudioInstallerPanel.jsx
+│     │  │  ├─ LoginPanel.jsx
+│     │  │  ├─ OutputsPanel.jsx
+│     │  │  ├─ PcConnectionPanel.jsx
+│     │  │  ├─ ProductCreditsPanel.jsx
+│     │  │  ├─ ProductionPipelinePanel.jsx
+│     │  │  ├─ ProjectCommercialEditorPanel.jsx
+│     │  │  ├─ ProjectCreationModePanel.jsx
+│     │  │  ├─ ProjectIntegrityPanel.jsx
+│     │  │  ├─ PublicationPackagePanel.jsx
+│     │  │  ├─ PublishGatePanel.jsx
+│     │  │  ├─ PublishReadinessPanel.jsx
+│     │  │  ├─ SagaRuntimePanel.jsx
+│     │  │  ├─ StoryFlowGuidanceCard.jsx
+│     │  │  ├─ StoryLayoutPanel.jsx
+│     │  │  ├─ StorySourcePanel.jsx
+│     │  │  ├─ StoryTranslationPanel.jsx
+│     │  │  ├─ SystemSmokePanel.jsx
+│     │  │  ├─ SystemSmokeV1Panel.jsx
+│     │  │  ├─ UpdaterPanel.jsx
+│     │  │  ├─ V1ReadinessPanel.jsx
+│     │  │  ├─ VaultPanel.jsx
+│     │  │  ├─ VisualAssetsPanel.jsx
+│     │  │  ├─ VisualSetsPanel.jsx
+│     │  │  ├─ VoiceCloningPanel.jsx
+│     │  │  ├─ VoiceProfilesPanel.jsx
+│     │  │  ├─ VoiceUsageGuidanceCard.jsx
+│     │  │  ├─ WebsiteControlMeaningCard.jsx
+│     │  │  ├─ WebsiteControlPanel.jsx
+│     │  │  ├─ WebsiteMarketingControlPanel.jsx
+│     │  │  ├─ WebsitePublishConfidenceCard.jsx
+│     │  │  └─ WebsiteReadinessCard.jsx
+│     │  ├─ utils/
+│     │  │  ├─ media.js
+│     │  │  ├─ storyFlowUiState.js
+│     │  │  ├─ voiceUsageUiState.js
+│     │  │  ├─ websiteControlMeaningUiState.js
+│     │  │  ├─ websitePublishUiState.js
+│     │  │  └─ websiteReadinessUiState.js
+│     │  ├─ api.js
+│     │  ├─ App.jsx
+│     │  └─ main.jsx
+│     ├─ src-tauri/
+│     │  ├─ icons/
+│     │  │  └─ icon.ico
+│     │  ├─ src/
+│     │  │  ├─ lib.rs
+│     │  │  └─ main.rs
+│     │  ├─ build.rs
+│     │  ├─ Cargo.toml
+│     │  └─ tauri.conf.json
+│     ├─ .env.development
+│     ├─ .env.example
+│     ├─ .env.production
+│     ├─ capacitor.config.ts
+│     ├─ index.html
+│     ├─ package.json
+│     └─ vite.config.js
+├─ data/
+│  └─ saga_visual_sets.json
+├─ deploy/
+│  ├─ .env.example
+│  ├─ build_android.py
+│  ├─ build_desktop.py
+│  ├─ build-android.bat
+│  ├─ build-android.sh
+│  ├─ build-frontend.bat
+│  ├─ build-frontend.sh
+│  ├─ check_runtime.py
+│  ├─ FINAL-STATUS.md
+│  ├─ GAP-MAP.md
+│  ├─ init-tauri.bat
+│  ├─ init-tauri.sh
+│  ├─ ONLINE-BUILDS.md
+│  ├─ POST-BUILD-CHECKLIST.md
+│  ├─ PRODUCTION-CHECKLIST.md
+│  ├─ README-DEPLOY.md
+│  ├─ release_check.py
+│  ├─ release_manifest.json
+│  ├─ RELEASE-V1.md
+│  ├─ run-smoke-test.bat
+│  ├─ run-smoke-test.sh
+│  ├─ RUNBOOK-PC.md
+│  ├─ smoke_test.py
+│  ├─ start-all.bat
+│  ├─ start-all.sh
+│  ├─ start-backend.bat
+│  ├─ start-backend.py
+│  ├─ start-backend.sh
+│  ├─ version.json
+│  ├─ version.remote.example.json
+│  └─ version.remote.json
+├─ docs/
+│  ├─ ACCESS_AND_ROLES.md
+│  ├─ CHANNEL_OUTPUTS_MODEL.md
+│  ├─ CHANNEL_PREP_MATRIX.md
+│  ├─ CI_ARTIFACTS.md
+│  ├─ DISTRIBUTION_HUB_PERSISTENCE_MODEL.md
+│  ├─ DISTRIBUTION_STATE_MODEL.md
+│  ├─ EXTERNAL_CHANNELS_ROADMAP.md
+│  ├─ EXTERNAL_INTEGRATION_STEPS.md
+│  ├─ FAMILY_PRIVATE_STUDIO_EDITORIAL_OWNERSHIP.md
+│  ├─ FINAL_BRANCH_CONSOLIDATION_CHECKLIST.md
+│  ├─ FIRST_REVENUE_PLAYBOOK.md
+│  ├─ H1_H5_CONSISTENCY_REVIEW_V1.md
+│  ├─ H1_PANEL_INTEGRATION_FINAL_STEP.md
+│  ├─ H1_PUBLISH_CONFIDENCE_IMPLEMENTATION_V1.md
+│  ├─ H1_VISIBLE_COMPLETION_CHECKLIST.md
+│  ├─ H2_READINESS_CREDIBILITY_EXECUTION_BUNDLE_V1.md
+│  ├─ H2_READINESS_CREDIBILITY_IMPLEMENTATION_V1.md
+│  ├─ H2_VISIBLE_COMPLETION_CHECKLIST.md
+│  ├─ H3_STORY_FIRST_COMFORT_EXECUTION_BUNDLE_V1.md
+│  ├─ H3_STORY_FIRST_COMFORT_IMPLEMENTATION_V1.md
+│  ├─ H3_VISIBLE_COMPLETION_CHECKLIST.md
+│  ├─ H4_VOICE_OWNERSHIP_CREDITS_VARIANTS_EXECUTION_BUNDLE_V1.md
+│  ├─ H4_VOICE_OWNERSHIP_CREDITS_VARIANTS_IMPLEMENTATION_V1.md
+│  ├─ H5_WEBSITE_CONTROL_OPERATOR_MEANING_EXECUTION_BUNDLE_V1.md
+│  ├─ H5_WEBSITE_CONTROL_OPERATOR_MEANING_IMPLEMENTATION_V1.md
+│  ├─ LOCAL_PACKAGING_AND_RUN.md
+│  ├─ MANUAL_BUILDS.md
+│  ├─ MERGE_READINESS_REVIEW_V1.md
+│  ├─ MERGE_READY_CHECKLIST.md
+│  ├─ MONETIZATION_LAUNCH_ORDER.md
+│  ├─ MULTI_IP_SAGA_PRINCIPLE.md
+│  ├─ NEXT_IMPLEMENTATION_BLOCKS_VOICE_SPONSOR_TEXT_FIRST.md
+│  ├─ NEXT_VISIBLE_IMPLEMENTATION_TARGET_H2.md
+│  ├─ OPERATIONAL_AUDIT_CHECKLIST_V1.md
+│  ├─ OPERATIONAL_EXECUTION_MATRIX_V1.md
+│  ├─ OPERATIONAL_INTEGRATION_EXIT_CRITERIA_V1.md
+│  ├─ OPERATIONAL_SEQUENCE_AFTER_H1.md
+│  ├─ PROJECT_LAUNCH_CHECKLIST.md
+│  ├─ PUBLISHING_PERMISSIONS_MATRIX.md
+│  ├─ RUNBOOK.md
+│  ├─ SAGA_VISUAL_SET_CONTRACT.txt
+│  ├─ SALES_READINESS_PLAN.md
+│  ├─ STUDIO_WEBSITE_OPERATIONAL_HANDOFF_V1.md
+│  ├─ TARGETS.md
+│  ├─ TEXT_FIRST_AUTOMATED_EDITORIAL_PIPELINE_BLUEPRINT.md
+│  ├─ TRUE_PRODUCTION_FLOW_AUDIT_V1.md
+│  ├─ V5_FINALIZATION_SCOPE.md
+│  ├─ VOICE_CREDITS_AND_SPONSORSHIP_RULES.md
+│  ├─ VOICE_PROFILE_IMPLEMENTATION_SPEC.md
+│  └─ WEBSITE_GO_LIVE_PRIORITY.txt
+├─ public/
+│  └─ brand/
+│     ├─ .gitkeep
+│     ├─ baribudos-studio-logo.png
+│     ├─ historia-que-protege-selo.png
+│     ├─ os-baribudos-logo.png
+│     └─ studio-baribudos-family-background.png
+├─ scripts/
+│  ├─ build_frontend.py
+│  ├─ dev_up.py
+│  └─ run_backend.py
+├─ studio/
+│  ├─ engine/
+│  │  └─ saga-loader.js
+│  └─ sagas/
+│     └─ baribudos/
+│        ├─ age-badge-canon.json
+│        ├─ characters-master.json
+│        ├─ episode-canon.json
+│        ├─ narrative-canon.json
+│        ├─ pedagogical-canon.json
+│        ├─ series-arc-canon.json
+│        └─ visual-canon.json
+├─ studio_core/
+│  ├─ api/
+│  │  ├─ routes/
+│  │  │  ├─ __init__.py
+│  │  │  ├─ age_badges.py
+│  │  │  ├─ assets.py
+│  │  │  ├─ audio_cast_preview.py
+│  │  │  ├─ audio_cast.py
+│  │  │  ├─ audiobooks.py
+│  │  │  ├─ branding_pack.py
+│  │  │  ├─ commerce_groups.py
+│  │  │  ├─ covers.py
+│  │  │  ├─ db_control.py
+│  │  │  ├─ deploy_control.py
+│  │  │  ├─ diagnostics.py
+│  │  │  ├─ ebooks.py
+│  │  │  ├─ editorial_engine.py
+│  │  │  ├─ editorial_media_pipeline.py
+│  │  │  ├─ editorial_production.py
+│  │  │  ├─ factory.py
+│  │  │  ├─ final_media_render.py
+│  │  │  ├─ health.py
+│  │  │  ├─ illustration_assets.py
+│  │  │  ├─ illustration_generation.py
+│  │  │  ├─ illustration_pipeline.py
+│  │  │  ├─ illustration_provider.py
+│  │  │  ├─ illustrations.py
+│  │  │  ├─ ip_branding.py
+│  │  │  ├─ ip_canons.py
+│  │  │  ├─ ip_characters.py
+│  │  │  ├─ ip_creator.py
+│  │  │  ├─ ip_metadata.py
+│  │  │  ├─ ip_palette.py
+│  │  │  ├─ jobs.py
+│  │  │  ├─ local_ai_installer.py
+│  │  │  ├─ local_audio_engine_manager.py
+│  │  │  ├─ local_audio_installer.py
+│  │  │  ├─ local_engine_manager.py
+│  │  │  ├─ marketplace_visuals.py
+│  │  │  ├─ pairing.py
+│  │  │  ├─ product_credits.py
+│  │  │  ├─ production_pipeline.py
+│  │  │  ├─ project_commercial.py
+│  │  │  ├─ project_integrity.py
+│  │  │  ├─ projects.py
+│  │  │  ├─ public_assets.py
+│  │  │  ├─ publication_package.py
+│  │  │  ├─ publish_readiness.py
+│  │  │  ├─ publishing.py
+│  │  │  ├─ saga_loader.py
+│  │  │  ├─ saga_runtime.py
+│  │  │  ├─ saga_visual_sets.py
+│  │  │  ├─ sagas.py
+│  │  │  ├─ secret_control.py
+│  │  │  ├─ settings.py
+│  │  │  ├─ sponsors.py
+│  │  │  ├─ sponsorship_scopes.py
+│  │  │  ├─ storefront.py
+│  │  │  ├─ story_layout.py
+│  │  │  ├─ story_source.py
+│  │  │  ├─ story_translation.py
+│  │  │  ├─ system_smoke_v1.py
+│  │  │  ├─ system_smoke.py
+│  │  │  ├─ updater.py
+│  │  │  ├─ users.py
+│  │  │  ├─ v1_readiness.py
+│  │  │  ├─ videos.py
+│  │  │  ├─ voice_library.py
+│  │  │  ├─ voice_preview.py
+│  │  │  ├─ voice_profiles.py
+│  │  │  ├─ website_admin.py
+│  │  │  ├─ website_bundle_reconcile.py
+│  │  │  ├─ website_bundles.py
+│  │  │  ├─ website_contract.py
+│  │  │  ├─ website_control.py
+│  │  │  ├─ website_publisher.py
+│  │  │  ├─ website_visual_set_reconcile.py
+│  │  │  └─ website_visual_sets.py
+│  │  ├─ __init__.py
+│  │  └─ main.py
+│  ├─ core/
+│  │  ├─ __init__.py
+│  │  ├─ branding.py
+│  │  ├─ config.py
+│  │  ├─ models.py
+│  │  └─ storage.py
+│  ├─ domain/
+│  │  └─ enums/
+│  │     ├─ asset_context.py
+│  │     └─ asset_type.py
+│  ├─ models/
+│  │  └─ asset.py
+│  ├─ services/
+│  │  ├─ __init__.py
+│  │  ├─ age_badge_service.py
+│  │  ├─ ai_runtime_bootstrap.py
+│  │  ├─ asset_registry_service.py
+│  │  ├─ audio_cast_preview_service.py
+│  │  ├─ audio_cast_service.py
+│  │  ├─ audiobook_service.py
+│  │  ├─ auth_service.py
+│  │  ├─ bootstrap_service.py
+│  │  ├─ branding_pack_service.py
+│  │  ├─ branding_resolver_service.py
+│  │  ├─ branding_resolver.py
+│  │  ├─ cdn_service.py
+│  │  ├─ commerce_group_service.py
+│  │  ├─ cover_service.py
+│  │  ├─ credential_resolver_service.py
+│  │  ├─ db_control_service.py
+│  │  ├─ deploy_control_service.py
+│  │  ├─ ebook_service.py
+│  │  ├─ editorial_media_pipeline_service.py
+│  │  ├─ editorial_page_engine.py
+│  │  ├─ editorial_production_bridge_service.py
+│  │  ├─ factory_service.py
+│  │  ├─ final_media_render_service.py
+│  │  ├─ illustration_asset_service.py
+│  │  ├─ illustration_generation_runtime_service.py
+│  │  ├─ illustration_generation_service.py
+│  │  ├─ illustration_integration_service.py
+│  │  ├─ illustration_pipeline_service.py
+│  │  ├─ illustration_provider_service.py
+│  │  ├─ ip_creator_service.py
+│  │  ├─ ip_runtime_service.py
+│  │  ├─ job_service.py
+│  │  ├─ language_service.py
+│  │  ├─ local_ai_installer_service.py
+│  │  ├─ local_audio_engine_manager_service.py
+│  │  ├─ local_audio_installer_service.py
+│  │  ├─ local_engine_manager_service.py
+│  │  ├─ marketplace_visual_adaptation_service.py
+│  │  ├─ output_service.py
+│  │  ├─ pairing_service.py
+│  │  ├─ product_credits_service.py
+│  │  ├─ production_pipeline_service.py
+│  │  ├─ project_factory_engine.py
+│  │  ├─ project_factory_runtime_service.py
+│  │  ├─ project_integrity_service.py
+│  │  ├─ project_service.py
+│  │  ├─ publication_package_service.py
+│  │  ├─ publication_payload_builder.py
+│  │  ├─ publication_policy_service.py
+│  │  ├─ publishing_service.py
+│  │  ├─ saga_loader_service.py
+│  │  ├─ saga_orchestrator.py
+│  │  ├─ saga_runtime_service.py
+│  │  ├─ saga_service.py
+│  │  ├─ saga_visual_set_service.py
+│  │  ├─ secret_control_service.py
+│  │  ├─ settings_service.py
+│  │  ├─ sponsorship_scope_service.py
+│  │  ├─ story_generation_engine.py
+│  │  ├─ story_layout_service.py
+│  │  ├─ story_service.py
+│  │  ├─ story_source_service.py
+│  │  ├─ story_translation_service.py
+│  │  ├─ system_smoke_service.py
+│  │  ├─ system_smoke_v1_service.py
+│  │  ├─ updater_service.py
+│  │  ├─ v1_readiness_service.py
+│  │  ├─ video_service.py
+│  │  ├─ voice_library_service.py
+│  │  ├─ voice_preview_service.py
+│  │  ├─ voice_profile_service.py
+│  │  ├─ website_admin_service.py
+│  │  ├─ website_bundle_reconcile_service.py
+│  │  ├─ website_bundle_service.py
+│  │  ├─ website_contract_payload_service.py
+│  │  ├─ website_contract_validator.py
+│  │  ├─ website_control_service.py
+│  │  ├─ website_publisher_service.py
+│  │  ├─ website_visual_set_reconcile_service.py
+│  │  └─ website_visual_set_service.py
+│  └─ __init__.py
+├─ .gitignore
+├─ OFFICIAL_STUDIO_WEBSITE_CONTRACT.txt
+├─ package.json
+├─ README.md
+└─ requirements.txt
