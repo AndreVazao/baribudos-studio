@@ -39,14 +39,27 @@ function getStatusMeta(status) {
   if (status === "published") return { label: "published", bg: "rgba(34,197,94,0.15)", color: "#166534" }
   if (status === "ready") return { label: "ready", bg: "rgba(59,130,246,0.15)", color: "#1d4ed8" }
   if (status === "queued") return { label: "queued", bg: "rgba(245,158,11,0.18)", color: "#92400e" }
+  if (status === "failed") return { label: "failed", bg: "rgba(239,68,68,0.12)", color: "#991b1b" }
   if (status === "planned") return { label: "planned", bg: "rgba(148,163,184,0.18)", color: "#475569" }
   return { label: "draft", bg: "rgba(100,116,139,0.12)", color: "#475569" }
+}
+
+function deriveChannelStatus({ readySignals, publishedSignals, failedSignals }) {
+  if (publishedSignals) return "published"
+  if (failedSignals) return "failed"
+  if (readySignals >= 3) return "ready"
+  if (readySignals >= 1) return "planned"
+  return "draft"
 }
 
 function getDistributionDestinations(project, marketing, websiteSync) {
   const publicState = marketing?.public_state || "private"
   const ready = !!project?.ready_for_publish
-  const hasWebsiteActivity = !!(websiteSync?.published_at || websiteSync?.last_revalidate_at || websiteSync?.publication_id)
+  const hasWebsiteActivity = !!(
+    websiteSync?.published_at ||
+    websiteSync?.last_revalidate_at ||
+    websiteSync?.publication_id
+  )
 
   const websiteStatus = publicState === "published"
     ? "published"
@@ -65,33 +78,83 @@ function getDistributionDestinations(project, marketing, websiteSync) {
       detail: hasWebsiteActivity
         ? `Sync conhecido: ${websiteSync?.published_at || websiteSync?.last_revalidate_at || websiteSync?.publication_id}`
         : "Sem publicação conhecida ainda.",
+      attempts: hasWebsiteActivity ? 1 : 0,
+      lastAttempt: websiteSync?.last_revalidate_at || websiteSync?.published_at || "-",
+      lastError: publicState === "private" ? "-" : "Sem erro conhecido.",
+      notes: publicState === "published"
+        ? "Canal próprio principal e primeiro motor de monetização."
+        : "Usar este canal para validar descoberta e compra antes de escalar.",
+      payloadSnapshot: {
+        title: marketing?.teaser_headline || project?.title || "-",
+        cta: marketing?.teaser_cta_label || "-",
+        cover: marketing?.teaser_cover_url || "-",
+      },
     },
     {
       id: "amazon",
-      label: "Amazon KDP / futuras integrações",
-      description: "Destino futuro para ebooks e publicações comerciais controladas pelo Studio.",
-      status: ready ? "planned" : "draft",
+      label: "Amazon KDP",
+      description: "Destino seguinte para ebooks e expansão editorial.",
+      status: deriveChannelStatus({
+        readySignals: [marketing?.teaser_cover_url, marketing?.teaser_subtitle, marketing?.teaser_release_label].filter(Boolean).length,
+        publishedSignals: false,
+        failedSignals: false,
+      }),
       detail: ready
-        ? "Projeto tecnicamente perto de ficar pronto para preparação de distribuição."
-        : "Falta fechar mais dados editoriais antes de distribuição externa.",
+        ? "Pode ser o primeiro canal externo depois de validar receita no Website."
+        : "Ainda precisa de mais base editorial e comercial.",
+      attempts: 0,
+      lastAttempt: "-",
+      lastError: "-",
+      notes: "Preparar capa, copy comercial, texto de lançamento e metadados finais.",
+      payloadSnapshot: {
+        title: marketing?.teaser_headline || project?.title || "-",
+        commercial_copy: marketing?.teaser_subtitle || "-",
+        release_text: marketing?.teaser_release_label || "-",
+      },
     },
     {
       id: "youtube",
       label: "YouTube / YouTube Kids",
-      description: "Destino futuro para séries, trailers, shorts e distribuição audiovisual controlada pelo Studio.",
-      status: marketing?.teaser_trailer_url ? "ready" : "planned",
+      description: "Destino seguinte para trailers, séries e descoberta audiovisual.",
+      status: deriveChannelStatus({
+        readySignals: [marketing?.teaser_trailer_url, marketing?.teaser_headline, marketing?.teaser_excerpt || marketing?.teaser_subtitle].filter(Boolean).length,
+        publishedSignals: false,
+        failedSignals: false,
+      }),
       detail: marketing?.teaser_trailer_url
-        ? "Já existe trailer ou asset de vídeo que pode alimentar um fluxo futuro."
-        : "Ainda sem asset de vídeo principal associado ao fluxo público.",
+        ? "Já existe base de vídeo para preparar uma saída externa."
+        : "Sem vídeo principal ainda, por isso ainda não é o melhor próximo passo.",
+      attempts: 0,
+      lastAttempt: "-",
+      lastError: "-",
+      notes: "Preparar vídeo, título, descrição e eventual thumbnail por ativo.",
+      payloadSnapshot: {
+        title: marketing?.teaser_headline || project?.title || "-",
+        video: marketing?.teaser_trailer_url || "-",
+        description: marketing?.teaser_excerpt || marketing?.teaser_subtitle || "-",
+      },
     },
     {
       id: "audio",
       label: "Audiobook / outras plataformas",
-      description: "Destino futuro para expansão de distribuição fora do Website próprio.",
-      status: marketing?.teaser_excerpt ? "planned" : "draft",
+      description: "Destino seguinte para expansão áudio e editorial complementar.",
+      status: deriveChannelStatus({
+        readySignals: [marketing?.teaser_excerpt, marketing?.teaser_cover_url, marketing?.teaser_headline].filter(Boolean).length,
+        publishedSignals: false,
+        failedSignals: false,
+      }),
       detail: marketing?.teaser_excerpt
-        ? "Já existe copy pública que ajuda a preparar metadados de distribuição."
-        : "Ainda sem base pública suficiente para distribuição editorial externa.",
+        ? "Já existe copy base para preparar uma saída de áudio ou plataforma complementar."
+        : "Falta base de texto pública para um canal áudio ficar credível.",
+      attempts: 0,
+      lastAttempt: "-",
+      lastError: "-",
+      notes: "Preparar áudio final, capa, copy e estado por canal antes de automatizar.",
+      payloadSnapshot: {
+        title: marketing?.teaser_headline || project?.title || "-",
+        excerpt: marketing?.teaser_excerpt || "-",
+        cover: marketing?.teaser_cover_url || "-",
+      },
     },
   ]
 }
@@ -229,7 +292,6 @@ const isVideo = (value) => /\.(mp4|webm|mov|m4v)$/i.test(String(value || ""))
 
 function collect(project) {
   const found = new Set()
-
   const walk = (node) => {
     if (!node) return
     if (typeof node === "string") {
@@ -242,7 +304,6 @@ function collect(project) {
     }
     if (typeof node === "object") Object.values(node).forEach(walk)
   }
-
   walk(project?.cover_image)
   walk(project?.illustration_path)
   walk(project?.outputs)
@@ -490,16 +551,9 @@ export default function WebsiteMarketingControlPanel({ user }) {
           <span style={{ display: "inline-flex", width: "fit-content", padding: "4px 8px", borderRadius: 999, background: "#fff", color: salesReadiness.color, fontWeight: 700, fontSize: 12 }}>{salesReadiness.label}</span>
           <span style={{ color: salesReadiness.color, fontWeight: 700 }}>{salesReadiness.completed}/{salesReadiness.total}</span>
         </div>
-        <div style={{ height: 10, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.65)" }}>
-          <div style={{ width: `${Math.round(salesReadiness.ratio * 100)}%`, height: "100%", background: salesReadiness.color }} />
-        </div>
+        <div style={{ height: 10, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.65)" }}><div style={{ width: `${Math.round(salesReadiness.ratio * 100)}%`, height: "100%", background: salesReadiness.color }} /></div>
         <div style={{ display: "grid", gap: 8 }}>
-          {salesReadiness.checks.map((item) => (
-            <div key={item.key} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(148,163,184,0.3)", background: "rgba(255,255,255,0.78)", display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-              <span>{item.label}</span>
-              <span style={{ color: item.ok ? "#166534" : "#991b1b", fontWeight: 700 }}>{item.ok ? "OK" : "Falta"}</span>
-            </div>
-          ))}
+          {salesReadiness.checks.map((item) => <div key={item.key} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(148,163,184,0.3)", background: "rgba(255,255,255,0.78)", display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><span>{item.label}</span><span style={{ color: item.ok ? "#166534" : "#991b1b", fontWeight: 700 }}>{item.ok ? "OK" : "Falta"}</span></div>)}
         </div>
       </div>
 
@@ -510,13 +564,28 @@ export default function WebsiteMarketingControlPanel({ user }) {
           {distributionDestinations.map((destination) => {
             const meta = getStatusMeta(destination.status)
             return (
-              <div key={destination.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", display: "grid", gap: 6 }}>
+              <div key={destination.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", display: "grid", gap: 8 }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <strong>{destination.label}</strong>
                   <span style={{ display: "inline-flex", width: "fit-content", padding: "4px 8px", borderRadius: 999, background: meta.bg, color: meta.color, fontWeight: 700, fontSize: 12 }}>{meta.label}</span>
                 </div>
                 <div style={{ color: "#475569" }}>{destination.description}</div>
                 <div style={{ color: "#64748b", fontSize: 13 }}>{destination.detail}</div>
+                <div style={{ display: "grid", gap: 6, padding: 10, borderRadius: 10, background: "rgba(248,250,252,0.88)", border: "1px solid rgba(148,163,184,0.20)" }}>
+                  <div>Tentativas: <strong>{destination.attempts}</strong></div>
+                  <div>Última tentativa: <strong>{destination.lastAttempt}</strong></div>
+                  <div>Último erro: <strong>{destination.lastError}</strong></div>
+                  <div>Notas: <strong>{destination.notes}</strong></div>
+                </div>
+                <div style={{ display: "grid", gap: 6, padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.92)", border: "1px solid rgba(148,163,184,0.20)" }}>
+                  <strong>Payload snapshot</strong>
+                  {Object.entries(destination.payloadSnapshot).map(([key, value]) => (
+                    <div key={key} style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
+                      <span style={{ color: "#475569" }}>{key}</span>
+                      <span style={{ color: "#111827", maxWidth: "60%", textAlign: "right", wordBreak: "break-word" }}>{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )
           })}
@@ -531,12 +600,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
             <div key={channel.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", display: "grid", gap: 8 }}>
               <strong>{channel.label}</strong>
               <div style={{ display: "grid", gap: 8 }}>
-                {channel.outputs.map((output) => (
-                  <div key={output.label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: 10, borderRadius: 10, border: "1px solid rgba(148,163,184,0.22)", background: "rgba(248,250,252,0.85)" }}>
-                    <span>{output.label}</span>
-                    <span style={{ color: output.ok ? "#166534" : "#991b1b", fontWeight: 700 }}>{output.ok ? "OK" : "Falta"}</span>
-                  </div>
-                ))}
+                {channel.outputs.map((output) => <div key={output.label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: 10, borderRadius: 10, border: "1px solid rgba(148,163,184,0.22)", background: "rgba(248,250,252,0.85)" }}><span>{output.label}</span><span style={{ color: output.ok ? "#166534" : "#991b1b", fontWeight: 700 }}>{output.ok ? "OK" : "Falta"}</span></div>)}
               </div>
             </div>
           ))}
@@ -563,16 +627,10 @@ export default function WebsiteMarketingControlPanel({ user }) {
         {STATES.map((value) => <option key={value} value={value}>{value}</option>)}
       </select>
 
-      <label><input type="checkbox" checked={!!marketing.prelaunch_enabled} onChange={(e) => setPatch({ prelaunch_enabled: e.target.checked })} />{" "}Pré-lançamento público ativo</label>
-      <label><input type="checkbox" checked={marketing.share_preview_images_during_production !== false} onChange={(e) => setPatch({ share_preview_images_during_production: e.target.checked })} />{" "}Permitir partilhar imagens teaser durante produção</label>
+      <label><input type="checkbox" checked={!!marketing.prelaunch_enabled} onChange={(e) => setPatch({ prelaunch_enabled: e.target.checked })} /> {" "}Pré-lançamento público ativo</label>
+      <label><input type="checkbox" checked={marketing.share_preview_images_during_production !== false} onChange={(e) => setPatch({ share_preview_images_during_production: e.target.checked })} /> {" "}Permitir partilhar imagens teaser durante produção</label>
 
-      {imageAssets.length ? (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Button onClick={() => useCover(imageAssets[0])} disabled={busy || !selectedProjectId} tone="secondary">Usar 1ª imagem como cover</Button>
-          <Button onClick={useFirstThreeGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 3 primeiras na galeria</Button>
-          <Button onClick={useFirstSixGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 6 primeiras na galeria</Button>
-        </div>
-      ) : null}
+      {imageAssets.length ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><Button onClick={() => useCover(imageAssets[0])} disabled={busy || !selectedProjectId} tone="secondary">Usar 1ª imagem como cover</Button><Button onClick={useFirstThreeGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 3 primeiras na galeria</Button><Button onClick={useFirstSixGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 6 primeiras na galeria</Button></div> : null}
 
       {assets.length ? (
         <div style={{ padding: 12, borderRadius: 12, border: "1px solid #dbe4d8", background: "rgba(240,253,244,0.85)", display: "grid", gap: 8 }}>
@@ -584,11 +642,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
                 <div key={item} style={{ padding: 10, borderRadius: 10, border: isSelected ? "2px solid #2F5E2E" : "1px solid #d1d5db", background: "#fff", display: "grid", gap: 8 }}>
                   <div style={{ display: "grid", gap: 8, gridTemplateColumns: isImage(item) ? "92px 1fr" : "1fr" }}>
                     <div>
-                      {isImage(item) ? (
-                        <img src={item} alt="asset preview" style={{ width: 92, height: 92, objectFit: "cover", borderRadius: 10, border: "1px solid #e5e7eb" }} />
-                      ) : isVideo(item) ? (
-                        <div style={{ width: 92, height: 92, display: "grid", placeItems: "center", borderRadius: 10, border: "1px solid #e5e7eb", background: "#111827", color: "#fff", fontWeight: 700 }}>Vídeo</div>
-                      ) : null}
+                      {isImage(item) ? <img src={item} alt="asset preview" style={{ width: 92, height: 92, objectFit: "cover", borderRadius: 10, border: "1px solid #e5e7eb" }} /> : isVideo(item) ? <div style={{ width: 92, height: 92, display: "grid", placeItems: "center", borderRadius: 10, border: "1px solid #e5e7eb", background: "#111827", color: "#fff", fontWeight: 700 }}>Vídeo</div> : null}
                     </div>
                     <div style={{ wordBreak: "break-all" }}>{item}</div>
                   </div>
