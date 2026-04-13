@@ -35,6 +35,22 @@ const EMPTY = {
   share_preview_images_during_production: true,
 }
 
+function getStatusMeta(status) {
+  if (status === "published") {
+    return { label: "published", bg: "rgba(34,197,94,0.15)", color: "#166534" }
+  }
+  if (status === "ready") {
+    return { label: "ready", bg: "rgba(59,130,246,0.15)", color: "#1d4ed8" }
+  }
+  if (status === "queued") {
+    return { label: "queued", bg: "rgba(245,158,11,0.18)", color: "#92400e" }
+  }
+  if (status === "planned") {
+    return { label: "planned", bg: "rgba(148,163,184,0.18)", color: "#475569" }
+  }
+  return { label: "draft", bg: "rgba(100,116,139,0.12)", color: "#475569" }
+}
+
 function getDistributionDestinations(project, marketing, websiteSync) {
   const publicState = marketing?.public_state || "private"
   const ready = !!project?.ready_for_publish
@@ -92,22 +108,6 @@ function getDistributionDestinations(project, marketing, websiteSync) {
   ]
 }
 
-function getStatusMeta(status) {
-  if (status === "published") {
-    return { label: "published", bg: "rgba(34,197,94,0.15)", color: "#166534" }
-  }
-  if (status === "ready") {
-    return { label: "ready", bg: "rgba(59,130,246,0.15)", color: "#1d4ed8" }
-  }
-  if (status === "queued") {
-    return { label: "queued", bg: "rgba(245,158,11,0.18)", color: "#92400e" }
-  }
-  if (status === "planned") {
-    return { label: "planned", bg: "rgba(148,163,184,0.18)", color: "#475569" }
-  }
-  return { label: "draft", bg: "rgba(100,116,139,0.12)", color: "#475569" }
-}
-
 function getSalesReadiness(project, marketing, websiteSync) {
   const checks = [
     {
@@ -156,38 +156,66 @@ function getSalesReadiness(project, marketing, websiteSync) {
   const total = checks.length
   const ratio = total ? completed / total : 0
 
-  let level = "draft"
   let label = "Ainda não deve avançar"
   let color = "#991b1b"
   let bg = "rgba(239,68,68,0.10)"
 
   if (ratio >= 1) {
-    level = "sell-now"
     label = "Pronto para vender"
     color = "#166534"
     bg = "rgba(34,197,94,0.12)"
   } else if (ratio >= 0.75) {
-    level = "almost-ready"
     label = "Quase pronto para vender"
     color = "#1d4ed8"
     bg = "rgba(59,130,246,0.12)"
   } else if (ratio >= 0.5) {
-    level = "needs-work"
     label = "Precisa de fechar mais base comercial"
     color = "#92400e"
     bg = "rgba(245,158,11,0.14)"
   }
 
-  return {
-    checks,
-    completed,
-    total,
-    ratio,
-    level,
-    label,
-    color,
-    bg,
-  }
+  return { checks, completed, total, ratio, label, color, bg }
+}
+
+function getExternalChannelOutputs(marketing) {
+  return [
+    {
+      id: "website",
+      label: "Website próprio",
+      outputs: [
+        { label: "Teaser público", ok: !!String(marketing?.teaser_headline || "").trim() },
+        { label: "Caminho de compra", ok: !!String(marketing?.teaser_cta_label || "").trim() },
+        { label: "Cover comercial", ok: !!String(marketing?.teaser_cover_url || "").trim() },
+      ],
+    },
+    {
+      id: "amazon",
+      label: "Amazon KDP",
+      outputs: [
+        { label: "Capa final", ok: !!String(marketing?.teaser_cover_url || "").trim() },
+        { label: "Copy comercial", ok: !!String(marketing?.teaser_subtitle || "").trim() },
+        { label: "Texto de lançamento", ok: !!String(marketing?.teaser_release_label || "").trim() },
+      ],
+    },
+    {
+      id: "youtube",
+      label: "YouTube / YouTube Kids",
+      outputs: [
+        { label: "Vídeo principal", ok: !!String(marketing?.teaser_trailer_url || "").trim() },
+        { label: "Título forte", ok: !!String(marketing?.teaser_headline || "").trim() },
+        { label: "Descrição base", ok: !!String(marketing?.teaser_excerpt || marketing?.teaser_subtitle || "").trim() },
+      ],
+    },
+    {
+      id: "audio",
+      label: "Audiobook / outras plataformas",
+      outputs: [
+        { label: "Copy base", ok: !!String(marketing?.teaser_excerpt || "").trim() },
+        { label: "Capa", ok: !!String(marketing?.teaser_cover_url || "").trim() },
+        { label: "Título de saída", ok: !!String(marketing?.teaser_headline || "").trim() },
+      ],
+    },
+  ]
 }
 
 function Button({ children, onClick, disabled = false, tone = "primary" }) {
@@ -323,6 +351,10 @@ export default function WebsiteMarketingControlPanel({ user }) {
   const salesReadiness = useMemo(
     () => getSalesReadiness(selectedProject, marketing, websiteSync),
     [selectedProject, marketing, websiteSync]
+  )
+  const externalOutputs = useMemo(
+    () => getExternalChannelOutputs(marketing),
+    [marketing]
   )
 
   async function loadProjects() {
@@ -481,7 +513,6 @@ export default function WebsiteMarketingControlPanel({ user }) {
       )
 
       await refreshProject(selectedProjectId)
-
       if (successMessage) {
         alert(successMessage)
       }
@@ -598,7 +629,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
         user
       )
 
-      await unpublishProjectToWebsite(selectedProjectId)
+      await unpublishProjectOnWebsite(selectedProjectId)
       await refreshProject(selectedProjectId)
       alert("Superfície pública retirada do Website.")
     } catch (error) {
@@ -630,20 +661,14 @@ export default function WebsiteMarketingControlPanel({ user }) {
           color: "#334155",
         }}
       >
-        O Studio decide o que fica privado, teaser, pré-lançamento ou lançamento final.
-        O Website só expõe a superfície pública escolhida aqui.
+        O Studio decide o que fica privado, teaser, pré-lançamento ou lançamento final. O Website só expõe a superfície pública escolhida aqui.
       </div>
 
       <label>Projeto</label>
       <select
         value={selectedProjectId}
         onChange={(e) => setSelectedProjectId(e.target.value)}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       >
         <option value="">Selecionar projeto</option>
         {projects.map((project) => (
@@ -664,12 +689,8 @@ export default function WebsiteMarketingControlPanel({ user }) {
             gap: 6,
           }}
         >
-          <div>
-            <strong>{selectedProject.title}</strong>
-          </div>
-          <div>
-            IP: {selectedProject.saga_name} ({selectedProject.saga_slug})
-          </div>
+          <div><strong>{selectedProject.title}</strong></div>
+          <div>IP: {selectedProject.saga_name} ({selectedProject.saga_slug})</div>
           <div>Ready for publish: {selectedProject.ready_for_publish ? "Sim" : "Não"}</div>
           <div>Estado público atual: {marketing.public_state}</div>
           <div>Assets detetados: {assets.length}</div>
@@ -707,21 +728,8 @@ export default function WebsiteMarketingControlPanel({ user }) {
           </span>
         </div>
 
-        <div
-          style={{
-            height: 10,
-            borderRadius: 999,
-            overflow: "hidden",
-            background: "rgba(255,255,255,0.65)",
-          }}
-        >
-          <div
-            style={{
-              width: `${Math.round(salesReadiness.ratio * 100)}%`,
-              height: "100%",
-              background: salesReadiness.color,
-            }}
-          />
+        <div style={{ height: 10, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.65)" }}>
+          <div style={{ width: `${Math.round(salesReadiness.ratio * 100)}%`, height: "100%", background: salesReadiness.color }} />
         </div>
 
         <div style={{ display: "grid", gap: 8 }}>
@@ -740,12 +748,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
               }}
             >
               <span>{item.label}</span>
-              <span
-                style={{
-                  color: item.ok ? "#166534" : "#991b1b",
-                  fontWeight: 700,
-                }}
-              >
+              <span style={{ color: item.ok ? "#166534" : "#991b1b", fontWeight: 700 }}>
                 {item.ok ? "OK" : "Falta"}
               </span>
             </div>
@@ -765,7 +768,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
       >
         <div><strong>Distribution Hub snapshot</strong></div>
         <div style={{ color: "#475569" }}>
-          O Studio é o centro de comando. O Website é só um destino. Amazon, YouTube e outros canais entram aqui como próximos destinos operacionais.
+          O Studio é o centro de comando. O Website é o primeiro destino. Amazon, YouTube e áudio entram como expansão controlada.
         </div>
         <div style={{ display: "grid", gap: 8 }}>
           {distributionDestinations.map((destination) => {
@@ -807,69 +810,83 @@ export default function WebsiteMarketingControlPanel({ user }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button onClick={autofill} disabled={busy || !selectedProjectId}>
-          Preencher da produção
-        </Button>
-        <Button
-          onClick={() => applyPreset("quick")}
-          disabled={busy || !selectedProjectId}
-          tone="secondary"
-        >
-          Preset teaser rápido
-        </Button>
-        <Button
-          onClick={() => applyPreset("prelaunch")}
-          disabled={busy || !selectedProjectId}
-          tone="secondary"
-        >
-          Preset pré-lançamento
-        </Button>
-        <Button
-          onClick={() => applyPreset("launch")}
-          disabled={busy || !selectedProjectId}
-          tone="secondary"
-        >
-          Preset lançamento
-        </Button>
-        <Button onClick={presetAndPublishTeaser} disabled={busy || !selectedProjectId}>
-          Preset + publicar teaser
-        </Button>
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 12,
+          border: "1px solid #e5e7eb",
+          background: "rgba(255,255,255,0.55)",
+          display: "grid",
+          gap: 8,
+        }}
+      >
+        <div><strong>External channel outputs</strong></div>
+        <div style={{ color: "#475569" }}>
+          Aqui vês rapidamente se cada canal já tem base mínima de saída pronta antes da integração externa real.
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {externalOutputs.map((channel) => (
+            <div
+              key={channel.id}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                border: "1px solid #d1d5db",
+                background: "#fff",
+                display: "grid",
+                gap: 8,
+              }}
+            >
+              <strong>{channel.label}</strong>
+              <div style={{ display: "grid", gap: 8 }}>
+                {channel.outputs.map((output) => (
+                  <div
+                    key={output.label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      padding: 10,
+                      borderRadius: 10,
+                      border: "1px solid rgba(148,163,184,0.22)",
+                      background: "rgba(248,250,252,0.85)",
+                    }}
+                  >
+                    <span>{output.label}</span>
+                    <span style={{ color: output.ok ? "#166534" : "#991b1b", fontWeight: 700 }}>
+                      {output.ok ? "OK" : "Falta"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button
-          onClick={() => save(marketing, "Controlo de marketing do Website guardado.")}
-          disabled={busy || !selectedProjectId}
-        >
-          Guardar controlo marketing
-        </Button>
-        <Button onClick={publishTeaser} disabled={busy || !selectedProjectId}>
-          Publicar pré-lançamento
-        </Button>
-        <Button onClick={promoteLaunch} disabled={busy || !selectedProjectId}>
-          Promover para lançamento
-        </Button>
-        <Button onClick={withdraw} disabled={busy || !selectedProjectId} tone="danger">
-          Retirar do Website
-        </Button>
+        <Button onClick={autofill} disabled={busy || !selectedProjectId}>Preencher da produção</Button>
+        <Button onClick={() => applyPreset("quick")} disabled={busy || !selectedProjectId} tone="secondary">Preset teaser rápido</Button>
+        <Button onClick={() => applyPreset("prelaunch")} disabled={busy || !selectedProjectId} tone="secondary">Preset pré-lançamento</Button>
+        <Button onClick={() => applyPreset("launch")} disabled={busy || !selectedProjectId} tone="secondary">Preset lançamento</Button>
+        <Button onClick={presetAndPublishTeaser} disabled={busy || !selectedProjectId}>Preset + publicar teaser</Button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Button onClick={() => save(marketing, "Controlo de marketing do Website guardado.")} disabled={busy || !selectedProjectId}>Guardar controlo marketing</Button>
+        <Button onClick={publishTeaser} disabled={busy || !selectedProjectId}>Publicar pré-lançamento</Button>
+        <Button onClick={promoteLaunch} disabled={busy || !selectedProjectId}>Promover para lançamento</Button>
+        <Button onClick={withdraw} disabled={busy || !selectedProjectId} tone="danger">Retirar do Website</Button>
       </div>
 
       <label>Estado público</label>
       <select
         value={marketing.public_state}
         onChange={(e) => setPatch({ public_state: e.target.value })}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
+        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
       >
         {STATES.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
+          <option key={value} value={value}>{value}</option>
         ))}
       </select>
 
@@ -878,7 +895,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
           type="checkbox"
           checked={!!marketing.prelaunch_enabled}
           onChange={(e) => setPatch({ prelaunch_enabled: e.target.checked })}
-        />{" "}
+        /> {" "}
         Pré-lançamento público ativo
       </label>
 
@@ -886,36 +903,16 @@ export default function WebsiteMarketingControlPanel({ user }) {
         <input
           type="checkbox"
           checked={marketing.share_preview_images_during_production !== false}
-          onChange={(e) =>
-            setPatch({ share_preview_images_during_production: e.target.checked })
-          }
-        />{" "}
+          onChange={(e) => setPatch({ share_preview_images_during_production: e.target.checked })}
+        /> {" "}
         Permitir partilhar imagens teaser durante produção
       </label>
 
       {imageAssets.length ? (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Button
-            onClick={() => useCover(imageAssets[0])}
-            disabled={busy || !selectedProjectId}
-            tone="secondary"
-          >
-            Usar 1ª imagem como cover
-          </Button>
-          <Button
-            onClick={useFirstThreeGallery}
-            disabled={busy || !selectedProjectId}
-            tone="secondary"
-          >
-            Usar 3 primeiras na galeria
-          </Button>
-          <Button
-            onClick={useFirstSixGallery}
-            disabled={busy || !selectedProjectId}
-            tone="secondary"
-          >
-            Usar 6 primeiras na galeria
-          </Button>
+          <Button onClick={() => useCover(imageAssets[0])} disabled={busy || !selectedProjectId} tone="secondary">Usar 1ª imagem como cover</Button>
+          <Button onClick={useFirstThreeGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 3 primeiras na galeria</Button>
+          <Button onClick={useFirstSixGallery} disabled={busy || !selectedProjectId} tone="secondary">Usar 6 primeiras na galeria</Button>
         </div>
       ) : null}
 
@@ -931,14 +928,9 @@ export default function WebsiteMarketingControlPanel({ user }) {
           }}
         >
           <strong>Assets sugeridos do projeto</strong>
-
           <div style={{ display: "grid", gap: 8 }}>
             {assets.slice(0, 10).map((item) => {
-              const isSelected =
-                item === marketing.teaser_cover_url ||
-                item === marketing.teaser_trailer_url ||
-                (marketing.teaser_gallery || []).includes(item)
-
+              const isSelected = item === marketing.teaser_cover_url || item === marketing.teaser_trailer_url || (marketing.teaser_gallery || []).includes(item)
               return (
                 <div
                   key={item}
@@ -951,25 +943,13 @@ export default function WebsiteMarketingControlPanel({ user }) {
                     gap: 8,
                   }}
                 >
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 8,
-                      gridTemplateColumns: isImage(item) ? "92px 1fr" : "1fr",
-                    }}
-                  >
+                  <div style={{ display: "grid", gap: 8, gridTemplateColumns: isImage(item) ? "92px 1fr" : "1fr" }}>
                     <div>
                       {isImage(item) ? (
                         <img
                           src={item}
                           alt="asset preview"
-                          style={{
-                            width: 92,
-                            height: 92,
-                            objectFit: "cover",
-                            borderRadius: 10,
-                            border: "1px solid #e5e7eb",
-                          }}
+                          style={{ width: 92, height: 92, objectFit: "cover", borderRadius: 10, border: "1px solid #e5e7eb" }}
                         />
                       ) : isVideo(item) ? (
                         <div
@@ -989,26 +969,13 @@ export default function WebsiteMarketingControlPanel({ user }) {
                         </div>
                       ) : null}
                     </div>
-
                     <div style={{ wordBreak: "break-all" }}>{item}</div>
                   </div>
 
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {isImage(item) ? (
-                      <Button onClick={() => useCover(item)} tone="secondary">
-                        Usar como cover
-                      </Button>
-                    ) : null}
-                    {isImage(item) ? (
-                      <Button onClick={() => addGallery(item)} tone="secondary">
-                        Adicionar galeria
-                      </Button>
-                    ) : null}
-                    {isVideo(item) ? (
-                      <Button onClick={() => useTrailer(item)} tone="secondary">
-                        Usar como trailer
-                      </Button>
-                    ) : null}
+                    {isImage(item) ? <Button onClick={() => useCover(item)} tone="secondary">Usar como cover</Button> : null}
+                    {isImage(item) ? <Button onClick={() => addGallery(item)} tone="secondary">Adicionar galeria</Button> : null}
+                    {isVideo(item) ? <Button onClick={() => useTrailer(item)} tone="secondary">Usar como trailer</Button> : null}
                   </div>
                 </div>
               )
@@ -1018,136 +985,34 @@ export default function WebsiteMarketingControlPanel({ user }) {
       ) : null}
 
       <label>Badge teaser</label>
-      <input
-        value={marketing.teaser_badge || ""}
-        onChange={(e) => setPatch({ teaser_badge: e.target.value })}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
-      />
+      <input value={marketing.teaser_badge || ""} onChange={(e) => setPatch({ teaser_badge: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
       <label>Headline teaser</label>
-      <input
-        value={marketing.teaser_headline || ""}
-        onChange={(e) => setPatch({ teaser_headline: e.target.value })}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
-      />
+      <input value={marketing.teaser_headline || ""} onChange={(e) => setPatch({ teaser_headline: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
       <label>Subheadline teaser</label>
-      <textarea
-        value={marketing.teaser_subtitle || ""}
-        onChange={(e) => setPatch({ teaser_subtitle: e.target.value })}
-        rows={3}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-          resize: "vertical",
-        }}
-      />
+      <textarea value={marketing.teaser_subtitle || ""} onChange={(e) => setPatch({ teaser_subtitle: e.target.value })} rows={3} style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
       <label>CTA teaser</label>
-      <input
-        value={marketing.teaser_cta_label || ""}
-        onChange={(e) => setPatch({ teaser_cta_label: e.target.value })}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
-      />
+      <input value={marketing.teaser_cta_label || ""} onChange={(e) => setPatch({ teaser_cta_label: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
       <label>Texto de lançamento</label>
-      <input
-        value={marketing.teaser_release_label || ""}
-        onChange={(e) => setPatch({ teaser_release_label: e.target.value })}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
-      />
+      <input value={marketing.teaser_release_label || ""} onChange={(e) => setPatch({ teaser_release_label: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
       <label>Imagem teaser principal</label>
-      <input
-        value={marketing.teaser_cover_url || ""}
-        onChange={(e) => setPatch({ teaser_cover_url: e.target.value })}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
-      />
+      <input value={marketing.teaser_cover_url || ""} onChange={(e) => setPatch({ teaser_cover_url: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
       <label>Trailer teaser</label>
-      <input
-        value={marketing.teaser_trailer_url || ""}
-        onChange={(e) => setPatch({ teaser_trailer_url: e.target.value })}
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-        }}
-      />
+      <input value={marketing.teaser_trailer_url || ""} onChange={(e) => setPatch({ teaser_trailer_url: e.target.value })} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
 
       <label>Galeria teaser</label>
-      <textarea
-        value={toText(marketing.teaser_gallery)}
-        onChange={(e) => setPatch({ teaser_gallery: parseLines(e.target.value) })}
-        rows={4}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-          resize: "vertical",
-        }}
-      />
+      <textarea value={toText(marketing.teaser_gallery)} onChange={(e) => setPatch({ teaser_gallery: parseLines(e.target.value) })} rows={4} style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
       <label>Excerto público</label>
-      <textarea
-        value={marketing.teaser_excerpt || ""}
-        onChange={(e) => setPatch({ teaser_excerpt: e.target.value })}
-        rows={4}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-          resize: "vertical",
-        }}
-      />
+      <textarea value={marketing.teaser_excerpt || ""} onChange={(e) => setPatch({ teaser_excerpt: e.target.value })} rows={4} style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
       <label>Notas de visibilidade</label>
-      <textarea
-        value={marketing.teaser_visibility_notes || ""}
-        onChange={(e) => setPatch({ teaser_visibility_notes: e.target.value })}
-        rows={3}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          outline: "none",
-          resize: "vertical",
-        }}
-      />
+      <textarea value={marketing.teaser_visibility_notes || ""} onChange={(e) => setPatch({ teaser_visibility_notes: e.target.value })} rows={3} style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none", resize: "vertical" }} />
 
       <div
         style={{
@@ -1159,59 +1024,20 @@ export default function WebsiteMarketingControlPanel({ user }) {
           gap: 8,
         }}
       >
-        <div>
-          <strong>Preview rápido do teaser</strong>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gap: 8,
-            padding: 12,
-            borderRadius: 12,
-            background: "#fff",
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          <div
-            style={{
-              display: "inline-flex",
-              width: "fit-content",
-              padding: "6px 10px",
-              borderRadius: 999,
-              background: "rgba(212,167,60,0.18)",
-              color: "#7c5a00",
-              fontWeight: 700,
-            }}
-          >
+        <div><strong>Preview rápido do teaser</strong></div>
+        <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, background: "#fff", border: "1px solid #e5e7eb" }}>
+          <div style={{ display: "inline-flex", width: "fit-content", padding: "6px 10px", borderRadius: 999, background: "rgba(212,167,60,0.18)", color: "#7c5a00", fontWeight: 700 }}>
             {marketing.teaser_badge || "Em breve"}
           </div>
-
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#1f2937" }}>
-            {marketing.teaser_headline || selectedProject?.title || "Headline teaser"}
-          </div>
-
-          <div style={{ color: "#475569" }}>
-            {marketing.teaser_subtitle || "Subheadline teaser"}
-          </div>
-
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#1f2937" }}>{marketing.teaser_headline || selectedProject?.title || "Headline teaser"}</div>
+          <div style={{ color: "#475569" }}>{marketing.teaser_subtitle || "Subheadline teaser"}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", color: "#64748b" }}>
             <span>CTA: {marketing.teaser_cta_label || "-"}</span>
             <span>•</span>
             <span>{marketing.teaser_release_label || "-"}</span>
           </div>
-
-          {marketing.teaser_cover_url ? (
-            <div style={{ wordBreak: "break-all", color: "#64748b" }}>
-              Cover: {marketing.teaser_cover_url}
-            </div>
-          ) : null}
-
-          {(marketing.teaser_gallery || []).length ? (
-            <div style={{ color: "#64748b" }}>
-              Galeria: {(marketing.teaser_gallery || []).length} imagem(ns)
-            </div>
-          ) : null}
+          {marketing.teaser_cover_url ? <div style={{ wordBreak: "break-all", color: "#64748b" }}>Cover: {marketing.teaser_cover_url}</div> : null}
+          {(marketing.teaser_gallery || []).length ? <div style={{ color: "#64748b" }}>Galeria: {(marketing.teaser_gallery || []).length} imagem(ns)</div> : null}
         </div>
       </div>
 
@@ -1226,9 +1052,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
             gap: 6,
           }}
         >
-          <div>
-            <strong>Último sync Website</strong>
-          </div>
+          <div><strong>Último sync Website</strong></div>
           <div>Publication ID: {websiteSync.publication_id || "-"}</div>
           <div>Checksum: {websiteSync.checksum || "-"}</div>
           <div>Publicado em: {websiteSync.published_at || "-"}</div>
