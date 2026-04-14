@@ -1,0 +1,51 @@
+name: Website Channel Ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "ID do projeto"
+        required: true
+        type: string
+      action:
+        description: "Ação do canal website"
+        required: true
+        default: "status"
+        type: choice
+        options:
+          - status
+          - envelope
+          - publish
+          - revalidate
+          - unpublish
+
+jobs:
+  website-channel-ops:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ inputs.project_id }}
+      CHANNEL_ACTION: ${{ inputs.action }}
+      BARIBUDOS_WEBSITE_PUBLISH_URL: ${{ secrets.BARIBUDOS_WEBSITE_PUBLISH_URL }}
+      BARIBUDOS_WEBSITE_PUBLISH_API_KEY: ${{ secrets.BARIBUDOS_WEBSITE_PUBLISH_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run website channel operation
+        run: PYTHONPATH=. python scripts/operate_website_channel.py
+
+      - name: Upload website channel operation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-channel-operation-report
+          path: artifacts/website-channel-operation-report.json
