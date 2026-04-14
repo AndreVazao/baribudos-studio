@@ -1,0 +1,38 @@
+name: Distribution Hub V6 Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "studio_core/**"
+      - "client/mobile-app/src/components/WebsiteMarketingControlPanel.jsx"
+      - "client/mobile-app/src/api/distribution-hub.js"
+      - "scripts/smoke_distribution_hub_v6.py"
+      - ".github/workflows/distribution-hub-v6-smoke.yml"
+
+jobs:
+  distribution-hub-v6-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install httpx
+
+      - name: Run Distribution Hub V6 smoke test
+        run: python scripts/smoke_distribution_hub_v6.py
+
+      - name: Upload smoke artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-hub-v6-smoke-report
+          path: artifacts/distribution-hub-v6-smoke-report.json
