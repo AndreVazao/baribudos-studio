@@ -8,6 +8,10 @@ import {
   unpublishProjectOnWebsite,
   updateProjectCommercial,
 } from "../api.js"
+import {
+  getDistributionHub,
+  refreshDistributionHub,
+} from "../api/distribution-hub.js"
 
 const STATES = [
   "private",
@@ -63,7 +67,7 @@ function getDistributionDestinations(project, marketing, websiteSync) {
 
   const websiteStatus = publicState === "published"
     ? "published"
-    : publicState === "prelaunch_public" || publicState === "teaser_ready"
+    : publicState === "prelaunch_public" || publicState === "teaser_ready" || publicState === "launch_ready"
       ? "ready"
       : ready
         ? "queued"
@@ -79,12 +83,12 @@ function getDistributionDestinations(project, marketing, websiteSync) {
         ? `Sync conhecido: ${websiteSync?.published_at || websiteSync?.last_revalidate_at || websiteSync?.publication_id}`
         : "Sem publicação conhecida ainda.",
       attempts: hasWebsiteActivity ? 1 : 0,
-      lastAttempt: websiteSync?.last_revalidate_at || websiteSync?.published_at || "-",
-      lastError: publicState === "private" ? "-" : "Sem erro conhecido.",
+      last_attempt: websiteSync?.last_revalidate_at || websiteSync?.published_at || "-",
+      last_error: publicState === "private" ? "-" : "Sem erro conhecido.",
       notes: publicState === "published"
         ? "Canal próprio principal e primeiro motor de monetização."
         : "Usar este canal para validar descoberta e compra antes de escalar.",
-      payloadSnapshot: {
+      payload_snapshot: {
         title: marketing?.teaser_headline || project?.title || "-",
         cta: marketing?.teaser_cta_label || "-",
         cover: marketing?.teaser_cover_url || "-",
@@ -103,10 +107,10 @@ function getDistributionDestinations(project, marketing, websiteSync) {
         ? "Pode ser o primeiro canal externo depois de validar receita no Website."
         : "Ainda precisa de mais base editorial e comercial.",
       attempts: 0,
-      lastAttempt: "-",
-      lastError: "-",
+      last_attempt: "-",
+      last_error: "-",
       notes: "Preparar capa, copy comercial, texto de lançamento e metadados finais.",
-      payloadSnapshot: {
+      payload_snapshot: {
         title: marketing?.teaser_headline || project?.title || "-",
         commercial_copy: marketing?.teaser_subtitle || "-",
         release_text: marketing?.teaser_release_label || "-",
@@ -125,10 +129,10 @@ function getDistributionDestinations(project, marketing, websiteSync) {
         ? "Já existe base de vídeo para preparar uma saída externa."
         : "Sem vídeo principal ainda, por isso ainda não é o melhor próximo passo.",
       attempts: 0,
-      lastAttempt: "-",
-      lastError: "-",
+      last_attempt: "-",
+      last_error: "-",
       notes: "Preparar vídeo, título, descrição e eventual thumbnail por ativo.",
-      payloadSnapshot: {
+      payload_snapshot: {
         title: marketing?.teaser_headline || project?.title || "-",
         video: marketing?.teaser_trailer_url || "-",
         description: marketing?.teaser_excerpt || marketing?.teaser_subtitle || "-",
@@ -147,10 +151,10 @@ function getDistributionDestinations(project, marketing, websiteSync) {
         ? "Já existe copy base para preparar uma saída de áudio ou plataforma complementar."
         : "Falta base de texto pública para um canal áudio ficar credível.",
       attempts: 0,
-      lastAttempt: "-",
-      lastError: "-",
+      last_attempt: "-",
+      last_error: "-",
       notes: "Preparar áudio final, capa, copy e estado por canal antes de automatizar.",
-      payloadSnapshot: {
+      payload_snapshot: {
         title: marketing?.teaser_headline || project?.title || "-",
         excerpt: marketing?.teaser_excerpt || "-",
         cover: marketing?.teaser_cover_url || "-",
@@ -316,6 +320,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
   const [commercial, setCommercial] = useState({})
   const [marketing, setMarketing] = useState(EMPTY)
   const [publishStatus, setPublishStatus] = useState(null)
+  const [distributionHub, setDistributionHub] = useState(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => { loadProjects() }, [])
@@ -325,10 +330,13 @@ export default function WebsiteMarketingControlPanel({ user }) {
   const assets = useMemo(() => collect(selectedProject), [selectedProject])
   const imageAssets = useMemo(() => assets.filter(isImage), [assets])
   const videoAssets = useMemo(() => assets.filter(isVideo), [assets])
-  const websiteSync = publishStatus?.website_sync || selectedProject?.website_sync || null
-  const distributionDestinations = useMemo(() => getDistributionDestinations(selectedProject, marketing, websiteSync), [selectedProject, marketing, websiteSync])
-  const salesReadiness = useMemo(() => getSalesReadiness(selectedProject, marketing, websiteSync), [selectedProject, marketing, websiteSync])
-  const externalOutputs = useMemo(() => getExternalChannelOutputs(marketing), [marketing])
+  const websiteSync = distributionHub?.website_sync || publishStatus?.website_sync || selectedProject?.website_sync || null
+  const distributionDestinations = useMemo(() => {
+    if (Array.isArray(distributionHub?.destinations) && distributionHub.destinations.length) return distributionHub.destinations
+    return getDistributionDestinations(selectedProject, marketing, websiteSync)
+  }, [distributionHub, selectedProject, marketing, websiteSync])
+  const salesReadiness = useMemo(() => distributionHub?.sales_readiness || getSalesReadiness(selectedProject, marketing, websiteSync), [distributionHub, selectedProject, marketing, websiteSync])
+  const externalOutputs = useMemo(() => Array.isArray(distributionHub?.external_outputs) ? distributionHub.external_outputs : getExternalChannelOutputs(marketing), [distributionHub, marketing])
 
   async function loadProjects() {
     const res = await listProjects(user)
@@ -337,17 +345,36 @@ export default function WebsiteMarketingControlPanel({ user }) {
     if (!selectedProjectId && list.length) setSelectedProjectId(list[0].id)
   }
 
-  async function refreshProject(projectId) {
+  async function refreshProject(projectId, options = {}) {
+    const forceHubRefresh = !!options.forceHubRefresh
     setBusy(true)
     try {
-      const [commercialRes, statusRes] = await Promise.all([
+      if (forceHubRefresh) {
+        await refreshDistributionHub(projectId, user).catch(() => null)
+      }
+
+      const [projectsRes, commercialRes, statusRes, hubRes] = await Promise.all([
+        listProjects(user).catch(() => null),
         getProjectCommercial(projectId).catch(() => ({ commercial: {} })),
         getWebsitePublishStatus(projectId).catch(() => null),
+        getDistributionHub(projectId).catch(() => null),
       ])
+
+      if (projectsRes?.projects) {
+        setProjects(projectsRes.projects)
+      }
+
       const nextCommercial = commercialRes?.commercial || {}
+      const nextDistributionHub = hubRes?.distribution_hub || null
+      const nextMarketing = {
+        ...EMPTY,
+        ...(nextDistributionHub?.marketing || nextCommercial?.website_marketing || nextCommercial?.marketing || {}),
+      }
+
       setCommercial(nextCommercial)
-      setMarketing({ ...EMPTY, ...(nextCommercial?.website_marketing || nextCommercial?.marketing || {}) })
+      setMarketing(nextMarketing)
       setPublishStatus(statusRes || null)
+      setDistributionHub(nextDistributionHub)
     } finally {
       setBusy(false)
     }
@@ -361,13 +388,17 @@ export default function WebsiteMarketingControlPanel({ user }) {
   const useFirstSixGallery = () => setPatch({ teaser_gallery: imageAssets.slice(0, 6) })
 
   function autofill() {
+    const storyText = typeof selectedProject?.story === "string"
+      ? selectedProject.story
+      : selectedProject?.story?.raw_text || ""
+
     setPatch({
       teaser_cover_url: marketing.teaser_cover_url || imageAssets[0] || selectedProject?.cover_image || selectedProject?.illustration_path || "",
       teaser_gallery: marketing.teaser_gallery?.length ? marketing.teaser_gallery : imageAssets.slice(0, 6),
       teaser_trailer_url: marketing.teaser_trailer_url || videoAssets[0] || "",
       teaser_headline: marketing.teaser_headline || selectedProject?.title || "",
       teaser_subtitle: marketing.teaser_subtitle || selectedProject?.summary || selectedProject?.description || `Uma nova criação do universo ${selectedProject?.saga_name || "Baribudos"} está a ganhar forma.`,
-      teaser_excerpt: marketing.teaser_excerpt || selectedProject?.story || selectedProject?.summary || "",
+      teaser_excerpt: marketing.teaser_excerpt || storyText || selectedProject?.summary || "",
     })
   }
 
@@ -437,7 +468,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
           teaser_gallery: Array.isArray(nextMarketing.teaser_gallery) ? nextMarketing.teaser_gallery : parseLines(nextMarketing.teaser_gallery),
         },
       }, user)
-      await refreshProject(selectedProjectId)
+      await refreshProject(selectedProjectId, { forceHubRefresh: true })
       if (successMessage) alert(successMessage)
     } catch (error) {
       alert(error?.message || "Erro ao guardar controlo de marketing.")
@@ -455,7 +486,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
         website_marketing: { ...marketing, public_state: "prelaunch_public", prelaunch_enabled: true },
       }, user)
       await publishProjectToWebsite(selectedProjectId)
-      await refreshProject(selectedProjectId)
+      await refreshProject(selectedProjectId, { forceHubRefresh: true })
       alert("Pré-lançamento empurrado para o Website.")
     } catch (error) {
       alert(error?.message || "Erro ao publicar pré-lançamento no Website.")
@@ -477,7 +508,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
         },
       }, user)
       await publishProjectToWebsite(selectedProjectId)
-      await refreshProject(selectedProjectId)
+      await refreshProject(selectedProjectId, { forceHubRefresh: true })
       alert("Preset de pré-lançamento aplicado e publicado no Website.")
     } catch (error) {
       alert(error?.message || "Erro ao aplicar e publicar teaser.")
@@ -496,7 +527,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
       }, user)
       await publishProjectToWebsite(selectedProjectId)
       await revalidateProjectOnWebsite(selectedProjectId)
-      await refreshProject(selectedProjectId)
+      await refreshProject(selectedProjectId, { forceHubRefresh: true })
       alert("Projeto promovido para lançamento final no Website.")
     } catch (error) {
       alert(error?.message || "Erro ao promover lançamento no Website.")
@@ -514,7 +545,7 @@ export default function WebsiteMarketingControlPanel({ user }) {
         website_marketing: { ...marketing, public_state: "private", prelaunch_enabled: false },
       }, user)
       await unpublishProjectOnWebsite(selectedProjectId)
-      await refreshProject(selectedProjectId)
+      await refreshProject(selectedProjectId, { forceHubRefresh: true })
       alert("Superfície pública retirada do Website.")
     } catch (error) {
       alert(error?.message || "Erro ao retirar superfície pública.")
@@ -524,7 +555,15 @@ export default function WebsiteMarketingControlPanel({ user }) {
   }
 
   return (
-    <Card title="Website Marketing Control" extra={<Button onClick={() => refreshProject(selectedProjectId)} disabled={busy || !selectedProjectId} tone="secondary">{busy ? "A atualizar..." : "Atualizar"}</Button>}>
+    <Card
+      title="Website Marketing Control"
+      extra={
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Button onClick={() => refreshProject(selectedProjectId)} disabled={busy || !selectedProjectId} tone="secondary">{busy ? "A atualizar..." : "Atualizar"}</Button>
+          <Button onClick={() => refreshProject(selectedProjectId, { forceHubRefresh: true })} disabled={busy || !selectedProjectId} tone="secondary">Sync hub V6</Button>
+        </div>
+      }
+    >
       <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(248,250,252,0.9)", color: "#334155" }}>
         O Studio decide o que fica privado, teaser, pré-lançamento ou lançamento final. O Website só expõe a superfície pública escolhida aqui.
       </div>
@@ -559,10 +598,12 @@ export default function WebsiteMarketingControlPanel({ user }) {
 
       <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 8 }}>
         <div><strong>Distribution Hub snapshot</strong></div>
-        <div style={{ color: "#475569" }}>O Studio é o centro de comando. O Website é o primeiro destino. Amazon, YouTube e áudio entram como expansão controlada.</div>
+        <div style={{ color: "#475569" }}>Snapshot real vindo do backend V6. O Studio é o centro de comando. O Website é o primeiro destino. Amazon, YouTube e áudio entram como expansão controlada.</div>
+        <div style={{ color: "#64748b", fontSize: 13 }}>Primary channel: <strong>{distributionHub?.primary_channel || "website"}</strong> · Último snapshot: <strong>{distributionHub?.last_snapshot_at || "-"}</strong></div>
         <div style={{ display: "grid", gap: 8 }}>
           {distributionDestinations.map((destination) => {
-            const meta = getStatusMeta(destination.status)
+            const meta = destination.status_meta || getStatusMeta(destination.status)
+            const payload = destination.payload_snapshot || destination.payloadSnapshot || {}
             return (
               <div key={destination.id} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", display: "grid", gap: 8 }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -572,14 +613,15 @@ export default function WebsiteMarketingControlPanel({ user }) {
                 <div style={{ color: "#475569" }}>{destination.description}</div>
                 <div style={{ color: "#64748b", fontSize: 13 }}>{destination.detail}</div>
                 <div style={{ display: "grid", gap: 6, padding: 10, borderRadius: 10, background: "rgba(248,250,252,0.88)", border: "1px solid rgba(148,163,184,0.20)" }}>
-                  <div>Tentativas: <strong>{destination.attempts}</strong></div>
-                  <div>Última tentativa: <strong>{destination.lastAttempt}</strong></div>
-                  <div>Último erro: <strong>{destination.lastError}</strong></div>
-                  <div>Notas: <strong>{destination.notes}</strong></div>
+                  <div>Tentativas: <strong>{destination.attempts ?? 0}</strong></div>
+                  <div>Última tentativa: <strong>{destination.last_attempt || destination.lastAttempt || "-"}</strong></div>
+                  <div>Último sucesso: <strong>{destination.last_success_at || destination.lastSuccessAt || "-"}</strong></div>
+                  <div>Último erro: <strong>{destination.last_error || destination.lastError || "-"}</strong></div>
+                  <div>Notas: <strong>{destination.notes || "-"}</strong></div>
                 </div>
                 <div style={{ display: "grid", gap: 6, padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.92)", border: "1px solid rgba(148,163,184,0.20)" }}>
                   <strong>Payload snapshot</strong>
-                  {Object.entries(destination.payloadSnapshot).map(([key, value]) => (
+                  {Object.entries(payload).map(([key, value]) => (
                     <div key={key} style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
                       <span style={{ color: "#475569" }}>{key}</span>
                       <span style={{ color: "#111827", maxWidth: "60%", textAlign: "right", wordBreak: "break-word" }}>{String(value)}</span>

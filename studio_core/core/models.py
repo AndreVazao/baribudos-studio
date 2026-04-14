@@ -11,6 +11,74 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def default_website_marketing() -> Dict[str, Any]:
+    return {
+        "public_state": "private",
+        "teaser_badge": "Em breve",
+        "teaser_headline": "",
+        "teaser_subtitle": "",
+        "teaser_cta_label": "Ver novidades",
+        "teaser_release_label": "",
+        "teaser_gallery": [],
+        "teaser_cover_url": "",
+        "teaser_trailer_url": "",
+        "teaser_excerpt": "",
+        "teaser_visibility_notes": "",
+        "prelaunch_enabled": False,
+        "share_preview_images_during_production": True,
+    }
+
+
+def default_distribution_channel(enabled: bool = True) -> Dict[str, Any]:
+    return {
+        "enabled": enabled,
+        "manual_status": "",
+        "attempts": 0,
+        "last_attempt": "",
+        "last_success_at": "",
+        "last_error": "",
+        "notes": "",
+    }
+
+
+def default_distribution_hub() -> Dict[str, Any]:
+    return {
+        "version": "v6",
+        "project_id": "",
+        "primary_channel": "website",
+        "notes": "",
+        "channels": {
+            "website": default_distribution_channel(True),
+            "amazon": default_distribution_channel(True),
+            "youtube": default_distribution_channel(True),
+            "audio": default_distribution_channel(True),
+        },
+        "history": [],
+        "created_at": "",
+        "updated_at": "",
+        "last_snapshot_at": "",
+    }
+
+
+def default_project_commercial() -> Dict[str, Any]:
+    return {
+        "internal_code": "",
+        "isbn": "",
+        "asin": "",
+        "price": "",
+        "currency": "EUR",
+        "collection_seal": "",
+        "marketplaces": [],
+        "commercial_status": "draft",
+        "channels": [],
+        "keywords": [],
+        "subtitle": "",
+        "blurb": "",
+        "website_marketing": default_website_marketing(),
+        "distribution_hub": default_distribution_hub(),
+    }
+
+
 class UserCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     role: Literal["owner", "creator", "admin", "editor", "voice-recorder", "child", "viewer"] = "editor"
@@ -63,6 +131,8 @@ class ProjectCreate(BaseModel):
     hidden_saga_key: str = ""
     hidden_saga_name: str = ""
     stage_modes: Dict[str, Any] = Field(default_factory=lambda: dict(DEFAULT_STAGE_MODES))
+    ready_for_publish: bool = False
+    website_sync: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ProjectPatch(BaseModel):
@@ -87,6 +157,8 @@ class ProjectPatch(BaseModel):
     hidden_saga_name: Optional[str] = None
     continuity: Optional[Dict[str, Any]] = None
     stage_modes: Optional[Dict[str, Any]] = None
+    ready_for_publish: Optional[bool] = None
+    website_sync: Optional[Dict[str, Any]] = None
 
 
 class Project(BaseModel):
@@ -118,27 +190,16 @@ class Project(BaseModel):
     })
     cover_image: str = ""
     illustration_path: str = ""
-    commercial: Dict[str, Any] = Field(default_factory=lambda: {
-        "internal_code": "",
-        "isbn": "",
-        "asin": "",
-        "price": "",
-        "currency": "EUR",
-        "collection_seal": "",
-        "marketplaces": [],
-        "commercial_status": "draft",
-        "channels": [],
-        "keywords": [],
-        "subtitle": "",
-        "blurb": ""
-    })
+    commercial: Dict[str, Any] = Field(default_factory=default_project_commercial)
     front_matter: Dict[str, Any] = Field(default_factory=dict)
     story: Dict[str, Any] = Field(default_factory=lambda: {
         "title": "",
         "language": "pt-PT",
         "pages": [],
-        "raw_text": ""
+        "raw_text": "",
     })
     outputs: Dict[str, Any] = Field(default_factory=dict)
+    ready_for_publish: bool = False
+    website_sync: Dict[str, Any] = Field(default_factory=dict)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)

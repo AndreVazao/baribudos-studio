@@ -16,6 +16,7 @@ from studio_core.api.routes.commerce_groups import router as commerce_groups_rou
 from studio_core.api.routes.covers import router as covers_router
 from studio_core.api.routes.db_control import router as db_control_router
 from studio_core.api.routes.deploy_control import router as deploy_control_router
+from studio_core.api.routes.distribution_hub_v6 import router as distribution_hub_v6_router
 from studio_core.api.routes.diagnostics import router as diagnostics_router
 from studio_core.api.routes.editorial_engine import router as editorial_engine_router
 from studio_core.api.routes.editorial_media_pipeline import router as editorial_media_pipeline_router
@@ -118,6 +119,7 @@ if storage_dir.exists():
 
 app.include_router(health_router, prefix="/api")
 app.include_router(diagnostics_router, prefix="/api")
+app.include_router(distribution_hub_v6_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(project_commercial_router, prefix="/api")
@@ -179,26 +181,12 @@ app.include_router(marketplace_visuals_router, prefix="/api")
 app.include_router(pairing_router, prefix="/api")
 app.include_router(website_publisher_router, prefix="/api")
 app.include_router(website_control_router, prefix="/api")
-app.include_router(website_admin_router, prefix="/api")
-app.include_router(website_bundles_router, prefix="/api")
-app.include_router(website_bundle_reconcile_router, prefix="/api")
 app.include_router(website_visual_sets_router, prefix="/api")
 app.include_router(website_visual_set_reconcile_router, prefix="/api")
+app.include_router(website_bundles_router, prefix="/api")
+app.include_router(website_bundle_reconcile_router, prefix="/api")
+app.include_router(website_admin_router, prefix="/api")
 app.include_router(deploy_control_router, prefix="/api")
 app.include_router(db_control_router, prefix="/api")
-app.include_router(commerce_groups_router, prefix="/api")
 app.include_router(secret_control_router, prefix="/api")
-app.include_router(public_assets_router, prefix="/api")
-app.include_router(storefront_router)
-
-
-@app.get("/")
-def root() -> dict:
-    return {
-        "ok": True,
-        "app_name": APP_CONFIG.app_name,
-        "version": APP_CONFIG.app_version,
-        "docs": "/docs",
-        "health": "/api/health",
-        "diagnostics": "/api/diagnostics",
-}
+app.include_router(storefront_router, prefix="/api")

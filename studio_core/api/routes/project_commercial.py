@@ -8,6 +8,8 @@ from studio_core.core.storage import read_json, update_json_item
 router = APIRouter(prefix="/project-commercial", tags=["project-commercial"])
 
 PROJECTS_FILE = "data/projects.json"
+ALLOWED_ROLES = {"owner", "creator", "admin"}
+ALLOWED_NAMES = {"andre", "andré", "esposa"}
 
 
 def _normalize_name(value: str) -> str:
@@ -17,7 +19,11 @@ def _normalize_name(value: str) -> str:
 def _can_edit_or_publish(user_role: str, user_name: str) -> bool:
     role = str(user_role or "").strip().lower()
     name = _normalize_name(user_name)
-    return role in {"owner", "creator", "admin"} or name in {"andré", "andre", "esposa", "wife", "mama"}
+    return role in ALLOWED_ROLES or name in ALLOWED_NAMES
+
+
+def _safe_dict(value):
+    return value if isinstance(value, dict) else {}
 
 
 def _get_project(project_id: str) -> dict | None:
@@ -37,7 +43,7 @@ def get_project_commercial(project_id: str) -> dict:
     return {
         "ok": True,
         "project_id": project_id,
-        "commercial": project.get("commercial", {})
+        "commercial": _safe_dict(project.get("commercial")),
     }
 
 
@@ -50,7 +56,7 @@ def patch_project_commercial(project_id: str, payload: dict, user_name: str = ""
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
-    commercial = payload.get("commercial") or {}
+    commercial = payload.get("commercial") if isinstance(payload, dict) and isinstance(payload.get("commercial"), dict) else payload
     if not isinstance(commercial, dict):
         raise HTTPException(status_code=400, detail="commercial inválido.")
 
@@ -60,15 +66,15 @@ def patch_project_commercial(project_id: str, payload: dict, user_name: str = ""
         lambda current: {
             **current,
             "commercial": {
-                **(current.get("commercial", {}) or {}),
-                **commercial
+                **_safe_dict(current.get("commercial")),
+                **commercial,
             },
-            "updated_at": now_iso()
-        }
+            "updated_at": now_iso(),
+        },
     )
 
     return {
         "ok": True,
         "project_id": project_id,
-        "commercial": updated.get("commercial", {})
-  }
+        "commercial": _safe_dict(updated.get("commercial")),
+    }
