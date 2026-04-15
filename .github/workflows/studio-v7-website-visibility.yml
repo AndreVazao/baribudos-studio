@@ -1,0 +1,47 @@
+name: Studio V7 Website Visibility
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Consulta ao Website V7"
+        required: true
+        default: "project"
+        type: choice
+        options:
+          - project
+          - catalog
+          - selling
+      project_id:
+        description: "ID do projeto (obrigatório no modo project)"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  studio-v7-website-visibility:
+    runs-on: ubuntu-latest
+    env:
+      VISIBILITY_MODE: ${{ inputs.mode }}
+      PROJECT_ID: ${{ inputs.project_id }}
+      BARIBUDOS_WEBSITE_BASE_URL: ${{ secrets.BARIBUDOS_WEBSITE_BASE_URL }}
+      BARIBUDOS_WEBSITE_PUBLISH_URL: ${{ secrets.BARIBUDOS_WEBSITE_PUBLISH_URL }}
+      BARIBUDOS_WEBSITE_PUBLISH_API_KEY: ${{ secrets.BARIBUDOS_WEBSITE_PUBLISH_API_KEY }}
+      STUDIO_PUBLISH_API_KEY: ${{ secrets.STUDIO_PUBLISH_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run website visibility inspection
+        run: PYTHONPATH=. python scripts/inspect_website_v7_state.py
+
+      - name: Upload website visibility report
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-v7-website-visibility-report
+          path: artifacts/studio-v7-website-visibility-report.json
