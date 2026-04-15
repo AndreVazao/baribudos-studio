@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from studio_core.core.storage import read_json, update_json_item
-from studio_core.core.models import now_iso
+from studio_core.core.storage import read_json
+from studio_core.services.publication_package_freeze_service import (
+    build_freeze_snapshot,
+    freeze_publication_package_operationally,
+)
 from studio_core.services.publication_package_service import build_publication_package
-from studio_core.services.publication_policy_service import evaluate_project_publication_policy
 
 router = APIRouter(prefix="/publication-package", tags=["publication-package"])
 
@@ -37,7 +39,27 @@ def get_publication_package(project_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
     package = build_publication_package(project)
-    return {"ok": True, "project_id": project_id, "package": package}
+    return {
+        "ok": True,
+        "project_id": project_id,
+        "package": package,
+        "frozen_at": project.get("publication_package_frozen_at", ""),
+        "freeze": project.get("publication_package_freeze", {}),
+    }
+
+
+@router.get("/{project_id}/freeze-preview")
+def get_publication_package_freeze_preview(project_id: str) -> dict:
+    project = _get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+
+    snapshot = build_freeze_snapshot(project)
+    return {
+        "ok": True,
+        "project_id": project_id,
+        "freeze_preview": snapshot,
+    }
 
 
 @router.post("/{project_id}/freeze")
@@ -49,28 +71,14 @@ def freeze_publication_package(project_id: str, user_name: str = "", user_role: 
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
-    if not bool(project.get("ready_for_publish", False)):
-        raise HTTPException(status_code=400, detail="Projeto ainda não está marcado como pronto para publicação.")
-
-    package = build_publication_package(project)
-    policy = evaluate_project_publication_policy({**project, "publication_package": package, "publication_package_frozen_at": now_iso()})
-    if not bool(policy.get("contract", {}).get("required_ok", False)):
-        raise HTTPException(status_code=400, detail="Contrato Website ainda não cumpre os campos/ativos obrigatórios para congelar pacote público.")
-
-    updated = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "publication_package": package,
-            "publication_package_frozen_at": now_iso(),
-            "updated_at": now_iso()
-        }
-    )
-
-    return {
-        "ok": True,
-        "project_id": project_id,
-        "publication_package": updated.get("publication_package", {}),
-        "publication_package_frozen_at": updated.get("publication_package_frozen_at")
-    }
+    try:
+        return freeze_publication_package_operationally(project_id, user_name=user_name, user_role=user_role)
+    except ValueError as exc:
+        message = str(exc)
+        if message == "project_not_found":
+            raise HTTPException(status_code=404, detail="Projeto não encontrado.") from exc
+        if message == "project_not_ready_for_publish":
+            raise HTTPException(status_code=400, detail="Projeto ainda não está marcado como pronto para publicação.") from exc
+        if message == "website_contract_not_ready":
+            raise HTTPException(status_code=400, detail="Contrato Website ainda não cumpre os campos/ativos obrigatórios para congelar pacote público.") from exc
+        raise HTTPException(status_code=400, detail=message) from exc

@@ -4,8 +4,11 @@ from fastapi import APIRouter, HTTPException
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
-from studio_core.services.publication_package_service import build_publication_package
 from studio_core.services.ip_creator_service import get_ip_by_slug
+from studio_core.services.production_readiness_service import (
+    get_production_readiness,
+    sync_ready_for_publish_with_readiness,
+)
 
 router = APIRouter(prefix="/publish-readiness", tags=["publish-readiness"])
 
@@ -123,26 +126,56 @@ def _character_lock_status_for_project(project: dict) -> dict:
     }
 
 
+def _compose_readiness(project: dict) -> dict:
+    readiness = get_production_readiness(str(project.get("id", "")))
+    character_lock = _character_lock_status_for_project(project)
+    package_ready = bool(_safe_dict(readiness.get("package_readiness")).get("ready", False))
+    operational_ready = float(readiness.get("ratio", 0)) >= 0.75
+    ready = bool(package_ready and operational_ready and character_lock.get("character_lock_ready", True))
+
+    return {
+        **readiness,
+        "ready": ready,
+        "operational_ready": operational_ready,
+        "package_ready": package_ready,
+        "character_lock": character_lock,
+    }
+
+
 @router.get("/{project_id}")
 def get_publish_readiness(project_id: str) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
-    package = build_publication_package(project)
-    readiness = package.get("checks", {}).get("readiness", {})
-    character_lock = _character_lock_status_for_project(project)
-    ready = bool(readiness.get("ready", False)) and bool(character_lock.get("character_lock_ready", True))
+    readiness = _compose_readiness(project)
 
     return {
         "ok": True,
         "project_id": project_id,
-        "readiness": {
-            **readiness,
-            "ready": ready,
-            "character_lock": character_lock,
-        },
+        "readiness": readiness,
         "ready_for_publish": bool(project.get("ready_for_publish", False)),
+    }
+
+
+@router.post("/{project_id}/sync")
+def sync_publish_readiness(project_id: str, user_name: str = "", user_role: str = "") -> dict:
+    if not _can_edit_or_publish(user_role, user_name):
+        raise HTTPException(status_code=403, detail="Sem permissão para sincronizar prontidão.")
+
+    project = _get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+
+    sync_payload = sync_ready_for_publish_with_readiness(project_id)
+    refreshed_project = _get_project(project_id)
+    readiness = _compose_readiness(refreshed_project or project)
+
+    return {
+        "ok": True,
+        "project_id": project_id,
+        "ready_for_publish": bool(sync_payload.get("ready_for_publish", False)),
+        "readiness": readiness,
     }
 
 
@@ -155,17 +188,21 @@ def mark_ready(project_id: str, user_name: str = "", user_role: str = "") -> dic
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
-    package = build_publication_package(project)
-    readiness = package.get("checks", {}).get("readiness", {}) or {}
-    character_lock = _character_lock_status_for_project(project)
+    readiness = _compose_readiness(project)
 
-    if not readiness.get("ready", False):
+    if not readiness.get("operational_ready", False):
         raise HTTPException(
             status_code=400,
-            detail=f"Projeto ainda não está pronto. Estado: {readiness.get('label', 'Não pronto')}."
+            detail=f"Projeto ainda não está operacionalmente pronto. Estado: {readiness.get('label', 'Não pronto')}."
         )
 
-    if not character_lock.get("character_lock_ready", True):
+    if not readiness.get("package_ready", False):
+        raise HTTPException(
+            status_code=400,
+            detail="Projeto ainda não tem publication package pronto para publicação."
+        )
+
+    if not _safe_dict(readiness.get("character_lock")).get("character_lock_ready", True):
         raise HTTPException(
             status_code=400,
             detail="Projeto bloqueado por character lock da saga. Fecha a consistência visual dos personagens principais antes de marcar como pronto."
@@ -178,7 +215,9 @@ def mark_ready(project_id: str, user_name: str = "", user_role: str = "") -> dic
             **current,
             "ready_for_publish": True,
             "ready_for_publish_at": now_iso(),
-            "updated_at": now_iso()
+            "production_readiness": readiness,
+            "production_readiness_synced_at": now_iso(),
+            "updated_at": now_iso(),
         }
     )
 
@@ -186,7 +225,8 @@ def mark_ready(project_id: str, user_name: str = "", user_role: str = "") -> dic
         "ok": True,
         "project_id": project_id,
         "ready_for_publish": updated.get("ready_for_publish", False),
-        "ready_for_publish_at": updated.get("ready_for_publish_at", "")
+        "ready_for_publish_at": updated.get("ready_for_publish_at", ""),
+        "readiness": readiness,
     }
 
 
@@ -205,12 +245,12 @@ def unmark_ready(project_id: str, user_name: str = "", user_role: str = "") -> d
         lambda current: {
             **current,
             "ready_for_publish": False,
-            "updated_at": now_iso()
+            "updated_at": now_iso(),
         }
     )
 
     return {
         "ok": True,
         "project_id": project_id,
-        "ready_for_publish": updated.get("ready_for_publish", False)
-}
+        "ready_for_publish": updated.get("ready_for_publish", False),
+    }
