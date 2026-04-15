@@ -1,0 +1,67 @@
+name: Studio V7 Publish Ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "ID do projeto"
+        required: true
+        type: string
+      action:
+        description: "Ação V7"
+        required: true
+        default: "readiness"
+        type: choice
+        options:
+          - readiness
+          - sync_readiness
+          - freeze_preview
+          - freeze
+          - website_status
+          - website_envelope
+          - website_publish
+          - website_revalidate
+      user_name:
+        description: "Nome do operador"
+        required: false
+        default: "Andre"
+        type: string
+      user_role:
+        description: "Role do operador"
+        required: false
+        default: "owner"
+        type: string
+
+jobs:
+  studio-v7-publish-ops:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ inputs.project_id }}
+      FLOW_ACTION: ${{ inputs.action }}
+      FLOW_USER_NAME: ${{ inputs.user_name }}
+      FLOW_USER_ROLE: ${{ inputs.user_role }}
+      BARIBUDOS_WEBSITE_PUBLISH_URL: ${{ secrets.BARIBUDOS_WEBSITE_PUBLISH_URL }}
+      BARIBUDOS_WEBSITE_PUBLISH_API_KEY: ${{ secrets.BARIBUDOS_WEBSITE_PUBLISH_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install httpx
+
+      - name: Run studio v7 publish flow operation
+        run: PYTHONPATH=. python scripts/operate_studio_v7_publish_flow.py
+
+      - name: Upload studio v7 publish flow report
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-v7-publish-flow-report
+          path: artifacts/studio-v7-publish-flow-report.json
