@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -68,8 +69,38 @@ def _now_title() -> str:
     return datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
 
 
+def _env_path(*names: str) -> Path | None:
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return Path(value).expanduser().resolve()
+    return None
+
+
+def _obsidian_vault_name() -> str:
+    return os.getenv("BARIBUDOS_OBSIDIAN_VAULT_NAME", "AndreOS").strip() or "AndreOS"
+
+
 def _memory_root() -> Path:
-    return resolve_storage_path("memory", "AndreOS").resolve()
+    """Resolve the live Studio memory root.
+
+    Correct production use on the home PC:
+      BARIBUDOS_MEMORY_ROOT=C:\\AndreOS
+
+    or:
+      BARIBUDOS_OBSIDIAN_VAULT_ROOT=C:\\Users\\Andre\\Documents\\AndreOS
+
+    This keeps operational memory outside the public repository and aligned with
+    the local Obsidian vault. Legacy storage/memory/AndreOS remains available
+    only when explicitly requested through BARIBUDOS_USE_LEGACY_STORAGE_MEMORY=1.
+    """
+
+    configured = _env_path("BARIBUDOS_MEMORY_ROOT", "BARIBUDOS_OBSIDIAN_VAULT_ROOT")
+    if configured:
+        return configured
+    if os.getenv("BARIBUDOS_USE_LEGACY_STORAGE_MEMORY", "").strip() == "1":
+        return resolve_storage_path("memory", "AndreOS").resolve()
+    return (Path.home() / "AndreOS").resolve()
 
 
 def _safe_project_name(project_name: str) -> str:
@@ -116,19 +147,19 @@ def _default_file_content(project_name: str, file_name: str) -> str:
     focus = profile.get("focus", "Definir proximo foco operacional.")
 
     if file_name == "MEMORIA_MESTRE.md":
-        return f"# {title} - MEMORIA MESTRE\n\n## Objetivo\n{objective}\n\n## Fonte de verdade\nEsta nota guarda o contexto persistente oficial do projeto.\n\n## Relacao com outros sistemas\n- Baribudos Studio controla a producao e o dashboard.\n- Baribudos Studio Website recebe publicacoes e estado publico.\n- AndreOS Memory pode ser usado como memoria externa privada para IA.\n\n## Regras obrigatorias\n- Consultar memoria antes de responder ou executar.\n- Guardar decisoes importantes em DECISOES.md.\n- Guardar execucoes em HISTORICO.md.\n- Atualizar ULTIMA_SESSAO.md no fim de sessoes relevantes.\n- Nunca guardar credenciais, tokens, chaves API, cookies ou segredos.\n\n## Proximo foco\n{focus}\n"
+        return f"# {title} - MEMORIA MESTRE\n\n## Objetivo\n{objective}\n\n## Fonte de verdade\nEsta nota guarda o contexto persistente operacional local do projeto no PC/Obsidian.\n\n## Relacao com outros sistemas\n- Baribudos Studio controla a producao e o dashboard.\n- Baribudos Studio Website recebe publicacoes e estado publico.\n- AndreOS Memory no GitHub deve guardar apenas contexto tecnico de programacao/repos, nao memoria operacional viva.\n\n## Regras obrigatorias\n- Consultar memoria antes de responder ou executar.\n- Guardar decisoes importantes em DECISOES.md.\n- Guardar execucoes em HISTORICO.md.\n- Atualizar ULTIMA_SESSAO.md no fim de sessoes relevantes.\n- Nunca guardar credenciais, tokens, chaves API, cookies ou segredos.\n\n## Proximo foco\n{focus}\n"
     if file_name == "DECISOES.md":
-        return f"# Decisoes - {title}\n\n## {_now_title()}\nMemoria persistente inicial criada para o projeto.\n"
+        return f"# Decisoes - {title}\n\n## {_now_title()}\nMemoria persistente operacional local criada para o projeto.\n"
     if file_name == "ARQUITETURA.md":
-        return f"# Arquitetura - {title}\n\n## Estado inicial\nArquitetura a consolidar com base no repo e no fluxo Studio -> Website.\n\n## Componentes esperados\n- Memoria persistente local em Markdown.\n- Endpoints de consulta e escrita controlada.\n- Logs de acoes.\n- Contexto compacto para IA.\n"
+        return f"# Arquitetura - {title}\n\n## Estado inicial\nArquitetura a consolidar com base no repo e no fluxo Studio -> Website.\n\n## Componentes esperados\n- Memoria persistente local em Markdown no vault Obsidian AndreOS.\n- Endpoints de consulta e escrita controlada.\n- Logs de acoes.\n- Contexto compacto para IA.\n"
     if file_name == "BACKLOG.md":
-        return f"# Backlog - {title}\n\n## Prioridade Alta\n- Manter memoria persistente ativa.\n- Registrar decisoes, historico e ultima sessao.\n- Sincronizar conhecimento do Studio e Website no AndreOS Memory.\n\n## Prioridade Media\n- Criar pesquisa semantica/vector database no futuro.\n"
+        return f"# Backlog - {title}\n\n## Prioridade Alta\n- Manter memoria persistente operacional ativa no PC/Obsidian.\n- Registrar decisoes, historico e ultima sessao.\n- Separar memoria operacional local de memoria tecnica GitHub/andreos-memory.\n\n## Prioridade Media\n- Criar pesquisa semantica/vector database no futuro.\n"
     if file_name == "HISTORICO.md":
-        return f"# Historico - {title}\n\n## {_now_title()}\nMemoria persistente inicial criada.\n"
+        return f"# Historico - {title}\n\n## {_now_title()}\nMemoria persistente operacional local criada.\n"
     if file_name == "ULTIMA_SESSAO.md":
-        return f"# Ultima Sessao - {title}\n\n## Data\n{_now_iso()}\n\n## Estado\nMemoria persistente inicial criada.\n\n## Proximo passo\nUsar os endpoints de memoria para ler, escrever e montar contexto para IA.\n"
+        return f"# Ultima Sessao - {title}\n\n## Data\n{_now_iso()}\n\n## Estado\nMemoria persistente operacional local criada.\n\n## Proximo passo\nUsar os endpoints de memoria para ler, escrever e montar contexto para IA.\n"
     if file_name == "PROMPTS.md":
-        return f"# Prompts - {title}\n\n## Prompt base\nUsa a memoria persistente deste projeto antes de responder.\n"
+        return f"# Prompts - {title}\n\n## Prompt base\nUsa a memoria persistente operacional local deste projeto antes de responder.\n"
     if file_name == "ERROS.md":
         return f"# Erros - {title}\n\n## Estado inicial\nAinda sem erros registados.\n"
     return f"# {file_name}\n"
@@ -161,8 +192,10 @@ def initialize_memory_core() -> Dict[str, Any]:
     return {
         "ok": True,
         "memory_root": str(root),
+        "vault_name": _obsidian_vault_name(),
         "projects": created_projects,
         "created_at": _now_iso(),
+        "legacy_storage_memory": os.getenv("BARIBUDOS_USE_LEGACY_STORAGE_MEMORY", "").strip() == "1",
     }
 
 
@@ -185,7 +218,7 @@ def list_projects() -> Dict[str, Any]:
     initialize_memory_core()
     projects_root = _memory_root() / "02_PROJETOS"
     projects = sorted([path.name for path in projects_root.iterdir() if path.is_dir()]) if projects_root.exists() else []
-    return {"ok": True, "projects": projects}
+    return {"ok": True, "memory_root": str(_memory_root()), "projects": projects}
 
 
 def read_project_memory(project_name: str) -> Dict[str, Any]:
@@ -193,7 +226,7 @@ def read_project_memory(project_name: str) -> Dict[str, Any]:
     create_project_memory(safe_name)
     project_path = _project_dir(safe_name)
     files = {file_name: _read_text(project_path / file_name) for file_name in CORE_FILES}
-    return {"ok": True, "project": safe_name, "files": files}
+    return {"ok": True, "project": safe_name, "memory_root": str(_memory_root()), "files": files}
 
 
 def _append_to_project_file(project_name: str, file_name: str, block: str) -> Dict[str, Any]:
@@ -278,12 +311,20 @@ def build_ai_context(project_name: str, user_request: str, max_chars_per_file: i
     ])
 
     context = "\n".join(sections).strip() + "\n"
-    return {"ok": True, "project": safe_name, "context": context, "chars": len(context)}
+    return {"ok": True, "project": safe_name, "memory_root": str(_memory_root()), "context": context, "chars": len(context)}
 
 
 def build_obsidian_uri(project_name: str, file_name: str = "MEMORIA_MESTRE.md") -> Dict[str, Any]:
     safe_name = _safe_project_name(project_name)
     safe_file = Path(str(file_name or "MEMORIA_MESTRE.md")).name
     file_path = f"02_PROJETOS/{safe_name}/{safe_file}"
-    uri = f"obsidian://open?vault=AndreOS&file={quote(file_path)}"
-    return {"ok": True, "project": safe_name, "file": safe_file, "uri": uri}
+    vault_name = _obsidian_vault_name()
+    uri = f"obsidian://open?vault={quote(vault_name)}&file={quote(file_path)}"
+    return {
+        "ok": True,
+        "project": safe_name,
+        "file": safe_file,
+        "vault": vault_name,
+        "memory_root": str(_memory_root()),
+        "uri": uri,
+    }
