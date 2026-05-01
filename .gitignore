@@ -16,6 +16,7 @@ storage/exports/
 storage/uploads/
 storage/videos/
 storage/audiobooks/
+storage/memory/
 
 # IDE
 .vscode/
