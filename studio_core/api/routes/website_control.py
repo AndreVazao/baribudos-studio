@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from studio_core.services.website_control_service import (
     get_website_catalog_status,
     get_website_health_status,
+    get_website_memory_link_status,
     get_website_publication_divergence,
     get_website_publication_status,
     get_website_summary_status,
@@ -17,6 +18,14 @@ router = APIRouter(prefix="/website-control", tags=["website-control"])
 def website_control_health() -> dict:
     try:
         return {"ok": True, "website": get_website_health_status()}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/memory-link")
+def website_control_memory_link() -> dict:
+    try:
+        return {"ok": True, "website": get_website_memory_link_status()}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
