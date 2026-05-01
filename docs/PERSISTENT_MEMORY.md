@@ -1,18 +1,42 @@
 # Baribudos Studio - Persistent Memory
 
-O Baribudos Studio tem agora uma camada de memoria persistente local em Markdown.
+O Baribudos Studio tem uma camada de memoria persistente local em Markdown.
 
-## Objetivo
+## Objetivo correto
 
-Evitar perda de contexto entre sessoes, execucoes, alteracoes e decisoes do Studio.
+Evitar perda de contexto operacional durante o uso do Studio no PC de casa.
 
-A memoria e usada para:
+Esta memoria local e para o programa instalado trabalhar melhor, continuar tarefas, lembrar progresso, manter historico de producao e alimentar o Obsidian local.
 
-- Guardar decisoes importantes.
-- Guardar historico de acoes.
-- Guardar backlog.
-- Guardar arquitetura.
-- Gerar contexto compacto para IA.
+## Separacao obrigatoria
+
+```text
+Studio instalado no PC
+└── Memoria operacional viva
+    ├── progresso de trabalho
+    ├── sessoes de producao
+    ├── estado de projetos criativos
+    ├── historico local
+    └── ligacao ao Obsidian local
+
+AndreVazao/andreos-memory
+└── Memoria de programacao/contexto tecnico das repos
+    ├── o que foi alterado no codigo
+    ├── decisoes de arquitetura
+    ├── auditorias
+    ├── instrucoes para futuras mexidas
+    └── contexto para ChatGPT/God Mode quando trabalhar nas repos
+```
+
+## Uso da memoria local do Studio
+
+A memoria local do Studio e usada para:
+
+- Guardar decisoes operacionais do Studio.
+- Guardar historico de acoes locais.
+- Guardar backlog local.
+- Guardar arquitetura operacional do Studio.
+- Gerar contexto compacto para IA local.
 - Abrir notas no Obsidian.
 - Manter a relacao Studio -> Website documentada.
 
@@ -84,22 +108,30 @@ Se uma dessas palavras for detectada numa escrita, a gravacao e bloqueada.
 
 ## Relacao com AndreOS Memory privado
 
-O repo privado `AndreVazao/andreos-memory` e a memoria externa oficial para IA e Obsidian.
+O repo privado `AndreVazao/andreos-memory` nao deve ser tratado como memoria operacional viva do Studio.
 
-O Studio guarda memoria runtime local. O AndreOS Memory guarda memoria longa, versionada e consultavel por IA.
+Ele serve como memoria tecnica de programacao e auditoria das repos, para quando ChatGPT/God Mode forem mexer no codigo e precisarem saber:
 
-Fluxo recomendado:
+- O que foi feito.
+- Porque foi feito.
+- Que decisoes tecnicas existem.
+- Que riscos foram detetados.
+- Que proximas alteracoes devem respeitar.
+
+Fluxo correto:
 
 ```text
-Baribudos Studio runtime memory
+Uso diario do Studio no PC
 ↓
-Resumo/decisoes importantes
+Memoria local + Obsidian local
+
+Trabalho de programacao nas repos
 ↓
 AndreVazao/andreos-memory
 ↓
-ChatGPT / Obsidian / God Mode
+ChatGPT / God Mode / GitHub
 ```
 
 ## Regra principal
 
-Nunca guardar credenciais, tokens, chaves API, cookies ou segredos na memoria.
+Nunca guardar credenciais, tokens, chaves API, cookies, segredos, dados sensiveis de clientes ou ficheiros privados de runtime em repos GitHub.
