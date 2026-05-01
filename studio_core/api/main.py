@@ -43,6 +43,7 @@ from studio_core.api.routes.local_audio_installer import router as local_audio_i
 from studio_core.api.routes.local_engine_manager import router as local_engine_manager_router
 from studio_core.api.routes.marketplace_visuals import router as marketplace_visuals_router
 from studio_core.api.routes.pairing import router as pairing_router
+from studio_core.api.routes.persistent_memory import router as persistent_memory_router
 from studio_core.api.routes.product_credits import router as product_credits_router
 from studio_core.api.routes.production_pipeline import router as production_pipeline_router
 from studio_core.api.routes.project_commercial import router as project_commercial_router
@@ -84,12 +85,14 @@ from studio_core.api.routes.website_visual_sets import router as website_visual_
 from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
 from studio_core.services.ai_runtime_bootstrap import start_all
 from studio_core.services.bootstrap_service import bootstrap_system
+from studio_core.services.persistent_memory_service import initialize_memory_core
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     bootstrap_system()
     ensure_default_owner()
+    initialize_memory_core()
     start_all()
     yield
 
@@ -128,6 +131,7 @@ app.include_router(product_credits_router, prefix="/api")
 app.include_router(publication_package_router, prefix="/api")
 app.include_router(publish_readiness_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
+app.include_router(persistent_memory_router, prefix="/api")
 app.include_router(sagas_router, prefix="/api")
 app.include_router(saga_visual_sets_router, prefix="/api")
 app.include_router(sponsors_router, prefix="/api")
