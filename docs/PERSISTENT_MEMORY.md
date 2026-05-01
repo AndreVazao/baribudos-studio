@@ -1,6 +1,6 @@
 # Baribudos Studio - Persistent Memory
 
-O Baribudos Studio tem uma camada de memoria persistente local em Markdown.
+O Baribudos Studio tem uma camada de memoria persistente operacional local em Markdown.
 
 ## Objetivo correto
 
@@ -42,13 +42,39 @@ A memoria local do Studio e usada para:
 
 ## Local de armazenamento runtime
 
-Por defeito, a memoria runtime fica em:
+No PC de casa, a memoria deve apontar para o vault local do Obsidian.
+
+Configurar uma destas variaveis:
 
 ```text
-storage/memory/AndreOS/
+BARIBUDOS_MEMORY_ROOT=C:\AndreOS
 ```
 
-Esta pasta esta ignorada no Git por seguranca.
+ou:
+
+```text
+BARIBUDOS_OBSIDIAN_VAULT_ROOT=C:\Users\Andre\Documents\AndreOS
+```
+
+Opcionalmente, o nome do vault Obsidian pode ser definido com:
+
+```text
+BARIBUDOS_OBSIDIAN_VAULT_NAME=AndreOS
+```
+
+Se nenhuma variavel for definida, o Studio usa por defeito:
+
+```text
+%USERPROFILE%\AndreOS
+```
+
+O modo antigo `storage/memory/AndreOS/` so deve ser usado se for explicitamente ativado:
+
+```text
+BARIBUDOS_USE_LEGACY_STORAGE_MEMORY=1
+```
+
+Isto evita que a memoria operacional viva fique presa dentro da repo publica ou exposta pela montagem `/storage`.
 
 ## Projetos iniciais
 
