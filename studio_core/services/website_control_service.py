@@ -50,6 +50,11 @@ def get_website_health_status() -> Dict[str, Any]:
     return _request_json(url, _api_key())
 
 
+def get_website_memory_link_status() -> Dict[str, Any]:
+    url = f"{_base_url()}/api/studio/status/memory-link"
+    return _request_json(url, _api_key())
+
+
 def get_website_summary_status() -> Dict[str, Any]:
     url = f"{_base_url()}/api/studio/summary"
     return _request_json(url, _api_key())
