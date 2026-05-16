@@ -413,6 +413,7 @@ baribudos-studio/
 │  │  └─ website_visual_set_service.py
 │  └─ __init__.py
 ├─ .gitignore
+├─ Baribudos_Studio_TREE.txt
 ├─ OFFICIAL_STUDIO_WEBSITE_CONTRACT.txt
 ├─ package.json
 ├─ PROJECT_TREE.txt
