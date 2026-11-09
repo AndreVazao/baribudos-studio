@@ -27,7 +27,7 @@ Não foi feita qualquer alteração funcional de autenticação nesta auditoria.
 | PIN inicial | `studio_core/api/routes/users.py`: `ensure_default_owner()` cria owner com PIN `1234` | Credencial previsível e conhecida |
 | Modelo de utilizador | `studio_core/core/models.py`: `User.pin`, `UserCreate.pin`, `UserPinPatch.pin` | Segredo em texto simples |
 | Respostas de utilizadores | `GET /api/users`, criação, alteração de PIN e login devolvem objetos/registos sem remover `pin` | Exposição de credenciais pela API |
-| Cliente móvel | `client/mobile-app/src/components/LoginPanel.jsx`: defaults André/`1234` | Credenciais predefinidas na interface |
+| Cliente móvel | `client/mobile-app/src/components/LoginPanel.jsx`: defaults André/`1234`; componente espera `onLoggedIn`, mas `App.jsx` passa `onLogin` | Credenciais predefinidas; callback não atualiza o estado React após login, exigindo reload para refletir o utilizador |
 | Sessão cliente | `client/mobile-app/src/api/core.js`: guarda o utilizador JSON em `localStorage`; `App.jsx` restaura-o no arranque | Não existe sessão assinada/revalidada no servidor |
 | Pedidos API | Helpers `get/post/put/patch/del` em `client/mobile-app/src/api/core.js` não acrescentam credencial de sessão | O cliente não está integrado com uma sessão server-side |
 | Autorização de projetos | `projects.py`, `project_commercial.py`, `project_integrity.py`, `publish_readiness.py`, `publishing.py` | Regras baseadas em `user_name`/`user_role` enviados pelo cliente |
