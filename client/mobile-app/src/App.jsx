@@ -175,7 +175,7 @@ export default function App() {
       ) : null}
 
       {connected && !user ? (
-        <LoginPanel onLogin={handleLogin} />
+        <LoginPanel onLoggedIn={handleLogin} />
       ) : null}
 
       {connected && user ? (
