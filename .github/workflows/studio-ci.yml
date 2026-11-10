@@ -59,3 +59,19 @@ jobs:
 
       - name: Import FastAPI app
         run: python -c "from studio_core.api.main import app; print(app.title)"
+
+      - name: Test route inventory analyzer
+        run: python -m unittest discover -s tests -p "test_*.py"
+
+      - name: Generate route authorization inventory
+        run: |
+          python scripts/audit_studio_routes.py --output "$RUNNER_TEMP/studio-route-inventory.md" --json-output "$RUNNER_TEMP/studio-route-inventory.json"
+          cat "$RUNNER_TEMP/studio-route-inventory.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload route authorization inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-route-authorization-inventory
+          path: |
+            ${{ runner.temp }}/studio-route-inventory.md
+            ${{ runner.temp }}/studio-route-inventory.json
