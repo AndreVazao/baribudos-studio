@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from typing import Any, Dict, List
 from urllib import error, request
 
@@ -18,6 +19,69 @@ from studio_core.services.website_contract_payload_service import build_website_
 PROJECTS_FILE = "data/projects.json"
 DEFAULT_SCHEMA_VERSION = "website_ingest_v1"
 MAX_HISTORY_ITEMS = 50
+MAX_RETRYABLE_CONFLICT_RETRIES = 3
+MAX_RETRY_AFTER_SECONDS = 5.0
+
+
+class WebsitePublishHTTPError(RuntimeError):
+    def __init__(self, status_code: int, details: str) -> None:
+        self.status_code = status_code
+        self.details = details
+        super().__init__(f"website_publish_http_error:{status_code}:{details}")
+
+
+def _is_retryable_transaction_conflict(status_code: int, response_body: str) -> bool:
+    if status_code != 409:
+        return False
+
+    try:
+        payload = json.loads(response_body)
+    except (TypeError, ValueError):
+        return False
+
+    return (
+        isinstance(payload, dict)
+        and payload.get("error") == "retryable_transaction_conflict"
+        and payload.get("retryable") is True
+    )
+
+
+def _retry_after_seconds(headers: Any, attempt: int) -> float:
+    raw_value = headers.get("Retry-After") if headers is not None else None
+    try:
+        delay = float(raw_value)
+    except (TypeError, ValueError):
+        delay = float(2 ** attempt)
+
+    return min(max(delay, 0.0), MAX_RETRY_AFTER_SECONDS)
+
+
+def _post_frozen_envelope(target_url: str, api_key: str, body: bytes) -> Dict[str, Any]:
+    for attempt in range(MAX_RETRYABLE_CONFLICT_RETRIES + 1):
+        http_request = request.Request(
+            target_url,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-studio-api-key": api_key,
+            },
+            method="POST",
+        )
+
+        try:
+            with request.urlopen(http_request, timeout=30) as response:
+                raw = response.read().decode("utf-8")
+                return json.loads(raw) if raw else {"ok": True}
+        except error.HTTPError as exc:
+            details = exc.read().decode("utf-8", errors="ignore")
+            retryable = _is_retryable_transaction_conflict(exc.code, details)
+
+            if not retryable or attempt >= MAX_RETRYABLE_CONFLICT_RETRIES:
+                raise WebsitePublishHTTPError(exc.code, details) from exc
+
+            time.sleep(_retry_after_seconds(exc.headers, attempt))
+
+    raise RuntimeError("website_publish_retry_exhausted")
 
 
 def _load_project(project_id: str) -> Dict[str, Any] | None:
@@ -334,23 +398,10 @@ def publish_project_to_website(project_id: str) -> Dict[str, Any]:
 
     body = json.dumps(envelope, ensure_ascii=False).encode("utf-8")
 
-    http_request = request.Request(
-        target_url,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "x-studio-api-key": api_key,
-        },
-        method="POST",
-    )
-
     try:
-        with request.urlopen(http_request, timeout=30) as response:
-            raw = response.read().decode("utf-8")
-            result = json.loads(raw) if raw else {"ok": True}
-    except error.HTTPError as exc:
-        details = exc.read().decode("utf-8", errors="ignore")
-        message = f"website_publish_http_error:{exc.code}:{details}"
+        result = _post_frozen_envelope(target_url, api_key, body)
+    except WebsitePublishHTTPError as exc:
+        message = f"website_publish_http_error:{exc.status_code}:{exc.details}"
         _write_website_operational_state(
             project_id,
             manual_status="failed",
