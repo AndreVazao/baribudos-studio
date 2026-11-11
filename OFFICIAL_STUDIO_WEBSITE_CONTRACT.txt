@@ -213,3 +213,23 @@ PRIVATE STUDIO PRODUCES AND CONTROLS.
 PUBLIC WEBSITE CONSUMES, PERSISTS, EXPOSES, SELLS, AND RESPONDS.
 
 This file is the official written contract anchor for the Studio repository.
+
+==================================================
+12. RETRY POLICY FOR SERIALIZABLE INGEST CONFLICTS
+==================================================
+When Website responds with HTTP 409 and the exact JSON error code
+"retryable_transaction_conflict" plus "retryable": true, Studio may retry
+the same publication request.
+
+The Studio publisher:
+- serializes the frozen envelope once before the first request;
+- reuses the exact same request body bytes, identifiers, project_version,
+  checksum and Studio-defined prices on every automatic retry;
+- honours a numeric Retry-After value, capped at five seconds;
+- performs at most three retries after the initial request;
+- does not retry unrelated 409 responses, other HTTP errors or connection
+  failures automatically.
+
+After the retry budget is exhausted, the publication is recorded as failed
+for operator review. A retry must never rebuild or mutate the frozen
+editorial snapshot during the same automatic retry sequence.
