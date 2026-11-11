@@ -88,7 +88,10 @@ class WebsitePublisherRetryTests(unittest.TestCase):
     def test_caps_retry_count_and_retry_after_delay(self) -> None:
         body = b'{"publication_id":"pub-1"}'
 
-        with patch.object(publisher.request, "urlopen", side_effect=lambda *args, **kwargs: retryable_conflict("30")) as urlopen:
+        def always_conflict(*args, **kwargs):
+            raise retryable_conflict("30")
+
+        with patch.object(publisher.request, "urlopen", side_effect=always_conflict) as urlopen:
             with patch.object(publisher.time, "sleep") as sleep:
                 with self.assertRaises(publisher.WebsitePublishHTTPError):
                     publisher._post_frozen_envelope(
