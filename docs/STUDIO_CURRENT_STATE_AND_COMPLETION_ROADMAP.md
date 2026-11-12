@@ -433,3 +433,56 @@ Não fazer correções isoladas que deixem rotas ou clientes incompatíveis. Pr�
 5. Fechar os gates de integração, checksum e unicidade da PR Website #26.
 6. Executar o ensaio audiovisual real exigido pela PR Studio #38.
 7. Atualizar esta auditoria com evidência de runtime, testes e referências às PRs; não declarar conclusão com base apenas em CI verde.
+
+
+## 11. Atualização de recuperação e sincronização — 12 de novembro de 2026 (posterior à secção 10)
+
+Esta secção **substitui** as afirmações da secção 10.1 que indicavam Supabase INACTIVE e recuperação ainda não autorizada. A autorização explícita foi recebida e a recuperação controlada foi executada na instância original.
+
+### 11.1 Supabase e Website após recuperação
+
+- Projeto original preservado: `rpfyazuejafgxswrlbvw`, `baribudos-studio-website`, região `eu-west-1`, PostgreSQL 17.6.1.
+- Restauro do projeto existente concluído; `get_project` confirmou `ACTIVE_HEALTHY`. Não foi criada instância substituta.
+- Consulta SQL read-only confirmou ligação ao PostgreSQL 17.6 e existência das 14 tabelas Prisma, mais `public.system_metadata`.
+- Migration registada: `20260527185301` (`phase_42_3_lite_stabilization`). Não foi aplicada qualquer migration durante a recuperação.
+- Contagens read-only na base de produção: `User=2`; `StudioSettings=0`; `IntellectualProperty=0`; `Series=0`; `Publication=0`; `PublicationVariant=0`; `PublicationAsset=0`; `Product=0`; `Checkout=0`; `CheckoutItem=0`; `CustomerLibrary=0`; `BundleGroup=0`; `BundleGroupItem=0`.
+- Smoke público sem autenticação nem writes: `/`, `/login`, `/loja`, `/ips`, `/novidades` responderam HTTP 200. A loja continua sem produtos; novidades declara ausência de novidades públicas. Isto não valida login, checkout, webhooks ou biblioteca.
+- `GET /api/catalog/home` respondeu `ok=true`, com arrays `products=[]` e `bundles=[]`.
+- Vercel runtime errors/logs na janela consultada (~30 min) sem erros; Supavisor entre 16:00–16:40 UTC sem correspondências ao erro tenant/user. Manter observação.
+- `public.system_metadata` continua com RLS desativado e sem policies; Security Advisor reporta `rls_disabled_in_public`. Não ativar RLS antes de desenhar e validar policies.
+- `DATABASE_URL` usa pooler transaction (6543); `DIRECT_URL` usa pooler session (5432), não o host direto. Não alterado; validar configuração Prisma/Supabase antes de qualquer mudança.
+- Vercel reportou metadados `readable-secret` para algumas variáveis encriptadas. Não prova exposição pública. Nenhum segredo foi exposto, rodado ou alterado.
+
+**Segurança da recuperação:** não foram alterados dados, schema, migrations, credenciais, env vars ou deployments; nenhuma compra, webhook ou write foi executado.
+
+### 11.2 Catálogo vazio e reconciliação Studio → Website
+
+A causa do catálogo vazio ainda não está provada. O publisher do Studio só envia uma publicação quando existe pacote congelado, política elegível e ação explícita de publicação. É necessário reconciliar os recibos locais `website_sync` com os IDs `publication_id`/`variant_id` no Website antes de reenviar qualquer conteúdo. O clone local disponível em `C:\\ProgramasGodMode\\baribudos-studio` está em `main` no commit `3cd6888`, não contém a pasta runtime `storage` e não é evidência do estado de produção do Studio. Não foram encontrados recibos runtime nesse clone. Não assumir que não existem noutro runtime.
+
+### 11.3 Website PR #26 e issue #36 — estado reconciliado
+
+- A PR Website #26 continua aberta/draft. O head documentado é `185523816ee1c242431024689221f434790444c0`; CI #156, Prisma Generate, typecheck, unit tests, build e Vercel Preview/Visibility foram reportados como sucesso.
+- A branch da PR #26 já implementa transação Prisma Serializable, substituição determinística do conjunto de assets, rollback quando a escrita falha, validação comercial/preço, versão congelada, conflito retryable P2034 (HTTP 409 + Retry-After) e correção do contrato de capa vazia. O emissor Studio repete o mesmo body para conflitos transitórios.
+- A inspeção do schema confirma `PublicationVariant.variantId` e `Product.slug` UNIQUE; `Product.publicationVariantId` não é UNIQUE. A proteção concorrente atual depende de Serializable + retry, não de constraint declarativa.
+- O checksum SHA-256 é calculado no Studio sobre `json.dumps(envelope, ensure_ascii=False, sort_keys=True)` antes de incluir `checksum`. O Website ainda não recalcula o digest; requer fixtures partilhadas Python/Node e teste Unicode/números.
+- Faltam testes reais de integração PostgreSQL: repetição, concorrência, rollback após falha de asset, replays e ausência de duplicados/inconsistências. Não declarar concluído apenas com CI.
+- A issue Website #36 foi criada como checklist explícita de atomicidade e falha de assets, mas sobrepõe-se em grande parte à PR #26. A PR #26 é a via de implementação existente; a issue #36 deve acompanhar os critérios que ainda faltam, evitando uma segunda implementação paralela.
+- Website issue #30 continua aberta: guardar URLs não prova que os bytes dos assets são materializados em storage durável próprio. Website deve funcionar com Studio/PC doméstico desligado.
+
+### 11.4 Memória, repositórios locais e próximos passos
+
+- O PC doméstico está online via Desktop Commander. Os clones locais Studio e Website estão limpos, em `main`, mas desatualizados face às branches/PRs remotas; não os usar para sobrescrever estado remoto.
+- O diretório local do clone Studio não tem `storage/`; a memória/runtime operacional não foi localizada. A pesquisa de recibos `website_sync` permanece pendente até localizar a instalação/runtime correto.
+- A memória técnica privada/AndreOS deve ser atualizada em paralelo com esta documentação; não guardar segredos nem conteúdo familiar privado em repositórios públicos.
+
+### 11.5 Próxima sequência obrigatória
+
+1. Localizar o runtime/instalação efetiva do Studio e obter, apenas em leitura, contagens/estados de projetos elegíveis, pacotes congelados e recibos `website_sync`; nunca expor conteúdo privado no relatório.
+2. Comparar recibos com IDs de publicações/variantes/produtos/assets do Website; só então decidir republicações pontuais.
+3. Continuar PR #26: integração PostgreSQL, checksum efetivo com fixtures Python/Node e política de unicidade por variante, sem migração destrutiva.
+4. Resolver issue #30: materialização durável dos bytes, hash/MIME/tamanho, retries e teste com Studio desligado.
+5. Rever RLS de `system_metadata` e o alerta `readable-secret`; nenhuma alteração sem desenho de policies/rotação coordenada.
+6. Validar `DIRECT_URL` e Supavisor sem expor valores secretos.
+7. Executar sandbox Stripe/PayPal, login, biblioteca e checkout só em ambiente de teste; não usar pagamentos reais.
+8. Prosseguir com P0 de autenticação/RBAC/storage do Studio e validar todas as rotas; manter as fases editoriais e multilingues como pendentes até testes reais.
+
