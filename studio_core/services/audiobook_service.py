@@ -234,10 +234,18 @@ def _merge_wavs(inputs: List[Path], output_path: Path) -> None:
 
         data_chunks.append(frames)
 
-    with wave.open(str(output_path), "wb") as out:
-        out.setparams(first_params)
-        for chunk in data_chunks:
-            out.writeframes(chunk)
+    temporary_path = output_path.with_name(
+        f".{output_path.name}.{uuid4().hex}.tmp"
+    )
+    try:
+        with wave.open(str(temporary_path), "wb") as out:
+            out.setparams(first_params)
+            for chunk in data_chunks:
+                out.writeframes(chunk)
+        temporary_path.replace(output_path)
+    except Exception:
+        temporary_path.unlink(missing_ok=True)
+        raise
 
 
 def _page_text(page: Dict[str, Any]) -> str:
