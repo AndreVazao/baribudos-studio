@@ -171,6 +171,7 @@ def _build_video_outputs(
                 "language": language,
                 "cover_path": hero_image,
                 "audio_path": audio_path,
+                "sequence_frames": approved_frames,
             },
         )
         outputs[language]["storyboard_frames_count"] = len(approved_frames) if isinstance(approved_frames, list) else 0
