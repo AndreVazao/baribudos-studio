@@ -47,13 +47,13 @@ No PC de casa, a memoria deve apontar para o vault local do Obsidian.
 Configurar uma destas variaveis:
 
 ```text
-BARIBUDOS_MEMORY_ROOT=C:\AndreOS
+BARIBUDOS_MEMORY_ROOT=C:\\AndreOS
 ```
 
 ou:
 
 ```text
-BARIBUDOS_OBSIDIAN_VAULT_ROOT=C:\Users\Andre\Documents\AndreOS
+BARIBUDOS_OBSIDIAN_VAULT_ROOT=C:\\Users\\Andre\\Documents\\AndreOS
 ```
 
 Opcionalmente, o nome do vault Obsidian pode ser definido com:
@@ -65,7 +65,7 @@ BARIBUDOS_OBSIDIAN_VAULT_NAME=AndreOS
 Se nenhuma variavel for definida, o Studio usa por defeito:
 
 ```text
-%USERPROFILE%\AndreOS
+%USERPROFILE%\\AndreOS
 ```
 
 O modo antigo `storage/memory/AndreOS/` so deve ser usado se for explicitamente ativado:
@@ -74,7 +74,7 @@ O modo antigo `storage/memory/AndreOS/` so deve ser usado se for explicitamente 
 BARIBUDOS_USE_LEGACY_STORAGE_MEMORY=1
 ```
 
-Isto evita que a memoria operacional viva fique presa dentro da repo publica ou exposta pela montagem `/storage`.
+Isto evita que a memoria operacional viva fique presa dentro da repo publica ou exposta pela montagem /storage.
 
 ## Projetos iniciais
 
@@ -132,31 +132,19 @@ bearer
 
 Se uma dessas palavras for detectada numa escrita, a gravacao e bloqueada.
 
-## Relacao com AndreOS Memory privado
+## Relacao com AndreOS Memory
 
-O repo privado `AndreVazao/andreos-memory` nao deve ser tratado como memoria operacional viva do Studio.
+O repo AndreVazao/andreos-memory serve como memoria tecnica de programacao e auditoria das repos, distinta da memoria operacional viva do Studio.
 
-Ele serve como memoria tecnica de programacao e auditoria das repos, para quando ChatGPT/God Mode forem mexer no codigo e precisarem saber:
+**Verificacao de visibilidade em 2026-11-12:** o GitHub reportou atualmente este repositorio com visibilidade publica. Documentacao anterior chamava-lhe privado. Rever a visibilidade e o conteudo do repositorio antes de guardar informacao pessoal, operacional sensivel ou material que deva ser privado. Nunca guardar credenciais, tokens, chaves API, cookies, segredos ou dados sensiveis de clientes em Git.
 
-- O que foi feito.
-- Porque foi feito.
-- Que decisoes tecnicas existem.
-- Que riscos foram detetados.
-- Que proximas alteracoes devem respeitar.
+## Snapshot de estado e continuidade
 
-Fluxo correto:
+A fonte de verdade sobre o estado técnico global do Studio e o documento:
 
-```text
-Uso diario do Studio no PC
-↓
-Memoria local + Obsidian local
+- docs/STUDIO_CURRENT_STATE_AND_COMPLETION_ROADMAP.md
 
-Trabalho de programacao nas repos
-↓
-AndreVazao/andreos-memory
-↓
-ChatGPT / God Mode / GitHub
-```
+Esse documento regista inventário, gaps, prioridades, idiomas configurados, critérios de conclusão e sequência de implementação. Atualizá-lo a cada marco relevante. Não assumir que uma funcionalidade está concluída apenas por existirem serviços, rotas, painéis ou CI verde.
 
 ## Regra principal
 
