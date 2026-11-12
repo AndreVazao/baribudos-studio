@@ -70,17 +70,6 @@ def _espeak_voice_for_language(language: str) -> str:
     return mapping.get(lang, "en")
 
 
-def _write_silent_wav(output_path: Path, duration_seconds: float = 2.0, sample_rate: int = 22050) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    frames = int(sample_rate * max(0.2, duration_seconds))
-    with wave.open(str(output_path), "w") as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(sample_rate)
-        wav_file.writeframes(b"\x00\x00" * frames)
-
-
 def _espeak_command() -> str:
     if shutil.which("espeak"):
         return "espeak"
@@ -94,35 +83,32 @@ def _synthesize_system_tts(text: str, output_path: Path, language: str) -> Dict[
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     command = _espeak_command()
-    if command:
-        try:
-            subprocess.run(
-                [
-                    command,
-                    "-v",
-                    _espeak_voice_for_language(language),
-                    "-w",
-                    str(output_path),
-                    text or "Texto vazio.",
-                ],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return {
-                "ok": True,
-                "provider": "system_tts",
-                "file_path": str(output_path),
-            }
-        except Exception:
-            pass
+    if not command:
+        raise RuntimeError(
+            "Nenhum motor TTS local está disponível (espeak/espeak-ng). "
+            "O audiobook não pode ser declarado concluído com áudio silencioso."
+        )
 
-    approx_seconds = max(1.5, len(text.split()) * 0.45) if text else 2.0
-    _write_silent_wav(output_path, duration_seconds=approx_seconds)
+    try:
+        subprocess.run(
+            [
+                command,
+                "-v",
+                _espeak_voice_for_language(language),
+                "-w",
+                str(output_path),
+                text or "Texto vazio.",
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception as exc:
+        raise RuntimeError("O motor TTS local falhou ao sintetizar o segmento.") from exc
+
     return {
-        "ok": False,
+        "ok": True,
         "provider": "system_tts",
-        "fallback_used": True,
         "file_path": str(output_path),
     }
 
@@ -300,7 +286,12 @@ def build_audiobook(
 
         part_paths: List[Path] = []
         pages = _story_pages(story)
+        if not pages or not any(_page_text(page) for page in pages):
+            raise ValueError(f"A história não contém texto para audiobook ({language}).")
+
         segment_counter = 0
+        providers_used = set()
+        fallback_segments: List[int] = []
 
         for page in pages:
             text = _page_text(page)
@@ -324,9 +315,23 @@ def build_audiobook(
                         synth = _synthesize_http_provider("xtts", segment_text, segment_path, language, speaker_wav=resolved_speaker_wav)
                     else:
                         synth = _synthesize_system_tts(segment_text, segment_path, language)
-                except Exception:
+                except Exception as provider_error:
+                    if provider == "system_tts":
+                        raise RuntimeError(
+                            f"Falha no TTS do segmento {segment_counter} ({language})."
+                        ) from provider_error
                     synth = _synthesize_system_tts(segment_text, segment_path, language)
+                    synth["fallback_used"] = True
+                    synth["fallback_reason"] = str(provider_error)
 
+                if not bool(synth.get("ok", False)):
+                    raise RuntimeError(
+                        f"O TTS não validou o segmento {segment_counter} ({language})."
+                    )
+
+                providers_used.add(str(synth.get("provider") or provider))
+                if bool(synth.get("fallback_used", False)):
+                    fallback_segments.append(segment_counter)
                 part_paths.append(Path(synth["file_path"]))
 
         final_path = output_dir / f"{base_name}.wav"
@@ -338,13 +343,16 @@ def build_audiobook(
             "format": "wav",
             "language": language,
             "title": project_title,
-            "provider": provider,
+            "provider": next(iter(providers_used)) if len(providers_used) == 1 else "mixed",
+            "requested_provider": provider,
+            "fallback_used": bool(fallback_segments),
+            "fallback_segments": fallback_segments,
             "file_name": final_path.name,
             "file_path": str(final_path),
             "pages_count": len(pages),
             "segments_count": len(part_paths),
-            "engine": f"{provider}-runtime",
-            "speaker_wav": speaker_wav if provider == "xtts" else "",
+            "engine": f"{'+'.join(sorted(providers_used))}-runtime",
+            "speaker_wav": speaker_wav if "xtts" in providers_used else "",
             "multi_voice": bool(audio_cast),
         }
 
