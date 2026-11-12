@@ -464,7 +464,7 @@ A causa do catálogo vazio ainda não está provada. O publisher do Studio só e
 - A PR Website #26 continua aberta/draft. O head documentado é `185523816ee1c242431024689221f434790444c0`; CI #156, Prisma Generate, typecheck, unit tests, build e Vercel Preview/Visibility foram reportados como sucesso.
 - A branch da PR #26 já implementa transação Prisma Serializable, substituição determinística do conjunto de assets, rollback quando a escrita falha, validação comercial/preço, versão congelada, conflito retryable P2034 (HTTP 409 + Retry-After) e correção do contrato de capa vazia. O emissor Studio repete o mesmo body para conflitos transitórios.
 - A inspeção do schema confirma `PublicationVariant.variantId` e `Product.slug` UNIQUE; `Product.publicationVariantId` não é UNIQUE. A proteção concorrente atual depende de Serializable + retry, não de constraint declarativa.
-- O checksum SHA-256 é calculado no Studio sobre `json.dumps(envelope, ensure_ascii=False, sort_keys=True)` antes de incluir `checksum`. O Website ainda não recalcula o digest; requer fixtures partilhadas Python/Node e teste Unicode/números.
+- O checksum SHA-256 é calculado no Studio sobre `json.dumps(envelope, ensure_ascii=False, sort_keys=True)` antes de incluir `checksum`. Em 12 Nov foi acrescentada ao branch Website #26 a verificação do digest sobre o body bruto, antes do Zod, com serialização compatível com Python e preservação de tokens numéricos (`1.0`). Foi criada fixture comum Python/Node com Unicode/emoji/decimais e testes de tampering. CI/typecheck/testes ainda pendentes de confirmação.
 - Faltam testes reais de integração PostgreSQL: repetição, concorrência, rollback após falha de asset, replays e ausência de duplicados/inconsistências. Não declarar concluído apenas com CI.
 - A issue Website #36 foi criada como checklist explícita de atomicidade e falha de assets, mas sobrepõe-se em grande parte à PR #26. A PR #26 é a via de implementação existente; a issue #36 deve acompanhar os critérios que ainda faltam, evitando uma segunda implementação paralela.
 - Website issue #30 continua aberta: guardar URLs não prova que os bytes dos assets são materializados em storage durável próprio. Website deve funcionar com Studio/PC doméstico desligado.
@@ -486,3 +486,29 @@ A causa do catálogo vazio ainda não está provada. O publisher do Studio só e
 7. Executar sandbox Stripe/PayPal, login, biblioteca e checkout só em ambiente de teste; não usar pagamentos reais.
 8. Prosseguir com P0 de autenticação/RBAC/storage do Studio e validar todas as rotas; manter as fases editoriais e multilingues como pendentes até testes reais.
 
+
+### 11.6 Investigação adicional do runtime e verificação SHA-256 — 12 Nov 2026, 21:06 UTC
+
+**Pesquisa local (apenas leitura):**
+- PC doméstico acessível. Foram verificados os clones `baribudos-studio`, `baribudos-studio-primary`, `baribudos-studio-home-edition` e `baribudos-studio-website` em `C:\\ProgramasGodMode`.
+- Studio clone `main` está em `3cd6888`; Website clone `main` em `ecf001a`; histórico primary `main` em `0be88a4`; home-edition `main` em `076a509`. Não foram observadas alterações locais nestes clones.
+- O home-edition implementa armazenamento local por defeito em `<process.cwd()>\\storage` (ou `BARIBUDOS_STORAGE_ROOT`), e o instalador cria `storage/data/projects.json`, `users.json`, etc. Essa pasta não existe no clone verificado.
+- Pesquisa de ficheiros operacionais `projects.json`, `users.json`, `publications.json`, `settings.json` e `storage/data` nos quatro clones não encontrou resultados.
+- Não foi encontrado processo Baribudos/uvicorn/node, listener nas portas 8787/8000/8001/5173/3000/8080, tarefa agendada com nome Studio/Baribudos, nem variáveis de ambiente `BARIBUDOS_STORAGE_ROOT`, `BARIBUDOS_HOME`, `BARIBUDOS_STUDIO_HOME`, `PORT` ou `HOST` ao nível User/Machine.
+- Limite: o acesso do Desktop Commander não permitiu inspecionar diretamente alguns diretórios de perfil AppData; a ausência de runtime/recibos só está confirmada nas localizações acessíveis verificadas. Não concluir que os dados foram perdidos ou inexistentes noutro disco/perfil.
+
+**Alterações de código Website PR #26 (branch `fix/v6-atomic-publication-sync`):**
+- Adicionado `src/lib/publication-checksum.ts`: parser JSON que retém os tokens numéricos do body bruto, ordenação de chaves por code point Unicode, serialização equivalente ao `json.dumps(..., ensure_ascii=False, sort_keys=True)` do Studio e SHA-256 com comparação constante.
+- Rota `POST /api/studio/publish` passa a ler o body uma vez, validar checksum antes de `JSON.parse`/Zod e rejeitar digest ausente/inválido com `publication_checksum_mismatch`, antes de qualquer write.
+- Adicionados testes Node para fixture válida Python, Unicode/emoji, float token `1.0`, alteração de conteúdo, digest alterado, digest em falta e independência da ordem das chaves.
+- Fixture `tests/fixtures/website-ingest-v1-checksum.json` partilhada byte a byte com o repo Studio; teste Python recalcula com o algoritmo de produção.
+- Contrato documentado em Website `docs/STUDIO_INGEST_CHECKSUM_CONTRACT.md`.
+- Commits no branch Website: `44324e1`, `60ed1bc`, `01e9f24`, `a4114ab`, `5e1e98b`, `87bcbd6`, `cd239ab` (sequência inclui helper, route, teste, correção de tipagem, fixture partilhada e documentação).
+- A implementação ainda não é considerada validada até CI, typecheck e suite de testes confirmarem sucesso. Nenhuma alteração foi aplicada à produção.
+
+**Próximos passos atualizados:**
+1. Aguardar/verificar CI e corrigir erros do checksum antes de avançar para testes PostgreSQL.
+2. Executar a fixture Python no repo Studio e fixture Node no Website; manter os bytes idênticos.
+3. Continuar a localizar a instalação/runtime real do Studio noutros perfis/discos autorizados; pedir indicação de caminho apenas se a pesquisa local continuar bloqueada.
+4. Reconciliar recibos reais com Website antes de qualquer republicação.
+5. Completar testes PostgreSQL concorrentes/rollback, unicidade por variante e materialização durável de assets.
