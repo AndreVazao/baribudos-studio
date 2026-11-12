@@ -47,13 +47,13 @@ No PC de casa, a memoria deve apontar para o vault local do Obsidian.
 Configurar uma destas variaveis:
 
 ```text
-BARIBUDOS_MEMORY_ROOT=C:\\AndreOS
+BARIBUDOS_MEMORY_ROOT=C:\AndreOS
 ```
 
 ou:
 
 ```text
-BARIBUDOS_OBSIDIAN_VAULT_ROOT=C:\\Users\\Andre\\Documents\\AndreOS
+BARIBUDOS_OBSIDIAN_VAULT_ROOT=C:\Users\Andre\Documents\AndreOS
 ```
 
 Opcionalmente, o nome do vault Obsidian pode ser definido com:
@@ -65,7 +65,7 @@ BARIBUDOS_OBSIDIAN_VAULT_NAME=AndreOS
 Se nenhuma variavel for definida, o Studio usa por defeito:
 
 ```text
-%USERPROFILE%\\AndreOS
+%USERPROFILE%\AndreOS
 ```
 
 O modo antigo `storage/memory/AndreOS/` so deve ser usado se for explicitamente ativado:
