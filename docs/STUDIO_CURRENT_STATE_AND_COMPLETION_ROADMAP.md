@@ -523,3 +523,24 @@ A causa do catálogo vazio ainda não está provada. O publisher do Studio só e
 - O gate de checksum no Website pode ser considerado validado pelo CI #161. PR #26 permanece draft porque faltam testes PostgreSQL reais, unicidade comercial por variante e assets duráveis (issue #30).
 
 **Próxima etapa técnica:** analisar a infraestrutura de testes e as opções de storage durável do Website; não usar a base de produção para testes de escrita. A pesquisa do runtime Studio continua limitada aos caminhos acessíveis e não encontrou os recibos.
+
+### 11.8 PostgreSQL CI de integração e inventário de storage — 12 Nov 2026, 21:15 UTC
+
+**Website PR #26 — integração PostgreSQL:**
+- Workflow `.github/workflows/website-ci.yml` agora provisiona PostgreSQL 17 efémero, aplica `prisma db push` somente nesse container e executa `tests/publication-sync.integration.test.ts` com `tsx@4.19.2`.
+- Testes reais do serviço `syncPublicationToCommerce`: replay idempotente, substituição de assets, atualização de preço, rollback integral forçado por trigger PostgreSQL e duas entregas concorrentes com retry do envelope mais recente.
+- Website CI #162 concluiu com sucesso os passos Prisma Generate, schema efémero, Typecheck, Unit tests, integração PostgreSQL e Build; job estava a finalizar na última consulta.
+- Website CI #164 foi iniciado para validar a versão final do teste concorrente e a versão atualizada do workflow; ainda em execução.
+- Nenhum teste usa a base Supabase de produção.
+
+**Storage:**
+- Consulta read-only de `storage.buckets` + `storage.objects` no Supabase original devolveu zero buckets.
+- Listagem Vercel integration configurations para project e account/team devolveu zero integrações.
+- Não foi criado bucket/store, segredo, env var, subscrição ou alteração de infraestrutura. Provider e eventual custo carecem de decisão explícita. Website issue #30 continua aberta.
+
+**Próximos gates:**
+1. Confirmar CI #164 completo.
+2. Executar teste Python da fixture partilhada no Studio.
+3. Resolver unicidade declarativa de `Product.publicationVariantId` com análise de dados históricos e migração segura.
+4. Obter decisão explícita sobre provider/storage e limite de custo; só depois implementar upload, hash/MIME/tamanho e serving durável.
+5. Continuar procura do runtime Studio nos caminhos/perfis/discos autorizados e reconciliar recibos.
