@@ -126,6 +126,18 @@ class AudiobookFallbackTests(unittest.TestCase):
 
             self.assertFalse(output_path.exists())
 
+    def test_merge_rejects_truncated_wav_segment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            truncated_path = Path(temp_dir) / "truncated.wav"
+            output_path = Path(temp_dir) / "combined.wav"
+            self._write_wav(truncated_path, frames=b"\x01\x00" * 2205)
+            truncated_path.write_bytes(truncated_path.read_bytes()[:-4])
+
+            with self.assertRaisesRegex(RuntimeError, "incompleto"):
+                audiobook._merge_wavs([truncated_path], output_path)
+
+            self.assertFalse(output_path.exists())
+
     def test_merge_rejects_empty_segment_list(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = Path(temp_dir) / "combined.wav"
@@ -157,7 +169,7 @@ class AudiobookFallbackTests(unittest.TestCase):
                                 },
                                 {
                                     "project_id": "project-silent",
-                                    "project_title": "Silêncio",
+                                    "project_title": "Silencio",
                                 },
                             )
 
