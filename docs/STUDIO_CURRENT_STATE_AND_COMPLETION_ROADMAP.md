@@ -555,3 +555,12 @@ A causa do catálogo vazio ainda não está provada. O publisher do Studio só e
 - Fixture foi recalculada com Python `hashlib/json.dumps`; digest confere. O teste Python correspondente existe no repositório Studio, embora ainda sem execução CI própria.
 - PR Website #26 permanece draft: falta resolver a unicidade/índice comercial por variante e materialização dos bytes em storage durável (provider não configurado). A issue #30 recebeu confirmação de zero buckets Supabase e zero integrações Vercel visíveis.
 - Nenhum teste escreveu na base de produção; nenhuma infraestrutura de storage foi criada.
+
+### 11.10 Auditoria read-only de unicidade e migration history — 12 Nov 2026
+
+- Índices reais de `public.Product`: `Product_pkey`, `Product_slug_key` e `idx_Product_publicationVariantId` (não-único). A tabela continua vazia; não há duplicados de produção neste momento.
+- `supabase_migrations.schema_migrations` regista apenas `20260527185301 / phase_42_3_lite_stabilization`.
+- Não existe tabela `_prisma_migrations` em nenhum schema consultado; os caminhos habituais de migrations no branch Website não contêm o SQL da migration registada.
+- Uma constraint UNIQUE simples em `Product.publicationVariantId` conflita com a intenção atual de preservar produtos históricos inativos. Um índice parcial `UNIQUE ... WHERE active = true` é uma opção potencial, mas o serviço teria de inativar duplicados antes de reativar/atualizar o produto primário.
+- Antes de qualquer mudança: recuperar/estabelecer baseline de migrations, confirmar comportamento em ambientes existentes, escrever migration reversível/segura e testar com PostgreSQL. Não executar DDL em produção sem autorização.
+- Issue Website #36 recebeu esta evidência; PR #26 continua draft.
