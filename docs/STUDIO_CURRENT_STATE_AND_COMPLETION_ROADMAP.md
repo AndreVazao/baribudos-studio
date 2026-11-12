@@ -512,3 +512,14 @@ A causa do catálogo vazio ainda não está provada. O publisher do Studio só e
 3. Continuar a localizar a instalação/runtime real do Studio noutros perfis/discos autorizados; pedir indicação de caminho apenas se a pesquisa local continuar bloqueada.
 4. Reconciliar recibos reais com Website antes de qualquer republicação.
 5. Completar testes PostgreSQL concorrentes/rollback, unicidade por variante e materialização durável de assets.
+
+### 11.7 Resultado de validação do checksum — 12 Nov 2026, 21:12 UTC
+
+- Website CI #161 terminou com `success` no head `cd239ab0249283937a1e0cafd90b1e0daa9373ff`.
+- Confirmados como sucesso: instalação de dependências, Secret hygiene, Prisma Generate, Typecheck, Unit tests e Build.
+- Repository Visibility Only #155 também terminou com sucesso.
+- A validação Node do Website passou incluindo fixture partilhada, Unicode/emoji, float token `1.0`, tampering de conteúdo/digest e reordenação de chaves.
+- O teste Python foi adicionado ao Studio, mas ainda não há execução CI/local registada para esse ficheiro. A fixture foi gerada com o algoritmo Python de produção e o digest conferido durante a criação.
+- O gate de checksum no Website pode ser considerado validado pelo CI #161. PR #26 permanece draft porque faltam testes PostgreSQL reais, unicidade comercial por variante e assets duráveis (issue #30).
+
+**Próxima etapa técnica:** analisar a infraestrutura de testes e as opções de storage durável do Website; não usar a base de produção para testes de escrita. A pesquisa do runtime Studio continua limitada aos caminhos acessíveis e não encontrou os recibos.
