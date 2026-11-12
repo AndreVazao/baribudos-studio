@@ -70,17 +70,6 @@ def _espeak_voice_for_language(language: str) -> str:
     return mapping.get(lang, "en")
 
 
-def _write_silent_wav(output_path: Path, duration_seconds: float = 2.0, sample_rate: int = 22050) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    frames = int(sample_rate * max(0.2, duration_seconds))
-    with wave.open(str(output_path), "w") as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(sample_rate)
-        wav_file.writeframes(b"\x00\x00" * frames)
-
-
 def _espeak_command() -> str:
     if shutil.which("espeak"):
         return "espeak"
@@ -363,7 +352,7 @@ def build_audiobook(
             "pages_count": len(pages),
             "segments_count": len(part_paths),
             "engine": f"{'+'.join(sorted(providers_used))}-runtime",
-            "speaker_wav": speaker_wav if provider == "xtts" else "",
+            "speaker_wav": speaker_wav if "xtts" in providers_used else "",
             "multi_voice": bool(audio_cast),
         }
 
