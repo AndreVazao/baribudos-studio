@@ -544,3 +544,14 @@ A causa do catálogo vazio ainda não está provada. O publisher do Studio só e
 3. Resolver unicidade declarativa de `Product.publicationVariantId` com análise de dados históricos e migração segura.
 4. Obter decisão explícita sobre provider/storage e limite de custo; só depois implementar upload, hash/MIME/tamanho e serving durável.
 5. Continuar procura do runtime Studio nos caminhos/perfis/discos autorizados e reconciliar recibos.
+
+### 11.9 Resultado final da validação PostgreSQL — 12 Nov 2026, 21:17 UTC
+
+- Website CI #164 terminou `success` no head `ce9f9da7fd21c505524b1fea300c13218d95d90a`.
+- Sucesso confirmado em todos os passos: container PostgreSQL, Prisma Generate, `prisma db push` isolado, Typecheck, Unit tests, testes de integração PostgreSQL e Build.
+- Repository Visibility Only #158 terminou `success`.
+- A suite de integração final inclui replay, substituição de assets, atualização de preço, rollback forçado por trigger PostgreSQL e duas entregas concorrentes com retry da versão mais recente.
+- O Website CI #161 também passou o checksum real e fixture Node/Python.
+- Fixture foi recalculada com Python `hashlib/json.dumps`; digest confere. O teste Python correspondente existe no repositório Studio, embora ainda sem execução CI própria.
+- PR Website #26 permanece draft: falta resolver a unicidade/índice comercial por variante e materialização dos bytes em storage durável (provider não configurado). A issue #30 recebeu confirmação de zero buckets Supabase e zero integrações Vercel visíveis.
+- Nenhum teste escreveu na base de produção; nenhuma infraestrutura de storage foi criada.
