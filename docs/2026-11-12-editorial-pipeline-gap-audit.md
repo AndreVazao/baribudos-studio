@@ -46,24 +46,23 @@ Correção pretendida:
 - Validar idioma real do texto e não marcar uma variante como pronta apenas porque existe um objeto com o código de idioma.
 - Manter a versão original imutável e ligar cada tradução à sua versão de origem.
 
-### P1 — audiobook pode ser declarado produzido mesmo quando contém silêncio
+### P1 — validação dos segmentos WAV e consistência do audiobook incompletas
 
-Evidência:
-- studio_core/services/audiobook_service.py tenta o provider selecionado.
-- Se o provider falhar, recorre a _synthesize_system_tts().
-- Se espeak/espeak-ng não estiver instalado ou falhar, _synthesize_system_tts() escreve um WAV de silêncio e devolve fallback_used=true e ok=false.
-- build_audiobook() não propaga esse estado para o resultado final; guarda os caminhos e declara os metadados do audiobook sem um estado de qualidade/erro por segmento.
+Evidência revista no código atual:
+- \`_synthesize_system_tts()\` já falha explicitamente quando espeak/espeak-ng não está disponível ou quando a síntese falha; não cria um WAV silencioso como fallback.
+- \`build_audiobook()\` rejeita resultados com \`ok=false\` e regista \`fallback_used\`/\`fallback_segments\`; os testes existentes cobrem a falha do motor local e a identificação do provider de fallback.
+- A lacuna restante está na confiança em ficheiros devolvidos por providers: antes desta correção, \`_merge_wavs()\` concatenava os bytes sem validar número de frames, integridade, silêncio ou compatibilidade de canais, sample width e sample rate entre segmentos.
 
 Impacto:
-- Um WAV silencioso ou parcialmente silencioso pode ser tratado como audiobook concluído.
-- A pipeline pode continuar para o vídeo e marcar a execução como completed.
+- Um provider pode devolver \`ok=true\` com um WAV vazio, truncado ou silencioso e o ficheiro pode ser aceite.
+- Segmentos com parâmetros PCM diferentes podem ser concatenados sob os parâmetros do primeiro segmento, produzindo áudio corrompido ou com velocidade/tom incorretos.
 
 Correção pretendida:
-- Nunca substituir silenciosamente uma falha de síntese por silêncio num artefacto apresentado como audiobook.
-- Propagar provider, estado, segmentos falhados, fallback e validação de duração/áudio.
-- Validar que o ficheiro existe, tem tamanho/duração plausíveis e contém áudio não silencioso.
-- Marcar a etapa como blocked/failed ou needs_review se a síntese não cumprir os critérios.
-- Criar testes para provider ausente, falha de provider, falha de segmento, ficheiro vazio e áudio silencioso.
+- Validar cada WAV antes da combinação: PCM suportado, canais/sample width/sample rate válidos, frames completos e sinal não silencioso.
+- Exigir parâmetros WAV compatíveis entre segmentos; uma futura normalização/resampling deve ser explícita e testada, nunca implícita.
+- Não criar ficheiro final quando a lista de segmentos está vazia ou qualquer segmento falha.
+- Testar WAV silencioso, lista vazia, formatos incompatíveis, ficheiro truncado e sucesso com fallback real.
+- Manter a qualidade editorial (pronúncia, idioma, clipping, pausas e completude) como uma validação posterior distinta da integridade técnica do WAV.
 
 ### P1 — output de vídeo atual não é ainda uma minissérie animada
 
