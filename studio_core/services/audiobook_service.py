@@ -157,27 +157,85 @@ def _synthesize_http_provider(
     }
 
 
+def _wav_has_signal(frames: bytes, sample_width: int) -> bool:
+    if not frames:
+        return False
+
+    # 8-bit PCM is unsigned and uses 128 as its silence midpoint.
+    if sample_width == 1:
+        return any(sample != 128 for sample in frames)
+
+    if sample_width not in {2, 3, 4}:
+        return False
+
+    return any(
+        int.from_bytes(
+            frames[offset : offset + sample_width],
+            byteorder="little",
+            signed=True,
+        ) != 0
+        for offset in range(0, len(frames), sample_width)
+    )
+
+
+def _read_wav_segment(wav_path: Path) -> Tuple[Any, bytes]:
+    try:
+        with wave.open(str(wav_path), "rb") as wav_file:
+            params = wav_file.getparams()
+            if (
+                params.nchannels < 1
+                or params.sampwidth not in {1, 2, 3, 4}
+                or params.framerate < 1
+                or params.nframes < 1
+                or params.comptype != "NONE"
+            ):
+                raise RuntimeError(f"Formato WAV não suportado: {wav_path.name}.")
+
+            frames = wav_file.readframes(params.nframes)
+    except (EOFError, OSError, wave.Error) as exc:
+        raise RuntimeError(f"Ficheiro WAV inválido: {wav_path.name}.") from exc
+
+    expected_bytes = params.nframes * params.nchannels * params.sampwidth
+    if len(frames) != expected_bytes:
+        raise RuntimeError(f"Segmento WAV incompleto: {wav_path.name}.")
+
+    if not _wav_has_signal(frames, params.sampwidth):
+        raise RuntimeError(f"Segmento WAV silencioso: {wav_path.name}.")
+
+    return params, frames
+
+
 def _merge_wavs(inputs: List[Path], output_path: Path) -> None:
     if not inputs:
-        _write_silent_wav(output_path, duration_seconds=2.0)
-        return
+        raise ValueError("Não existem segmentos de áudio para combinar.")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    first = None
+    first_params = None
+    expected_format = None
     data_chunks = []
 
     for wav_path in inputs:
-        with wave.open(str(wav_path), "rb") as wav_file:
-            params = wav_file.getparams()
-            frames = wav_file.readframes(wav_file.getnframes())
+        params, frames = _read_wav_segment(wav_path)
+        current_format = (
+            params.nchannels,
+            params.sampwidth,
+            params.framerate,
+            params.comptype,
+        )
 
-        if first is None:
-            first = params
+        if expected_format is None:
+            first_params = params
+            expected_format = current_format
+        elif current_format != expected_format:
+            raise RuntimeError(
+                "Os segmentos do audiobook usam formatos WAV incompatíveis."
+            )
+
         data_chunks.append(frames)
 
     with wave.open(str(output_path), "wb") as out:
-        out.setparams(first)
+        out.setparams(first_params)
         for chunk in data_chunks:
             out.writeframes(chunk)
 
