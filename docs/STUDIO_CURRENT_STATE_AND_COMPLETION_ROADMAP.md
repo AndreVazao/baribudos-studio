@@ -380,3 +380,56 @@ A ordem é deliberada. Não começar por traduzir, gerar vídeos ou acrescentar 
 - 2026-11-12: mantidos como bloqueios principais segurança familiar, storage privado, pipeline editorial real, tradução real e autonomia de assets do Website.
 
 **Este documento é um snapshot vivo.** Atualizar estado, evidência, datas, PRs e testes quando novas auditorias ou implementações alterarem a realidade do produto.
+
+
+## 10. Atualização operacional — 12 de novembro de 2026 (execução posterior à baseline)
+
+Esta secção acrescenta evidência operacional recolhida depois do snapshot estrutural acima. Não altera retroativamente os resultados dos testes anteriores.
+
+### 10.1 Website de produção — bloqueio comercial P0
+
+A issue [Website #35](https://github.com/AndreVazao/baribudos-studio-website/issues/35) regista falhas HTTP 500 em `/loja`, `/ips` e `/novidades`; homepage e login respondem HTTP 200. Os logs Vercel associam as falhas a `PrismaClientInitializationError` e `FATAL (ENOTFOUND): tenant/user not found`. O deployment Vercel estar READY não prova conectividade à base de dados.
+
+A consulta read-only ao provider Supabase confirmou que o projeto existente `baribudos-studio-website` está com estado **INACTIVE**, região `eu-west-1`, PostgreSQL 17.6.1. Esta evidência confirma o estado do projeto no provider; não prova isoladamente se o erro de tenant/role decorre apenas da inatividade, de endpoint, role ou configuração de ligação.
+
+**Restrição operacional:** não restaurar, pausar, substituir, criar projeto alternativo, alterar credenciais ou modificar variáveis de produção sem autorização explícita e confirmação do alvo. A recuperação deve preservar a instância e os dados existentes. Depois de autorizada, validar conectividade e as rotas públicas, catálogo, checkout, webhooks e biblioteca.
+
+### 10.2 Website PR #26 — sincronização
+
+A PR continua aberta/draft. O head reportado é `185523816ee1c242431024689221f434790444c0`. A normalização de capa vazia/omitida e os testes de URL absoluta/caminho relativo estão incluídos. CI, Prisma Generate, typecheck, unit tests, build e Vercel Preview foram reportados como sucesso.
+
+Continuam gates obrigatórios antes de merge:
+- integração PostgreSQL para concorrência, repetição, remoção de assets e rollback;
+- recálculo real do SHA-256 com fixtures partilhadas e normalização idêntica entre Python e Node;
+- constraint declarativa que garanta unicidade de `Product.publicationVariantId` por variante, com migração segura e tratamento de duplicados;
+- materialização dos bytes dos assets em storage durável controlado pelo Website, que é acompanhada separadamente pela issue #30.
+
+### 10.3 Studio PR #38 — produção audiovisual
+
+A PR continua aberta/draft no head `912ad3746e0444f8c74865105550d1c1f6a53a3e`. Os caminhos manual e direto de exportação passam agora os frames aprovados do storyboard ao gerador de episódios. Studio CI #426 e Distribution Hub Smoke #33 foram reportados como sucesso, incluindo testes Python.
+
+Falta ensaio real com FFmpeg, imagens aprovadas e áudio: confirmar duração, ordem, sincronização, MP4 reproduzível e resultado final. Os testes de encaminhamento não certificam qualidade audiovisual.
+
+### 10.4 Segurança Studio — âmbito da auditoria
+
+O inventário heurístico reportou 78 módulos de rotas, 233 handlers, 233 sem sinal local de autorização, 97 sensíveis/operacionais e 29 com referências a identidade fornecida pelo cliente. Estes números são sinais de triagem, não prova individual de exposição.
+
+A revisão estática confirmou no snapshot consultado:
+- CORS com origins wildcard e credenciais;
+- montagem de toda a raiz de storage em `/storage`;
+- criação automática do owner com PIN previsível `1234`;
+- rotas de utilizadores que devolvem o registo completo e comparam PIN em texto simples;
+- decisões de acesso a projetos baseadas em parâmetros de identidade/função fornecidos pelo cliente;
+- ausência de verificação local visível nos módulos Secret Control, DB Control, Deploy Control e Updater, a exigir rastreio de middleware, dependências e serviços antes de concluir sobre cada endpoint.
+
+Não fazer correções isoladas que deixem rotas ou clientes incompatíveis. Próxima saída técnica: matriz handler → dependências globais/router → principal server-side → autorização/serviço → dados e efeitos → testes 401/403, incluindo fluxos anónimos, sessão inválida/expirada/revogada e tentativa de falsificação de papel.
+
+### 10.5 Ordem de execução atualizada
+
+1. Obter autorização explícita para recuperar a instância Supabase existente; até lá, manter apenas investigação read-only.
+2. Preparar e executar a recuperação controlada, com validação do estado do provider e preservação dos dados.
+3. Fechar a matriz de segurança dos 233 handlers e desenhar a migração coordenada de autenticação/RBAC.
+4. Resolver materialização durável de assets Website sem dependência do Studio doméstico.
+5. Fechar os gates de integração, checksum e unicidade da PR Website #26.
+6. Executar o ensaio audiovisual real exigido pela PR Studio #38.
+7. Atualizar esta auditoria com evidência de runtime, testes e referências às PRs; não declarar conclusão com base apenas em CI verde.
