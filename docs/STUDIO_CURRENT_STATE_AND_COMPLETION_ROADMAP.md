@@ -380,3 +380,251 @@ A ordem é deliberada. Não começar por traduzir, gerar vídeos ou acrescentar 
 - 2026-11-12: mantidos como bloqueios principais segurança familiar, storage privado, pipeline editorial real, tradução real e autonomia de assets do Website.
 
 **Este documento é um snapshot vivo.** Atualizar estado, evidência, datas, PRs e testes quando novas auditorias ou implementações alterarem a realidade do produto.
+
+
+## 10. Atualização operacional — 12 de novembro de 2026 (execução posterior à baseline)
+
+Esta secção acrescenta evidência operacional recolhida depois do snapshot estrutural acima. Não altera retroativamente os resultados dos testes anteriores.
+
+### 10.1 Website de produção — bloqueio comercial P0
+
+A issue [Website #35](https://github.com/AndreVazao/baribudos-studio-website/issues/35) regista falhas HTTP 500 em `/loja`, `/ips` e `/novidades`; homepage e login respondem HTTP 200. Os logs Vercel associam as falhas a `PrismaClientInitializationError` e `FATAL (ENOTFOUND): tenant/user not found`. O deployment Vercel estar READY não prova conectividade à base de dados.
+
+A consulta read-only ao provider Supabase confirmou que o projeto existente `baribudos-studio-website` está com estado **INACTIVE**, região `eu-west-1`, PostgreSQL 17.6.1. Esta evidência confirma o estado do projeto no provider; não prova isoladamente se o erro de tenant/role decorre apenas da inatividade, de endpoint, role ou configuração de ligação.
+
+**Restrição operacional:** não restaurar, pausar, substituir, criar projeto alternativo, alterar credenciais ou modificar variáveis de produção sem autorização explícita e confirmação do alvo. A recuperação deve preservar a instância e os dados existentes. Depois de autorizada, validar conectividade e as rotas públicas, catálogo, checkout, webhooks e biblioteca.
+
+### 10.2 Website PR #26 — sincronização
+
+A PR continua aberta/draft. O head reportado é `185523816ee1c242431024689221f434790444c0`. A normalização de capa vazia/omitida e os testes de URL absoluta/caminho relativo estão incluídos. CI, Prisma Generate, typecheck, unit tests, build e Vercel Preview foram reportados como sucesso.
+
+Continuam gates obrigatórios antes de merge:
+- integração PostgreSQL para concorrência, repetição, remoção de assets e rollback;
+- recálculo real do SHA-256 com fixtures partilhadas e normalização idêntica entre Python e Node;
+- constraint declarativa que garanta unicidade de `Product.publicationVariantId` por variante, com migração segura e tratamento de duplicados;
+- materialização dos bytes dos assets em storage durável controlado pelo Website, que é acompanhada separadamente pela issue #30.
+
+### 10.3 Studio PR #38 — produção audiovisual
+
+A PR continua aberta/draft no head `912ad3746e0444f8c74865105550d1c1f6a53a3e`. Os caminhos manual e direto de exportação passam agora os frames aprovados do storyboard ao gerador de episódios. Studio CI #426 e Distribution Hub Smoke #33 foram reportados como sucesso, incluindo testes Python.
+
+Falta ensaio real com FFmpeg, imagens aprovadas e áudio: confirmar duração, ordem, sincronização, MP4 reproduzível e resultado final. Os testes de encaminhamento não certificam qualidade audiovisual.
+
+### 10.4 Segurança Studio — âmbito da auditoria
+
+O inventário heurístico reportou 78 módulos de rotas, 233 handlers, 233 sem sinal local de autorização, 97 sensíveis/operacionais e 29 com referências a identidade fornecida pelo cliente. Estes números são sinais de triagem, não prova individual de exposição.
+
+A revisão estática confirmou no snapshot consultado:
+- CORS com origins wildcard e credenciais;
+- montagem de toda a raiz de storage em `/storage`;
+- criação automática do owner com PIN previsível `1234`;
+- rotas de utilizadores que devolvem o registo completo e comparam PIN em texto simples;
+- decisões de acesso a projetos baseadas em parâmetros de identidade/função fornecidos pelo cliente;
+- ausência de verificação local visível nos módulos Secret Control, DB Control, Deploy Control e Updater, a exigir rastreio de middleware, dependências e serviços antes de concluir sobre cada endpoint.
+
+Não fazer correções isoladas que deixem rotas ou clientes incompatíveis. Próxima saída técnica: matriz handler → dependências globais/router → principal server-side → autorização/serviço → dados e efeitos → testes 401/403, incluindo fluxos anónimos, sessão inválida/expirada/revogada e tentativa de falsificação de papel.
+
+### 10.5 Ordem de execução atualizada
+
+1. Obter autorização explícita para recuperar a instância Supabase existente; até lá, manter apenas investigação read-only.
+2. Preparar e executar a recuperação controlada, com validação do estado do provider e preservação dos dados.
+3. Fechar a matriz de segurança dos 233 handlers e desenhar a migração coordenada de autenticação/RBAC.
+4. Resolver materialização durável de assets Website sem dependência do Studio doméstico.
+5. Fechar os gates de integração, checksum e unicidade da PR Website #26.
+6. Executar o ensaio audiovisual real exigido pela PR Studio #38.
+7. Atualizar esta auditoria com evidência de runtime, testes e referências às PRs; não declarar conclusão com base apenas em CI verde.
+
+
+## 11. Atualização de recuperação e sincronização — 12 de novembro de 2026 (posterior à secção 10)
+
+Esta secção **substitui** as afirmações da secção 10.1 que indicavam Supabase INACTIVE e recuperação ainda não autorizada. A autorização explícita foi recebida e a recuperação controlada foi executada na instância original.
+
+### 11.1 Supabase e Website após recuperação
+
+- Projeto original preservado: `rpfyazuejafgxswrlbvw`, `baribudos-studio-website`, região `eu-west-1`, PostgreSQL 17.6.1.
+- Restauro do projeto existente concluído; `get_project` confirmou `ACTIVE_HEALTHY`. Não foi criada instância substituta.
+- Consulta SQL read-only confirmou ligação ao PostgreSQL 17.6 e existência das 14 tabelas Prisma, mais `public.system_metadata`.
+- Migration registada: `20260527185301` (`phase_42_3_lite_stabilization`). Não foi aplicada qualquer migration durante a recuperação.
+- Contagens read-only na base de produção: `User=2`; `StudioSettings=0`; `IntellectualProperty=0`; `Series=0`; `Publication=0`; `PublicationVariant=0`; `PublicationAsset=0`; `Product=0`; `Checkout=0`; `CheckoutItem=0`; `CustomerLibrary=0`; `BundleGroup=0`; `BundleGroupItem=0`.
+- Smoke público sem autenticação nem writes: `/`, `/login`, `/loja`, `/ips`, `/novidades` responderam HTTP 200. A loja continua sem produtos; novidades declara ausência de novidades públicas. Isto não valida login, checkout, webhooks ou biblioteca.
+- `GET /api/catalog/home` respondeu `ok=true`, com arrays `products=[]` e `bundles=[]`.
+- Vercel runtime errors/logs na janela consultada (~30 min) sem erros; Supavisor entre 16:00–16:40 UTC sem correspondências ao erro tenant/user. Manter observação.
+- `public.system_metadata` continua com RLS desativado e sem policies; Security Advisor reporta `rls_disabled_in_public`. Não ativar RLS antes de desenhar e validar policies.
+- `DATABASE_URL` usa pooler transaction (6543); `DIRECT_URL` usa pooler session (5432), não o host direto. Não alterado; validar configuração Prisma/Supabase antes de qualquer mudança.
+- Vercel reportou metadados `readable-secret` para algumas variáveis encriptadas. Não prova exposição pública. Nenhum segredo foi exposto, rodado ou alterado.
+
+**Segurança da recuperação:** não foram alterados dados, schema, migrations, credenciais, env vars ou deployments; nenhuma compra, webhook ou write foi executado.
+
+### 11.2 Catálogo vazio e reconciliação Studio → Website
+
+A causa do catálogo vazio ainda não está provada. O publisher do Studio só envia uma publicação quando existe pacote congelado, política elegível e ação explícita de publicação. É necessário reconciliar os recibos locais `website_sync` com os IDs `publication_id`/`variant_id` no Website antes de reenviar qualquer conteúdo. O clone local disponível em `C:\\ProgramasGodMode\\baribudos-studio` está em `main` no commit `3cd6888`, não contém a pasta runtime `storage` e não é evidência do estado de produção do Studio. Não foram encontrados recibos runtime nesse clone. Não assumir que não existem noutro runtime.
+
+### 11.3 Website PR #26 e issue #36 — estado reconciliado
+
+- A PR Website #26 continua aberta/draft. O head documentado é `185523816ee1c242431024689221f434790444c0`; CI #156, Prisma Generate, typecheck, unit tests, build e Vercel Preview/Visibility foram reportados como sucesso.
+- A branch da PR #26 já implementa transação Prisma Serializable, substituição determinística do conjunto de assets, rollback quando a escrita falha, validação comercial/preço, versão congelada, conflito retryable P2034 (HTTP 409 + Retry-After) e correção do contrato de capa vazia. O emissor Studio repete o mesmo body para conflitos transitórios.
+- A inspeção do schema confirma `PublicationVariant.variantId` e `Product.slug` UNIQUE; `Product.publicationVariantId` não é UNIQUE. A proteção concorrente atual depende de Serializable + retry, não de constraint declarativa.
+- O checksum SHA-256 é calculado no Studio sobre `json.dumps(envelope, ensure_ascii=False, sort_keys=True)` antes de incluir `checksum`. Em 12 Nov foi acrescentada ao branch Website #26 a verificação do digest sobre o body bruto, antes do Zod, com serialização compatível com Python e preservação de tokens numéricos (`1.0`). Foi criada fixture comum Python/Node com Unicode/emoji/decimais e testes de tampering. CI/typecheck/testes ainda pendentes de confirmação.
+- Faltam testes reais de integração PostgreSQL: repetição, concorrência, rollback após falha de asset, replays e ausência de duplicados/inconsistências. Não declarar concluído apenas com CI.
+- A issue Website #36 foi criada como checklist explícita de atomicidade e falha de assets, mas sobrepõe-se em grande parte à PR #26. A PR #26 é a via de implementação existente; a issue #36 deve acompanhar os critérios que ainda faltam, evitando uma segunda implementação paralela.
+- Website issue #30 continua aberta: guardar URLs não prova que os bytes dos assets são materializados em storage durável próprio. Website deve funcionar com Studio/PC doméstico desligado.
+
+### 11.4 Memória, repositórios locais e próximos passos
+
+- O PC doméstico está online via Desktop Commander. Os clones locais Studio e Website estão limpos, em `main`, mas desatualizados face às branches/PRs remotas; não os usar para sobrescrever estado remoto.
+- O diretório local do clone Studio não tem `storage/`; a memória/runtime operacional não foi localizada. A pesquisa de recibos `website_sync` permanece pendente até localizar a instalação/runtime correto.
+- A memória técnica privada/AndreOS deve ser atualizada em paralelo com esta documentação; não guardar segredos nem conteúdo familiar privado em repositórios públicos.
+
+### 11.5 Próxima sequência obrigatória
+
+1. Localizar o runtime/instalação efetiva do Studio e obter, apenas em leitura, contagens/estados de projetos elegíveis, pacotes congelados e recibos `website_sync`; nunca expor conteúdo privado no relatório.
+2. Comparar recibos com IDs de publicações/variantes/produtos/assets do Website; só então decidir republicações pontuais.
+3. Continuar PR #26: integração PostgreSQL, checksum efetivo com fixtures Python/Node e política de unicidade por variante, sem migração destrutiva.
+4. Resolver issue #30: materialização durável dos bytes, hash/MIME/tamanho, retries e teste com Studio desligado.
+5. Rever RLS de `system_metadata` e o alerta `readable-secret`; nenhuma alteração sem desenho de policies/rotação coordenada.
+6. Validar `DIRECT_URL` e Supavisor sem expor valores secretos.
+7. Executar sandbox Stripe/PayPal, login, biblioteca e checkout só em ambiente de teste; não usar pagamentos reais.
+8. Prosseguir com P0 de autenticação/RBAC/storage do Studio e validar todas as rotas; manter as fases editoriais e multilingues como pendentes até testes reais.
+
+
+### 11.6 Investigação adicional do runtime e verificação SHA-256 — 12 Nov 2026, 21:06 UTC
+
+**Pesquisa local (apenas leitura):**
+- PC doméstico acessível. Foram verificados os clones `baribudos-studio`, `baribudos-studio-primary`, `baribudos-studio-home-edition` e `baribudos-studio-website` em `C:\\ProgramasGodMode`.
+- Studio clone `main` está em `3cd6888`; Website clone `main` em `ecf001a`; histórico primary `main` em `0be88a4`; home-edition `main` em `076a509`. Não foram observadas alterações locais nestes clones.
+- O home-edition implementa armazenamento local por defeito em `<process.cwd()>\\storage` (ou `BARIBUDOS_STORAGE_ROOT`), e o instalador cria `storage/data/projects.json`, `users.json`, etc. Essa pasta não existe no clone verificado.
+- Pesquisa de ficheiros operacionais `projects.json`, `users.json`, `publications.json`, `settings.json` e `storage/data` nos quatro clones não encontrou resultados.
+- Não foi encontrado processo Baribudos/uvicorn/node, listener nas portas 8787/8000/8001/5173/3000/8080, tarefa agendada com nome Studio/Baribudos, nem variáveis de ambiente `BARIBUDOS_STORAGE_ROOT`, `BARIBUDOS_HOME`, `BARIBUDOS_STUDIO_HOME`, `PORT` ou `HOST` ao nível User/Machine.
+- Limite: o acesso do Desktop Commander não permitiu inspecionar diretamente alguns diretórios de perfil AppData; a ausência de runtime/recibos só está confirmada nas localizações acessíveis verificadas. Não concluir que os dados foram perdidos ou inexistentes noutro disco/perfil.
+
+**Alterações de código Website PR #26 (branch `fix/v6-atomic-publication-sync`):**
+- Adicionado `src/lib/publication-checksum.ts`: parser JSON que retém os tokens numéricos do body bruto, ordenação de chaves por code point Unicode, serialização equivalente ao `json.dumps(..., ensure_ascii=False, sort_keys=True)` do Studio e SHA-256 com comparação constante.
+- Rota `POST /api/studio/publish` passa a ler o body uma vez, validar checksum antes de `JSON.parse`/Zod e rejeitar digest ausente/inválido com `publication_checksum_mismatch`, antes de qualquer write.
+- Adicionados testes Node para fixture válida Python, Unicode/emoji, float token `1.0`, alteração de conteúdo, digest alterado, digest em falta e independência da ordem das chaves.
+- Fixture `tests/fixtures/website-ingest-v1-checksum.json` partilhada byte a byte com o repo Studio; teste Python recalcula com o algoritmo de produção.
+- Contrato documentado em Website `docs/STUDIO_INGEST_CHECKSUM_CONTRACT.md`.
+- Commits no branch Website: `44324e1`, `60ed1bc`, `01e9f24`, `a4114ab`, `5e1e98b`, `87bcbd6`, `cd239ab` (sequência inclui helper, route, teste, correção de tipagem, fixture partilhada e documentação).
+- A implementação ainda não é considerada validada até CI, typecheck e suite de testes confirmarem sucesso. Nenhuma alteração foi aplicada à produção.
+
+**Próximos passos atualizados:**
+1. Aguardar/verificar CI e corrigir erros do checksum antes de avançar para testes PostgreSQL.
+2. Executar a fixture Python no repo Studio e fixture Node no Website; manter os bytes idênticos.
+3. Continuar a localizar a instalação/runtime real do Studio noutros perfis/discos autorizados; pedir indicação de caminho apenas se a pesquisa local continuar bloqueada.
+4. Reconciliar recibos reais com Website antes de qualquer republicação.
+5. Completar testes PostgreSQL concorrentes/rollback, unicidade por variante e materialização durável de assets.
+
+### 11.7 Resultado de validação do checksum — 12 Nov 2026, 21:12 UTC
+
+- Website CI #161 terminou com `success` no head `cd239ab0249283937a1e0cafd90b1e0daa9373ff`.
+- Confirmados como sucesso: instalação de dependências, Secret hygiene, Prisma Generate, Typecheck, Unit tests e Build.
+- Repository Visibility Only #155 também terminou com sucesso.
+- A validação Node do Website passou incluindo fixture partilhada, Unicode/emoji, float token `1.0`, tampering de conteúdo/digest e reordenação de chaves.
+- O teste Python foi adicionado ao Studio, mas ainda não há execução CI/local registada para esse ficheiro. A fixture foi gerada com o algoritmo Python de produção e o digest conferido durante a criação.
+- O gate de checksum no Website pode ser considerado validado pelo CI #161. PR #26 permanece draft porque faltam testes PostgreSQL reais, unicidade comercial por variante e assets duráveis (issue #30).
+
+**Próxima etapa técnica:** analisar a infraestrutura de testes e as opções de storage durável do Website; não usar a base de produção para testes de escrita. A pesquisa do runtime Studio continua limitada aos caminhos acessíveis e não encontrou os recibos.
+
+### 11.8 PostgreSQL CI de integração e inventário de storage — 12 Nov 2026, 21:15 UTC
+
+**Website PR #26 — integração PostgreSQL:**
+- Workflow `.github/workflows/website-ci.yml` agora provisiona PostgreSQL 17 efémero, aplica `prisma db push` somente nesse container e executa `tests/publication-sync.integration.test.ts` com `tsx@4.19.2`.
+- Testes reais do serviço `syncPublicationToCommerce`: replay idempotente, substituição de assets, atualização de preço, rollback integral forçado por trigger PostgreSQL e duas entregas concorrentes com retry do envelope mais recente.
+- Website CI #162 concluiu com sucesso os passos Prisma Generate, schema efémero, Typecheck, Unit tests, integração PostgreSQL e Build; job estava a finalizar na última consulta.
+- Website CI #164 foi iniciado para validar a versão final do teste concorrente e a versão atualizada do workflow; ainda em execução.
+- Nenhum teste usa a base Supabase de produção.
+
+**Storage:**
+- Consulta read-only de `storage.buckets` + `storage.objects` no Supabase original devolveu zero buckets.
+- Listagem Vercel integration configurations para project e account/team devolveu zero integrações.
+- Não foi criado bucket/store, segredo, env var, subscrição ou alteração de infraestrutura. Provider e eventual custo carecem de decisão explícita. Website issue #30 continua aberta.
+
+**Próximos gates:**
+1. Confirmar CI #164 completo.
+2. Executar teste Python da fixture partilhada no Studio.
+3. Resolver unicidade declarativa de `Product.publicationVariantId` com análise de dados históricos e migração segura.
+4. Obter decisão explícita sobre provider/storage e limite de custo; só depois implementar upload, hash/MIME/tamanho e serving durável.
+5. Continuar procura do runtime Studio nos caminhos/perfis/discos autorizados e reconciliar recibos.
+
+### 11.9 Resultado final da validação PostgreSQL — 12 Nov 2026, 21:17 UTC
+
+- Website CI #164 terminou `success` no head `ce9f9da7fd21c505524b1fea300c13218d95d90a`.
+- Sucesso confirmado em todos os passos: container PostgreSQL, Prisma Generate, `prisma db push` isolado, Typecheck, Unit tests, testes de integração PostgreSQL e Build.
+- Repository Visibility Only #158 terminou `success`.
+- A suite de integração final inclui replay, substituição de assets, atualização de preço, rollback forçado por trigger PostgreSQL e duas entregas concorrentes com retry da versão mais recente.
+- O Website CI #161 também passou o checksum real e fixture Node/Python.
+- Fixture foi recalculada com Python `hashlib/json.dumps`; digest confere. O teste Python correspondente existe no repositório Studio, embora ainda sem execução CI própria.
+- PR Website #26 permanece draft: falta resolver a unicidade/índice comercial por variante e materialização dos bytes em storage durável (provider não configurado). A issue #30 recebeu confirmação de zero buckets Supabase e zero integrações Vercel visíveis.
+- Nenhum teste escreveu na base de produção; nenhuma infraestrutura de storage foi criada.
+
+### 11.10 Auditoria read-only de unicidade e migration history — 12 Nov 2026
+
+- Índices reais de `public.Product`: `Product_pkey`, `Product_slug_key` e `idx_Product_publicationVariantId` (não-único). A tabela continua vazia; não há duplicados de produção neste momento.
+- `supabase_migrations.schema_migrations` regista apenas `20260527185301 / phase_42_3_lite_stabilization`.
+- Não existe tabela `_prisma_migrations` em nenhum schema consultado; os caminhos habituais de migrations no branch Website não contêm o SQL da migration registada.
+- Uma constraint UNIQUE simples em `Product.publicationVariantId` conflita com a intenção atual de preservar produtos históricos inativos. Um índice parcial `UNIQUE ... WHERE active = true` é uma opção potencial, mas o serviço teria de inativar duplicados antes de reativar/atualizar o produto primário.
+- Antes de qualquer mudança: recuperar/estabelecer baseline de migrations, confirmar comportamento em ambientes existentes, escrever migration reversível/segura e testar com PostgreSQL. Não executar DDL em produção sem autorização.
+- Issue Website #36 recebeu esta evidência; PR #26 continua draft.
+
+
+## 12. Atualização operacional — 13 de novembro de 2026
+
+Esta secção regista verificações posteriores à secção 11. Não substitui os snapshots históricos; corrige o estado atual onde existe evidência mais recente.
+
+### 12.1 Website público e PostgreSQL
+
+- A instância Supabase original `baribudos-studio-website` continua `ACTIVE_HEALTHY`, PostgreSQL 17.6.1, região `eu-west-1`.
+- O deployment Vercel de produção continua `READY`.
+- Smoke HTTP público desta execução: `/`, `/login`, `/loja`, `/ips` e `/novidades` responderam HTTP 200.
+- `GET /api/catalog/home` respondeu HTTP 200 com `products=[]` e `bundles=[]`.
+- Website issue #35 foi encerrada como concluída: o incidente PostgreSQL/HTTP 500 deixou de se reproduzir. O catálogo vazio permanece um problema funcional distinto, acompanhado pela issue #36 e pela PR #26.
+- Não foram inseridos produtos sintéticos nem efetuados writes, migrations ou alterações de infraestrutura nesta execução.
+
+### 12.2 Website PR #26 — estado e correção do contrato de retry
+
+- Branch: `fix/v6-atomic-publication-sync`.
+- Head atual: `1ebbbb400a8e0a5924e807e0a6bee2108238b67e`.
+- Website CI #165 e Repository Visibility Only #159 concluíram com sucesso neste head.
+- Preview Vercel associado ao mesmo commit: deployment `dpl_6GbTkAjy4cTZ2oZxcxzqmXx7kgTC`, estado `READY`.
+- A PR continua draft e não foi integrada.
+
+A revisão cruzada do contrato encontrou uma incompatibilidade concreta: o publisher do Studio já repetia o mesmo body congelado quando recebia HTTP 409 com `error=retryable_transaction_conflict` e `retryable=true`, mas a rota oficial Website `/api/studio/publish` apenas devolvia o status 409 com a mensagem genérica da exceção. Assim, o retry automático não era acionado.
+
+Correção acrescentada à PR #26:
+- Helper comum `buildPublicationErrorResponse()` para produzir a resposta exata do contrato e evitar divergência entre rotas.
+- A rota oficial `/api/studio/publish` devolve agora `409`, `retryable_transaction_conflict`, `retryable=true` e `Retry-After: 1` para P2034.
+- A rota alternativa `/api/publications/ingest` passou também a validar SHA-256 sobre o body bruto antes de Zod/writes, e usa a mesma resposta de erro.
+- Testes acrescentados para a resposta exata consumida pelo publisher do Studio e para garantir que P2002/outros erros não são tratados como retryable.
+
+O publisher do Studio em main já serializa o envelope congelado uma vez, repete os mesmos bytes, limita-se a três retries e respeita `Retry-After` até cinco segundos. A rota oficial documentada pelo contrato é `/api/studio/publish`.
+
+### 12.3 Gates que impedem o merge da PR #26
+
+- A integração PostgreSQL efémera, replay, substituição de assets, rollback forçado e concorrência/retry passaram no Website CI #164; o CI #165 voltou a validar o head após a correção das rotas.
+- O schema mantém `PublicationVariant.variantId` UNIQUE e `Product.slug` UNIQUE, mas `Product.publicationVariantId` continua sem constraint UNIQUE. Serializable protege o fluxo transacional testado; não substitui uma garantia declarativa para todos os escritores.
+- A baseline de migrations de produção continua incompleta. Não criar DDL/índice em produção até recuperar e rever a baseline e a política de ativação/desativação de produtos históricos.
+- Storage durável continua pendente: as verificações anteriores registaram zero buckets Supabase e zero conectores Vercel ligados ao projeto. O Website ainda não provou materialização e serving autónomo de bytes quando o Studio doméstico está offline.
+- Reconciliar receipts reais do Studio com `publication_id`/`variant_id` antes de qualquer publicação real; não popular o catálogo com dados sintéticos.
+
+### 12.4 Studio — estado funcional e segurança
+
+- Studio PR #38 permanece draft. Studio CI #426 e Distribution Hub Smoke #33 passaram, mas falta ensaio real FFmpeg com imagens aprovadas e áudio para validar duração, ordem, sincronização e reprodução do MP4.
+- A branch de trabalho de integridade WAV foi comparada com main; os blobs de `audiobook_service.py` e `tests/test_audiobook_fallbacks.py` já coincidem com main. Não foi aberta PR redundante.
+- A prioridade P0 de segurança mantém-se: inventário heurístico de 78 módulos/233 handlers é apenas triagem. Continuar a matriz handler → dependências globais/router → principal server-side → autorização/serviço → dados/efeitos, antes de migrar PIN, sessões, RBAC, CORS ou storage.
+- Não foi feita migração parcial de autenticação nem alteração à superfície de storage nesta execução.
+
+### 12.5 Infraestrutura, histórico e distribuição
+
+- O projeto Vercel `baribudos-studio-website` está ligado ao Website Next.js; o deployment público e o estado PostgreSQL foram verificados separadamente.
+- Não foi encontrado manifest `render.yaml`, `Procfile` ou configuração explícita de serviço Render nos trees consultados dos dois repositórios ativos. A conta Render não foi consultada nesta execução; não atribuir serviços sem evidência.
+- Os repositórios históricos `AndreVazao/baribudos-studio-primary` e `AndreVazao/baribudos-studio-home-edition` continuam existentes e com `archived=false`; foram apenas consultados como referências e não foram alterados.
+- A distribuição externa de ebooks, audiobooks e YouTube/YouTube Kids continua uma fase posterior. A roadmap documentada não prova APIs de publicação, contas autorizadas ou adaptadores ativos. O Studio mantém aprovação editorial/comercial por canal.
+
+### 12.6 Próxima sequência
+
+1. Fechar a revisão/validação dos modelos, erros e concorrência da PR Website #26, sem declarar unicidade declarativa inexistente.
+2. Recuperar baseline de migrations e decidir, com evidência, a constraint comercial segura por variante.
+3. Definir storage durável apenas após auditoria final de recursos existentes, custos e autorização; depois testar bytes, MIME, tamanho, checksum, retries e Studio offline.
+4. Localizar o runtime real do Studio e reconciliar receipts antes de publicar conteúdo real.
+5. Prosseguir a migração de segurança integral do Studio, sem remendos parciais.
+6. Executar ensaio audiovisual real da PR #38.
+7. Validar login, checkout, webhooks e biblioteca em sandbox, sem pagamentos reais.
