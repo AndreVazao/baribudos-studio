@@ -109,18 +109,68 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             self.assertGreater(mini_path.stat().st_size, 1000)
             self.assertEqual(mini_series["format"], "mp4")
 
+            production_outputs = [
+                {"story": story, "ebook": ebook, "audio": audio, "mini_series": mini_series}
+            ]
+            for index in range(2, 6):
+                next_story = {
+                    **story,
+                    "id": f"story-{index:03d}",
+                    "title": f"História {index} — A floresta aprende em conjunto",
+                    "raw_text": f"História {index}. Tilo e os amigos escutaram, conversaram e pediram ajuda a um adulto de confiança.",
+                    "pages": [
+                        {**page, "text": f"História {index}. {page['text']}"}
+                        for page in story["pages"]
+                    ],
+                }
+                next_project_id = f"{project_id}-{index:03d}"
+                with patch.object(ebook_service, "resolve_storage_path", side_effect=lambda *parts: storage.joinpath(*parts)), patch.object(ebook_service, "load_ip_runtime", return_value=runtime):
+                    next_ebook = ebook_service.build_epub(
+                        next_story,
+                        project_id=next_project_id,
+                        project_title=next_story["title"],
+                        language="pt-PT",
+                        author="Baribudo Estúdio",
+                        saga_id="baribudos",
+                    )
+                with patch.object(audiobook_service, "resolve_storage_path", side_effect=lambda *parts: storage.joinpath(*parts)):
+                    next_audio = audiobook_service.build_audiobook(
+                        {"pt-PT": next_story},
+                        {"project_id": next_project_id, "project_title": next_story["title"], "provider": "system_tts"},
+                    )["pt-PT"]
+                with patch.object(video_service, "resolve_storage_path", side_effect=lambda *parts: storage.joinpath(*parts)):
+                    next_video = video_service.build_series_episode(
+                        next_story,
+                        {
+                            "project_id": next_project_id,
+                            "project_title": next_story["title"],
+                            "language": "pt-PT",
+                            "audio_path": next_audio["file_path"],
+                            "sequence_frames": [
+                                {"index": 1, "image_path": str(first)},
+                                {"index": 2, "image_path": str(second)},
+                            ],
+                        },
+                    )
+                production_outputs.append({
+                    "story": next_story,
+                    "ebook": next_ebook,
+                    "audio": next_audio,
+                    "mini_series": next_video,
+                })
+
             five_stories = [
                 {
-                    "id": f"story-{index:03d}",
-                    "title": f"História {index}",
+                    "id": item["story"]["id"],
+                    "title": item["story"]["title"],
                     "saga_slug": "baribudos",
                     "language": "pt-PT",
                     "sequence_number": index,
                     "editorial_status": "approved",
                     "value_theme": "Pedir ajuda",
-                    "mini_series_path": str(mini_path),
+                    "mini_series_path": item["mini_series"]["file_path"],
                 }
-                for index in range(1, 6)
+                for index, item in enumerate(production_outputs, start=1)
             ]
             groups = select_complete_story_groups(five_stories)
             self.assertEqual(len(groups), 1)
