@@ -654,9 +654,9 @@ A PR draft #40 (`feat/five-story-production-cloud-2026-11-13`) acrescenta uma pr
 - Studio CI #43424340684: success.
 - Distribution Hub V6 Smoke #43424340465: success.
 - 20 testes Python passaram.
-- Audiobook de teste: 3 segmentos e WAV produzido por eSpeak NG.
-- Filme compilatório de teste: H.264/AAC, 57,6 segundos.
-- Artifact `baribudos-story-production-validation`, retenção de 14 dias (expira em 27 Nov 2026).
+- Cinco histórias sintéticas independentes produziram cada uma EPUB, audiobook WAV (3 segmentos) e minissérie MP4 através dos builders reais.
+- O guia para pais e filme compilatório foram produzidos a partir dos cinco outputs; FFprobe confirmou H.264/AAC e 71,93 segundos.
+- Artifact `baribudos-story-production-validation` (3,74 MB), retenção de 14 dias (expira em 27 Nov 2026).
 
 ### Limites e gates
 
