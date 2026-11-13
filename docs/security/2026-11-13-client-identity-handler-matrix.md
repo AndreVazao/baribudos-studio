@@ -95,3 +95,27 @@ Revisão estática dos sete módulos prioritários em `main` (13-11-2026). Esta 
 - [ ] Testes HTTP 401/403 e falsificação de identidade.
 - [ ] Plano de migração de sessão/RBAC e compatibilidade desktop/mobile.
 - [ ] Prova dinâmica de que ficheiros internos não são servidos por HTTP.
+
+
+## Verificação da aplicação e serviços chamados
+
+A leitura de `studio_core/api/main.py` confirmou no estado atual de `main`:
+
+- A aplicação não regista middleware global de autenticação/autorização.
+- CORS está configurado com `allow_origins=["*"]`, `allow_credentials=True`, métodos e headers wildcard.
+- A raiz completa de storage é montada em `/storage` através de `StaticFiles`; a mesma raiz contém `data/*.json` e outros dados operacionais.
+- Os routers de utilizadores, projetos, publicação, controlo de base de dados, deploy e segredos são registados diretamente sem dependência global visível.
+
+Nos serviços inspecionados:
+
+- `freeze_publication_package_operationally` usa `user_name` e `user_role` para preencher `frozen_by` no snapshot; não valida a identidade nem a autorização.
+- `publish_package` constrói um registo de publicação e copia `requested_by`; não valida identidade nem autorização.
+- `repair_project_structure` normaliza estrutura de dados; não valida identidade nem autorização.
+- `sync_ready_for_publish_with_readiness` altera `ready_for_publish` e grava readiness; não valida identidade nem autorização.
+- Estes serviços não substituem o gate HTTP; a proteção tem de ocorrer antes da execução e usar um principal validado pelo servidor.
+
+**Conclusão P0 reforçada:** os handlers acima não têm uma camada central visível que compense os gates forjáveis. A montagem estática de storage também permanece uma exposição estrutural. Ainda falta prova dinâmica HTTP num ambiente isolado; não foi feito qualquer pedido a endpoints de dados nem alterado storage.
+
+### Contenção e plano de migração
+
+A correção deve ser coordenada: primeiro definir principal e sessão server-side, matriz RBAC, allowlist pública e migração de clientes; depois proteger routers/serviços, retirar a montagem de storage privado e migrar desktop/mobile. Não colocar um middleware de bloqueio global sem primeiro separar health, assets públicos e integração Website, pois isso pode interromper operações legítimas e publicação outbound.
