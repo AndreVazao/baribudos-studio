@@ -10,7 +10,6 @@ on:
   push:
     branches:
       - main
-      - feat/five-story-production-cloud-2026-11-13
   workflow_dispatch:
 
 permissions:
