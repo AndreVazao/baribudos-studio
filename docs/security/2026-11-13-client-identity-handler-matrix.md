@@ -64,3 +64,34 @@
 ## Limite e próxima etapa
 
 Esta matriz é uma lista de trabalho derivada do inventário CI, não a revisão manual concluída pedida na issue #43. O passo seguinte é seguir os handlers P0 e atualizar cada linha com referências concretas a serviços e testes. A migração de sessão/RBAC deve esperar pela conclusão dessa análise e pelo plano de compatibilidade desktop/mobile.
+
+
+## Primeira revisão manual — superfícies P0
+
+Revisão estática dos sete módulos prioritários em `main` (13-11-2026). Esta secção regista apenas comportamento diretamente visível nos handlers e helpers locais; ainda não substitui testes HTTP nem o rastreio completo de serviços.
+
+| Módulo | Evidência observada | Conclusão estática |
+|---|---|---|
+| `users.py` | `GET /users`, `POST /users`, `PATCH /users/{user_id}`, `PATCH /users/{user_id}/pin` não recebem principal nem dependência de autorização. Login compara PIN em texto simples e devolve o registo completo do utilizador. | **P0 confirmado no código da rota:** gestão de utilizadores e PIN sem gate de autorização visível; exposição de registo e credencial na resposta. |
+| `projects.py` | `GET /projects` usa `user_id`/`user_name` do pedido para filtrar visibilidade. `PATCH /projects/{project_id}` chama `_can_edit_or_publish(user_role, user_name)`; o helper aceita roles declaradas `owner/creator/admin` ou nomes fixos. | **P0 confirmado no código da rota:** autorização/visibilidade baseada em valores fornecidos pelo cliente. `POST /projects` também aceita `created_by` e `created_by_name` do payload. |
+| `publishing.py` | `POST /publishing/publish` autoriza com `user_role`/`user_name` do pedido; `requested_by` pode ser fornecido no payload. | **P0 confirmado no código da rota:** a decisão local de publicar é forjável pelo cliente. |
+| `publication_package.py` | `POST /publication-package/{project_id}/freeze` chama helper local que aceita `owner/creator/admin` ou nomes fixos vindos dos parâmetros; encaminha os mesmos valores ao serviço de freeze. | **P0 confirmado no gate da rota:** identidade/função do cliente controla o freeze; falta rastrear as verificações internas do serviço, sem assumir que são seguras. |
+| `publish_readiness.py` | `POST sync`, `mark-ready` e `unmark-ready` usam helper local baseado em `user_role`/`user_name` do pedido. | **P0 confirmado no gate da rota:** cliente pode declarar role/nome aceite pelo helper para alterar estado de prontidão. |
+| `project_commercial.py` | `PATCH /{project_id}` autoriza por `user_role`/`user_name` fornecidos pelo pedido; roles `owner/creator/admin` ou nomes `andre/andré/esposa`. | **P0 confirmado no gate da rota:** alterações comerciais aceitam identidade declarada pelo cliente. |
+| `project_integrity.py` | `POST /{project_id}/repair` usa o mesmo padrão de autorização por role/nome do pedido antes de alterar o projeto. | **P0 confirmado no gate da rota:** operação de reparação aceita identidade declarada pelo cliente. |
+
+### Decisão técnica
+
+- Não corrigir estes módulos individualmente com comparações adicionais dos mesmos campos: isso preservaria a falsificação.
+- O principal autenticado tem de ser derivado de sessão/credencial verificada no servidor e injetado por dependência central.
+- Rotas de leitura que hoje aceitam acesso sem principal (por exemplo, listagens de publicação, pacote, prontidão e integridade) também precisam de classificação explícita: público, familiar autenticado ou editorial/admin. Não as tornar públicas por omissão.
+- `requested_by`, `created_by` e `created_by_name` devem ser atribuídos pelo servidor após autenticação, não usados como prova de identidade quando enviados pelo cliente.
+- Antes da implementação: mapear dependências do serviço `freeze_publication_package_operationally`, `publish_package`, `validate_project_publishability`, `sync_ready_for_publish_with_readiness`, `repair_project_structure` e helpers de storage; depois escrever testes HTTP negativos e de regressão.
+
+### Estado desta revisão
+
+- [x] Inspeção estática dos sete módulos P0 acima.
+- [ ] Inspeção transitiva dos serviços e middleware da aplicação.
+- [ ] Testes HTTP 401/403 e falsificação de identidade.
+- [ ] Plano de migração de sessão/RBAC e compatibilidade desktop/mobile.
+- [ ] Prova dinâmica de que ficheiros internos não são servidos por HTTP.
