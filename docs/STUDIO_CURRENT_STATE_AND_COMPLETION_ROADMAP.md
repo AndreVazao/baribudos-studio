@@ -628,3 +628,47 @@ O publisher do Studio em main já serializa o envelope congelado uma vez, repete
 5. Prosseguir a migração de segurança integral do Studio, sem remendos parciais.
 6. Executar ensaio audiovisual real da PR #38.
 7. Validar login, checkout, webhooks e biblioteca em sandbox, sem pagamentos reais.
+
+
+## 16. Atualização — linha de produção editorial e validação cloud (2026-11-13)
+
+A PR draft #40 (`feat/five-story-production-cloud-2026-11-13`) acrescenta uma primeira implementação testável do ciclo de outputs por história e do bundle complementar de cinco histórias.
+
+### Unidade por história
+
+- Uma história aprovada deve originar um EPUB, um audiobook e uma minissérie associada à mesma versão/IP/idioma.
+- A CI cloud agora instala FFmpeg, FFprobe e eSpeak NG numa VM Ubuntu efémera e executa os builders reais do Studio com fixtures sintéticas.
+- A validação confirmou EPUB ZIP/OPF/TOC, WAV produzido por TTS real, MP4 com vídeo/áudio e compilação H.264/AAC.
+
+### Bundle de cinco histórias
+
+- Serviço `story_bundle_service.py` seleciona apenas histórias explicitamente aprovadas, com ID estável, agrupadas por IP/saga e idioma.
+- Só grupos completos de cinco são elegíveis; grupos incompletos ficam em espera e IPs/idiomas nunca são misturados.
+- O bundle gera guia para pais e compila as cinco minisséries existentes num MP4.
+- Esta unidade de cinco histórias não fixa a dimensão de volumes, coleções ou temporadas comerciais.
+- A integração automática com API/dashboard e persistência editorial ainda não está implementada.
+
+### Evidência cloud
+
+- Story Production Cloud Validation #43424340639: success.
+- Studio CI #43424340684: success.
+- Distribution Hub V6 Smoke #43424340465: success.
+- 20 testes Python passaram.
+- Audiobook de teste: 3 segmentos e WAV produzido por eSpeak NG.
+- Filme compilatório de teste: H.264/AAC, 57,6 segundos.
+- Artifact `baribudos-story-production-validation`, retenção de 14 dias (expira em 27 Nov 2026).
+
+### Limites e gates
+
+- Os fixtures são sintéticos; nenhum conteúdo privado ou dado de produção foi usado.
+- A geração narrativa principal continua baseada em templates determinísticos, não num provider generativo real.
+- A tradução/localização continua simulada.
+- TTS técnico não equivale a voz artística/editorial aprovada.
+- Minissérie/filme continuam slideshow/animatic de imagens estáticas, sem animação fluida nem lip-sync.
+- Não houve writes em produção, publicação ou sync Website.
+
+### Próximos trabalhos registados
+
+- Issue #41: ligar bundle de cinco histórias ao fluxo editorial aprovado, com persistência, idempotência, versionamento, jobs e dashboard; depende da migração de segurança P0.
+- Issue #42: provider generativo de histórias, validação de canon/idade/segurança, versões imutáveis e aprovação adulta.
+- Manter PR #40 draft até revisão. Não confundir CI verde com prontidão editorial/comercial.
