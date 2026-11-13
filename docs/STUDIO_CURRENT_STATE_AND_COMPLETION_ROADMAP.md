@@ -564,3 +564,67 @@ A causa do catálogo vazio ainda não está provada. O publisher do Studio só e
 - Uma constraint UNIQUE simples em `Product.publicationVariantId` conflita com a intenção atual de preservar produtos históricos inativos. Um índice parcial `UNIQUE ... WHERE active = true` é uma opção potencial, mas o serviço teria de inativar duplicados antes de reativar/atualizar o produto primário.
 - Antes de qualquer mudança: recuperar/estabelecer baseline de migrations, confirmar comportamento em ambientes existentes, escrever migration reversível/segura e testar com PostgreSQL. Não executar DDL em produção sem autorização.
 - Issue Website #36 recebeu esta evidência; PR #26 continua draft.
+
+
+## 12. Atualização operacional — 13 de novembro de 2026
+
+Esta secção regista verificações posteriores à secção 11. Não substitui os snapshots históricos; corrige o estado atual onde existe evidência mais recente.
+
+### 12.1 Website público e PostgreSQL
+
+- A instância Supabase original `baribudos-studio-website` continua `ACTIVE_HEALTHY`, PostgreSQL 17.6.1, região `eu-west-1`.
+- O deployment Vercel de produção continua `READY`.
+- Smoke HTTP público desta execução: `/`, `/login`, `/loja`, `/ips` e `/novidades` responderam HTTP 200.
+- `GET /api/catalog/home` respondeu HTTP 200 com `products=[]` e `bundles=[]`.
+- Website issue #35 foi encerrada como concluída: o incidente PostgreSQL/HTTP 500 deixou de se reproduzir. O catálogo vazio permanece um problema funcional distinto, acompanhado pela issue #36 e pela PR #26.
+- Não foram inseridos produtos sintéticos nem efetuados writes, migrations ou alterações de infraestrutura nesta execução.
+
+### 12.2 Website PR #26 — estado e correção do contrato de retry
+
+- Branch: `fix/v6-atomic-publication-sync`.
+- Head atual: `1ebbbb400a8e0a5924e807e0a6bee2108238b67e`.
+- Website CI #165 e Repository Visibility Only #159 concluíram com sucesso neste head.
+- Preview Vercel associado ao mesmo commit: deployment `dpl_6GbTkAjy4cTZ2oZxcxzqmXx7kgTC`, estado `READY`.
+- A PR continua draft e não foi integrada.
+
+A revisão cruzada do contrato encontrou uma incompatibilidade concreta: o publisher do Studio já repetia o mesmo body congelado quando recebia HTTP 409 com `error=retryable_transaction_conflict` e `retryable=true`, mas a rota oficial Website `/api/studio/publish` apenas devolvia o status 409 com a mensagem genérica da exceção. Assim, o retry automático não era acionado.
+
+Correção acrescentada à PR #26:
+- Helper comum `buildPublicationErrorResponse()` para produzir a resposta exata do contrato e evitar divergência entre rotas.
+- A rota oficial `/api/studio/publish` devolve agora `409`, `retryable_transaction_conflict`, `retryable=true` e `Retry-After: 1` para P2034.
+- A rota alternativa `/api/publications/ingest` passou também a validar SHA-256 sobre o body bruto antes de Zod/writes, e usa a mesma resposta de erro.
+- Testes acrescentados para a resposta exata consumida pelo publisher do Studio e para garantir que P2002/outros erros não são tratados como retryable.
+
+O publisher do Studio em main já serializa o envelope congelado uma vez, repete os mesmos bytes, limita-se a três retries e respeita `Retry-After` até cinco segundos. A rota oficial documentada pelo contrato é `/api/studio/publish`.
+
+### 12.3 Gates que impedem o merge da PR #26
+
+- A integração PostgreSQL efémera, replay, substituição de assets, rollback forçado e concorrência/retry passaram no Website CI #164; o CI #165 voltou a validar o head após a correção das rotas.
+- O schema mantém `PublicationVariant.variantId` UNIQUE e `Product.slug` UNIQUE, mas `Product.publicationVariantId` continua sem constraint UNIQUE. Serializable protege o fluxo transacional testado; não substitui uma garantia declarativa para todos os escritores.
+- A baseline de migrations de produção continua incompleta. Não criar DDL/índice em produção até recuperar e rever a baseline e a política de ativação/desativação de produtos históricos.
+- Storage durável continua pendente: as verificações anteriores registaram zero buckets Supabase e zero conectores Vercel ligados ao projeto. O Website ainda não provou materialização e serving autónomo de bytes quando o Studio doméstico está offline.
+- Reconciliar receipts reais do Studio com `publication_id`/`variant_id` antes de qualquer publicação real; não popular o catálogo com dados sintéticos.
+
+### 12.4 Studio — estado funcional e segurança
+
+- Studio PR #38 permanece draft. Studio CI #426 e Distribution Hub Smoke #33 passaram, mas falta ensaio real FFmpeg com imagens aprovadas e áudio para validar duração, ordem, sincronização e reprodução do MP4.
+- A branch de trabalho de integridade WAV foi comparada com main; os blobs de `audiobook_service.py` e `tests/test_audiobook_fallbacks.py` já coincidem com main. Não foi aberta PR redundante.
+- A prioridade P0 de segurança mantém-se: inventário heurístico de 78 módulos/233 handlers é apenas triagem. Continuar a matriz handler → dependências globais/router → principal server-side → autorização/serviço → dados/efeitos, antes de migrar PIN, sessões, RBAC, CORS ou storage.
+- Não foi feita migração parcial de autenticação nem alteração à superfície de storage nesta execução.
+
+### 12.5 Infraestrutura, histórico e distribuição
+
+- O projeto Vercel `baribudos-studio-website` está ligado ao Website Next.js; o deployment público e o estado PostgreSQL foram verificados separadamente.
+- Não foi encontrado manifest `render.yaml`, `Procfile` ou configuração explícita de serviço Render nos trees consultados dos dois repositórios ativos. A conta Render não foi consultada nesta execução; não atribuir serviços sem evidência.
+- Os repositórios históricos `AndreVazao/baribudos-studio-primary` e `AndreVazao/baribudos-studio-home-edition` continuam existentes e com `archived=false`; foram apenas consultados como referências e não foram alterados.
+- A distribuição externa de ebooks, audiobooks e YouTube/YouTube Kids continua uma fase posterior. A roadmap documentada não prova APIs de publicação, contas autorizadas ou adaptadores ativos. O Studio mantém aprovação editorial/comercial por canal.
+
+### 12.6 Próxima sequência
+
+1. Fechar a revisão/validação dos modelos, erros e concorrência da PR Website #26, sem declarar unicidade declarativa inexistente.
+2. Recuperar baseline de migrations e decidir, com evidência, a constraint comercial segura por variante.
+3. Definir storage durável apenas após auditoria final de recursos existentes, custos e autorização; depois testar bytes, MIME, tamanho, checksum, retries e Studio offline.
+4. Localizar o runtime real do Studio e reconciliar receipts antes de publicar conteúdo real.
+5. Prosseguir a migração de segurança integral do Studio, sem remendos parciais.
+6. Executar ensaio audiovisual real da PR #38.
+7. Validar login, checkout, webhooks e biblioteca em sandbox, sem pagamentos reais.
