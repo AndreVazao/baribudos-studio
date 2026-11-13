@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -154,6 +155,20 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             print(json.dumps(report, ensure_ascii=False, indent=2))
             self.assertTrue(report_path.is_file())
+
+            artifact_dir_value = os.environ.get("BARIBUDOS_PRODUCTION_TEST_OUTPUT_DIR")
+            if artifact_dir_value:
+                artifact_dir = Path(artifact_dir_value)
+                artifact_dir.mkdir(parents=True, exist_ok=True)
+                for source in (
+                    epub_path,
+                    audio_path,
+                    mini_path,
+                    Path(bundle_output["guide"]["file_path"]),
+                    Path(bundle_output["compilation"]["file_path"]),
+                    report_path,
+                ):
+                    shutil.copy2(source, artifact_dir / source.name)
 
     def test_grouping_never_mixes_ip_language_or_unapproved_stories(self) -> None:
         stories = []
