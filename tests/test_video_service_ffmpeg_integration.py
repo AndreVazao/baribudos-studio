@@ -120,7 +120,7 @@ class VideoServiceFFmpegIntegrationTests(unittest.TestCase):
             self.assertEqual(video_stream["codec_name"], "h264")
             self.assertEqual(audio_stream["codec_name"], "aac")
             self.assertEqual((video_stream["width"], video_stream["height"]), (1600, 900))
-            self.assertGreater(int(video_stream.get("nb_read_frames", 0)), 20)
+            self.assertEqual(int(video_stream.get("nb_read_frames", 0)), 2, "The slideshow should contain one encoded frame per approved storyboard image")
 
             duration = float(metadata["format"]["duration"])
             self.assertGreaterEqual(duration, 2.5)
