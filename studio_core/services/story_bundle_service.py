@@ -229,14 +229,20 @@ def build_five_story_bundle(
     *,
     output_dir: str | Path,
     title: str = "",
+    bundle_id: str = "",
 ) -> Dict[str, Any]:
     groups = select_complete_story_groups(stories)
     if not groups:
         return {"status": "waiting_for_five_approved_stories", "bundles_created": 0}
-    if len(groups) > 1:
-        raise ValueError("multiple_complete_groups_require_explicit_bundle_selection")
-
-    bundle = groups[0]
+    if bundle_id:
+        selected = [item for item in groups if item["id"] == bundle_id]
+        if not selected:
+            raise ValueError("selected_story_bundle_not_found")
+        bundle = selected[0]
+    elif len(groups) == 1:
+        bundle = groups[0]
+    else:
+        raise ValueError("multiple_complete_groups_require_bundle_id")
     bundle["title"] = title or "Guia para Pais e Filme — cinco histórias"
     root = Path(output_dir)
     guide = build_parent_guide(bundle, output_path=root / "parents-guide.md")
