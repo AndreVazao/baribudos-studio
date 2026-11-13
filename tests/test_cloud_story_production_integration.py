@@ -172,7 +172,7 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
 
     def test_grouping_never_mixes_ip_language_or_unapproved_stories(self) -> None:
         stories = []
-        for index in range(1, 7):
+        for index in range(1, 11):
             stories.append({
                 "id": f"approved-{index}",
                 "saga_slug": "baribudos",
@@ -186,10 +186,13 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             {"id": "other-language", "saga_slug": "baribudos", "language": "en", "sequence_number": 1, "approved": True},
         ])
         groups = select_complete_story_groups(stories)
-        self.assertEqual(len(groups), 1)
+        self.assertEqual(len(groups), 2)
         self.assertEqual(groups[0]["story_ids"], [f"approved-{index}" for index in range(1, 6)])
+        self.assertEqual(groups[1]["story_ids"], [f"approved-{index}" for index in range(6, 11)])
         self.assertEqual(groups[0]["saga_slug"], "baribudos")
         self.assertEqual(groups[0]["language"], "pt-PT")
+        reversed_groups = select_complete_story_groups(list(reversed(stories)))
+        self.assertEqual([item["id"] for item in groups], [item["id"] for item in reversed_groups])
 
 
 if __name__ == "__main__":
