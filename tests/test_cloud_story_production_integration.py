@@ -195,6 +195,16 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
                 "ebook": {"format": ebook["format"], "bytes": epub_path.stat().st_size},
                 "audiobook": {"format": audio["format"], "bytes": audio_path.stat().st_size, "segments": audio["segments_count"]},
                 "mini_series": {"format": mini_series["format"], "bytes": mini_path.stat().st_size, "engine": mini_series["engine"]},
+                "five_story_outputs": [
+                    {
+                        "story_id": item["story"]["id"],
+                        "ebook_bytes": Path(item["ebook"]["file_path"]).stat().st_size,
+                        "audiobook_bytes": Path(item["audio"]["file_path"]).stat().st_size,
+                        "audiobook_segments": item["audio"]["segments_count"],
+                        "mini_series_bytes": Path(item["mini_series"]["file_path"]).stat().st_size,
+                    }
+                    for item in production_outputs
+                ],
                 "five_story_bundle": {
                     "story_count": bundle_output["story_count"],
                     "guide": bundle_output["guide"]["file_path"],
@@ -211,9 +221,9 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
                 artifact_dir = Path(artifact_dir_value)
                 artifact_dir.mkdir(parents=True, exist_ok=True)
                 for source in (
-                    epub_path,
-                    audio_path,
-                    mini_path,
+                    *[Path(item["ebook"]["file_path"]) for item in production_outputs],
+                    *[Path(item["audio"]["file_path"]) for item in production_outputs],
+                    *[Path(item["mini_series"]["file_path"]) for item in production_outputs],
                     Path(bundle_output["guide"]["file_path"]),
                     Path(bundle_output["compilation"]["file_path"]),
                     report_path,
