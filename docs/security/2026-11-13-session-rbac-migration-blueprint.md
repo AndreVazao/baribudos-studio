@@ -169,3 +169,36 @@ Não considerar a migração concluída até:
 - Definir formato de autenticação máquina-a-máquina Website → Studio, se vier a existir; a direção atualmente suportada é Studio → Website.
 
 **Regra de segurança:** não reduzir controlos para manter clientes antigos funcionais. Se um cliente não suportar bearer/session, deve ser atualizado antes da desativação da autenticação legacy.
+
+
+## 9. Evidência concreta dos clientes e estado da migração (13-11-2026)
+
+Inspeção do head ff452f71cf627370ad69e495dd789247a6575ba9 confirmou:
+
+### Cliente React/Capacitor/Tauri
+
+- O projeto usa uma única aplicação `client/mobile-app` para Android/Capacitor e desktop/Tauri; não existe um segundo `client/desktop-app` no tree atual.
+- `client/mobile-app/package.json` declara Capacitor 7 e Tauri 2, mas não declara plugin de secure storage.
+- `client/mobile-app/src-tauri/Cargo.toml` contém apenas `tauri`, `serde` e `serde_json`; não declara plugin de keyring/secure storage.
+- `src-tauri/src/lib.rs` inicializa `tauri::Builder::default()` sem plugin de armazenamento seguro.
+- `src/api/core.js` persiste o utilizador completo serializado em `localStorage` (`baribudos_python_user`); não guarda token nem envia Authorization bearer.
+- `src/App.jsx` restaura esse utilizador no arranque através de `getSavedUser()` sem revalidar sessão no servidor.
+- `src/components/LoginPanel.jsx` tem nome e PIN predefinidos no estado inicial (`André`/`1234`).
+- As funções `get`, `post`, `put`, `patch` e `del` usam `fetch` sem cabeçalho Authorization.
+- `resolveBackendFileUrl()` converte caminhos `/storage/` em URLs HTTP diretas, dependendo da montagem estática do backend.
+
+### Consequência
+
+A migração não pode consistir apenas em adicionar middleware FastAPI. É necessário alterar o contrato de login, o cliente HTTP central, bootstrap da aplicação, logout, gestão de sessões e resolução de media. O mesmo bundle é empacotado em Tauri e Capacitor, pelo que a estratégia de armazenamento seguro deve ser compatível com ambos os ambientes e ter adaptadores nativos separados quando necessário.
+
+### Critérios de implementação para o cliente
+
+1. Remover defaults de nome/PIN da UI.
+2. Não persistir perfil como prova de sessão; manter apenas perfil público derivado da resposta validada.
+3. Implementar token bearer em memória e armazenamento nativo seguro, sem fallback para localStorage.
+4. Validar sessão no arranque e após reconexão; em 401 limpar estado e pedir novo login.
+5. Logout deve revogar no backend e limpar o armazenamento nativo, mesmo que a UI esteja offline (com revogação pendente controlada, sem prolongar autorização).
+6. Remover envio de `user_id`, `user_name` e `user_role` de todos os pedidos de autorização; manter campos de auditoria apenas se forem preenchidos/confirmados no servidor.
+7. Substituir media URLs diretas `/storage/` por URLs de asset público explícito ou endpoint autenticado de download.
+
+**Estado:** diagnóstico estático do cliente concluído. Não foram adicionados plugins, alteradas dependências, credenciais, dados ou runtime. A escolha final do mecanismo secure storage e a implementação continuam pendentes de testes nativos Android/Windows.
