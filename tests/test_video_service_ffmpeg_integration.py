@@ -128,7 +128,7 @@ class VideoServiceFFmpegIntegrationTests(unittest.TestCase):
 
             extracted_red = root / "sample-red.png"
             extracted_blue = root / "sample-blue.png"
-            for timestamp, destination in ((0.5, extracted_red), (2.1, extracted_blue)):
+            for frame_index, destination in ((0, extracted_red), (1, extracted_blue)):
                 subprocess.run(
                     [
                         "ffmpeg",
@@ -136,10 +136,12 @@ class VideoServiceFFmpegIntegrationTests(unittest.TestCase):
                         "-loglevel",
                         "error",
                         "-y",
-                        "-ss",
-                        str(timestamp),
                         "-i",
                         str(output_path),
+                        "-vf",
+                        f"select=eq(n\\,{frame_index})",
+                        "-fps_mode",
+                        "passthrough",
                         "-frames:v",
                         "1",
                         str(destination),
