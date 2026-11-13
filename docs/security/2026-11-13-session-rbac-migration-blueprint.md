@@ -202,3 +202,42 @@ A migração não pode consistir apenas em adicionar middleware FastAPI. É nece
 7. Substituir media URLs diretas `/storage/` por URLs de asset público explícito ou endpoint autenticado de download.
 
 **Estado:** diagnóstico estático do cliente concluído. Não foram adicionados plugins, alteradas dependências, credenciais, dados ou runtime. A escolha final do mecanismo secure storage e a implementação continuam pendentes de testes nativos Android/Windows.
+
+
+## 10. Revisão P0 dos routers registados e superfícies operacionais (13-11-2026)
+
+Inspeção direta de `studio_core/api/main.py` e dos módulos indicados abaixo no commit `2fe853ee459e9756f32efdfc575a77204c9a0677`:
+
+### Evidência transversal em `main.py`
+
+- Não está registado middleware global de autenticação nem dependência global `dependencies=[...]` na criação da app ou nos `include_router` inspecionados.
+- CORS permite origins, métodos e headers wildcard com credenciais ativadas.
+- A raiz resolvida por `resolve_storage_path()` é montada integralmente em `/storage` com `StaticFiles`, sem filtro de subpastas ou autorização por asset.
+- `public/` também é montada em `/public`; esta superfície requer inventário de conteúdo e política explícita, embora não seja equivalente à raiz privada.
+- Os routers de users, settings, persistent memory, website admin/control, deploy, DB e secrets são incluídos sem dependência global visível.
+
+### Routers P0 diretamente inspecionados
+
+| Router | Operações encontradas | Evidência observada | Classificação provisória |
+|---|---|---|---|
+| `secret_control.py` | Listar, revelar, criar, alterar, apagar e exportar vaults | Handlers chamam diretamente serviços; `reveal_values` pode solicitar valores em claro; sem dependência auth visível | P0 crítico |
+| `db_control.py` | Estado e readiness DB | Exposição de diagnóstico operacional; sem dependência auth visível | P1 privado |
+| `deploy_control.py` | Resumo e lista de deployments Vercel | Exposição de estado operacional; sem dependência auth visível | P1 privado |
+| `updater.py` | Versão, check e download | Check/download alteram estado ou obtêm artefactos; sem dependência auth visível | P0/P1 privado |
+| `website_admin.py` | Alterar visibilidade e preço de produtos | Mutação comercial chama serviços sem dependência auth visível | P0 crítico |
+| `website_control.py` | Health, memory-link, resumo, catálogo, publicação e divergência | Leitura operacional e potencial informação comercial; sem dependência auth visível | P1 privado |
+| `settings.py` | Ler e atualizar settings | Leitura/escrita direta sem dependência auth visível | P0 crítico |
+| `persistent_memory.py` | Criar projetos, decisões, histórico, backlog, sessão, contexto e URI Obsidian | Escrita/leitura de memória privada sem dependência auth visível | P0 crítico |
+
+### Implicações
+
+1. Não basta proteger os 29 handlers da matriz: as rotas administrativas e de dados sensíveis sem campos `user_*` também exigem classificação e cobertura de autenticação.
+2. `secret_control` deve ser bloqueado para anónimos e limitado a owner; os valores de vault não devem ser revelados por omissão nem exportados sem autorização explícita e auditoria.
+3. `website_admin` exige owner/admin com permissão comercial explícita e registo de auditoria.
+4. `settings` deve separar settings não sensíveis de configuração/segredos; escrita restrita a owner/admin.
+5. `persistent_memory` deve ser privado por projeto e não permitir que o `project_name` fornecido no URL/body determine sozinho o âmbito de acesso.
+6. `updater` deve validar assinatura, origem, versão e hash dos artefactos; check/download não devem ser tratados como operações públicas.
+7. CORS não é mecanismo de autenticação. A política final deve usar origens explícitas por ambiente, mas a correção de CORS isolada não resolve acesso direto à API.
+8. A montagem de `/storage` é um bloqueador de privacidade: mover ficheiros privados para fora de qualquer StaticFiles mount e publicar apenas assets explicitamente aprovados através de um registry/allowlist. Downloads privados passam por endpoint autenticado e validado por escopo.
+
+**Limites:** trata-se de inspeção estática dos módulos e do registo da aplicação. Não foram executados testes HTTP nem provada a exploração remota. Dependências indiretas, configuração de deployment e todos os restantes routers ainda precisam de rastreio. Não houve alteração de runtime, storage, dados, CORS, credenciais ou infraestrutura.
