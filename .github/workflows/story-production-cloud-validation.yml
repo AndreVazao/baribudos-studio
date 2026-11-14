@@ -1,0 +1,74 @@
+name: Story Production Cloud Validation
+
+on:
+  pull_request:
+    paths:
+      - "studio_core/services/**"
+      - "tests/**"
+      - ".github/workflows/story-production-cloud-validation.yml"
+      - "requirements.txt"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-production-cloud-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-integration:
+    name: EPUB + audiobook + mini-series + five-story bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install cloud media toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg espeak-ng
+          ffmpeg -version
+          ffprobe -version
+          espeak-ng --version
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile Studio backend
+        run: python -m compileall studio_core
+
+      - name: Run complete production integration
+        env:
+          BARIBUDOS_PRODUCTION_TEST_OUTPUT_DIR: ${{ runner.temp }}/baribudos-production-validation
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Add production validation summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/baribudos-production-validation/production-validation-report.json" ]; then
+            echo '## Story production cloud validation' >> "$GITHUB_STEP_SUMMARY"
+            cat "$RUNNER_TEMP/baribudos-production-validation/production-validation-report.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload production artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baribudos-story-production-validation
+          path: ${{ runner.temp }}/baribudos-production-validation/
+          if-no-files-found: warn
+          retention-days: 14
