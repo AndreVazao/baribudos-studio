@@ -8,6 +8,7 @@ on:
       - feature/**
       - fix/**
       - hotfix/**
+      - security/**
   pull_request:
   workflow_dispatch:
 
@@ -55,7 +56,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Compile backend
-        run: python -m compileall studio_core
+        run: python -m compileall studio_core scripts
 
       - name: Import FastAPI app
         run: python -c "from studio_core.api.main import app; print(app.title)"
@@ -63,15 +64,24 @@ jobs:
       - name: Test route inventory analyzer
         run: python -m unittest discover -s tests -p "test_*.py"
 
-      - name: Generate route authorization inventory
+      - name: Generate heuristic route authorization inventory
         run: |
           python scripts/audit_studio_routes.py --output "$RUNNER_TEMP/studio-route-inventory.md" --json-output "$RUNNER_TEMP/studio-route-inventory.json"
           cat "$RUNNER_TEMP/studio-route-inventory.md" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload route authorization inventory
+      - name: Generate registered FastAPI route and dependency manifest
+        run: |
+          python scripts/export_studio_fastapi_manifest.py \
+            --json-output "$RUNNER_TEMP/studio-fastapi-route-manifest.json" \
+            --markdown-output "$RUNNER_TEMP/studio-fastapi-route-manifest.md"
+          cat "$RUNNER_TEMP/studio-fastapi-route-manifest.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload route authorization evidence
         uses: actions/upload-artifact@v4
         with:
-          name: studio-route-authorization-inventory
+          name: studio-route-authorization-evidence
           path: |
             ${{ runner.temp }}/studio-route-inventory.md
             ${{ runner.temp }}/studio-route-inventory.json
+            ${{ runner.temp }}/studio-fastapi-route-manifest.md
+            ${{ runner.temp }}/studio-fastapi-route-manifest.json
