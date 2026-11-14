@@ -63,23 +63,26 @@ Validação ainda necessária:
 - Executar Studio CI e confirmar os testes de silêncio, ficheiro truncado, lista vazia, formatos incompatíveis e fallback válido.
 - Ensaiar providers reais e avaliar pronúncia, idioma, clipping, pausas, duração e completude. A integridade técnica do WAV não certifica a qualidade editorial do audiobook.
 
-### P1 — output de vídeo atual não é ainda uma minissérie animada
+### P1 — sequência de storyboard não chegava a todos os caminhos de vídeo
 
-Evidência:
-- studio_core/services/video_service.py constrói MP4 com FFmpeg a partir de uma imagem ou de uma sequência de imagens estáticas, com áudio.
-- project_factory_engine.py chama build_video_frame_sequence(project) e obtém approved_frames, mas ao chamar build_series_episode() envia apenas hero_image como cover_path e não envia sequence_frames.
-- Consequentemente, a função build_series_episode() recebe normalmente uma única imagem de capa e cria um vídeo estático com áudio, em vez de usar a sequência de frames aprovada.
+Evidência revista no código:
+- build_video_frame_sequence() usa build_storyboard_manifest(), que por sua vez usa list_approved_frames(); só entram frames marcados approved=true e com image_path.
+- O caminho automático de project_factory_engine já passa sequence_frames para build_series_episode(); tests/test_project_factory_video_sequence.py já protege esse comportamento.
+- Dois caminhos alternativos ainda enviavam apenas capa e áudio: _run_manual_outputs() em production_pipeline_service.py e POST /videos/export/{project_id} em api/routes/videos.py.
+- video_service.py cria slideshow quando recebe imagens existentes; sem sequência válida, usa uma única capa.
 
-Impacto:
-- O output atual é mais próximo de um vídeo de imagem fixa/slideshow simples do que de uma minissérie audiovisual com cenas/episódios.
-- Frames de storyboard aprovados podem ser ignorados na montagem final.
-- Não há evidência nesta via de animação de personagens, movimentos, cenas temporizadas, sincronização labial ou edição narrativa por episódio.
+Impacto antes da correção:
+- O mesmo projeto podia produzir uma sequência de cenas no caminho automático e um vídeo estático nos caminhos manual/export.
+- A experiência dependia do endpoint/modo usado, apesar de existirem frames aprovados.
 
-Correção pretendida:
-- Corrigir primeiro a passagem de frames aprovados e testar a sequência completa.
-- Definir um modelo de episódio: cenas, duração, transições, áudio, diálogos, personagens, legendas e assets.
-- Separar slideshow/animatic de episódio animado, com estados e nomes honestos.
-- Evoluir para animação por fases, sem chamar minissérie completa a um vídeo de imagem fixa.
+Correção aplicada nesta branch:
+- Os dois caminhos alternativos passam agora a usar o mesmo construtor de sequência aprovada.
+- Foram acrescentados testes que confirmam a passagem integral de sequence_frames na pipeline manual e na rota direta.
+- Se não houver frames aprovados existentes, video_service mantém o fallback de capa e reporta frames_used=0; não inventa cenas.
+
+Validação ainda necessária:
+- Executar Studio CI para confirmar os novos testes e a compilação.
+- Fazer um ensaio de integração com imagens reais aprovadas, áudio e FFmpeg para verificar duração, ordem, sincronização e reprodução do MP4. Os testes unitários de encaminhamento não certificam qualidade audiovisual.
 
 ### P1 — execução da pipeline pode marcar completed sem verificar os outputs
 
