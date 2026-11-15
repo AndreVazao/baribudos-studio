@@ -1,7 +1,13 @@
+import json
 import unittest
 from types import SimpleNamespace
 
-from scripts.export_studio_fastapi_manifest import build_manifest, dependency_tree
+from scripts.export_studio_fastapi_manifest import (
+    application_security_surface,
+    build_manifest,
+    dependency_tree,
+    render_markdown,
+)
 
 
 def dependency(call, children=None, scopes=None):
@@ -17,6 +23,14 @@ def endpoint():
 
 
 def auth_dependency():
+    pass
+
+
+class CORSMiddleware:
+    pass
+
+
+class TraceMiddleware:
     pass
 
 
@@ -63,6 +77,52 @@ class RuntimeRouteManifestTests(unittest.TestCase):
         )
         manifest = build_manifest([route, route])
         self.assertEqual(manifest["duplicate_route_ids"], ["GET /api/duplicate"])
+
+    def test_application_surface_captures_cors_and_global_dependencies_without_secrets(self):
+        app = SimpleNamespace(
+            router=SimpleNamespace(
+                dependencies=[SimpleNamespace(dependency=auth_dependency, scopes=["owner"])]
+            ),
+            user_middleware=[
+                SimpleNamespace(
+                    cls=CORSMiddleware,
+                    options={
+                        "allow_origins": ["*"],
+                        "allow_credentials": True,
+                        "allow_methods": ["*"],
+                        "allow_headers": ["*"],
+                    },
+                ),
+                SimpleNamespace(
+                    cls=TraceMiddleware,
+                    options={"secret": "must-not-appear", "enabled": True},
+                ),
+            ],
+        )
+        surface = application_security_surface(app)
+        self.assertEqual(surface["global_dependency_count"], 1)
+        self.assertEqual(surface["global_dependencies"][0]["call"], f"{auth_dependency.__module__}.{auth_dependency.__qualname__}")
+        self.assertEqual(surface["global_dependencies"][0]["security_scopes"], ["owner"])
+        self.assertEqual(surface["middleware_count"], 2)
+        self.assertEqual(
+            surface["middleware"][0]["cors_options"],
+            {
+                "allow_origins": ["*"],
+                "allow_credentials": True,
+                "allow_methods": ["*"],
+                "allow_headers": ["*"],
+            },
+        )
+        self.assertNotIn("must-not-appear", json.dumps(surface))
+        self.assertNotIn("must-not-appear", render_markdown(build_manifest([], app=app)))
+
+    def test_missing_application_is_explicitly_not_inspected(self):
+        manifest = build_manifest([])
+        self.assertEqual(
+            manifest["application_security_surface"]["source"],
+            "not supplied to build_manifest",
+        )
+        self.assertIn("Application object was not supplied", render_markdown(manifest))
 
 
 if __name__ == "__main__":
