@@ -70,7 +70,9 @@ def application_security_surface(app: Any) -> dict[str, Any]:
     for item in getattr(app, "user_middleware", None) or []:
         middleware_class = getattr(item, "cls", None)
         middleware_name = callable_name(middleware_class) if middleware_class else type(item).__qualname__
-        options = getattr(item, "options", None) or {}
+        options = getattr(item, "kwargs", None) or getattr(item, "options", None) or {}
+        if not isinstance(options, dict):
+            options = {}
         record = {
             "middleware": middleware_name,
             "option_names": sorted(str(key) for key in options),
