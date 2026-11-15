@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -94,7 +95,45 @@ def application_security_surface(app: Any) -> dict[str, Any]:
     }
 
 
-def build_manifest(api_routes: Iterable[Any], app: Any = None) -> dict[str, Any]:
+def non_api_route_inventory(all_routes: Iterable[Any], api_routes: Iterable[Any]) -> dict[str, Any]:
+    """Inventory Starlette routes and mounts excluded from the APIRoute list."""
+    api_ids = {id(route) for route in api_routes}
+    records: list[dict[str, Any]] = []
+    for route in all_routes:
+        if id(route) in api_ids:
+            continue
+        mounted_app = getattr(route, 'app', None)
+        record: dict[str, Any] = {
+            'route_type': type(route).__name__,
+            'path': str(getattr(route, 'path', '')),
+            'name': str(getattr(route, 'name', '')),
+            'methods': sorted(str(method).upper() for method in (getattr(route, 'methods', None) or [])),
+        }
+        if mounted_app is not None:
+            mounted_type = type(mounted_app)
+            record['mounted_app'] = f'{mounted_type.__module__}.{mounted_type.__qualname__}'
+            if mounted_type.__name__ == 'StaticFiles':
+                directory = getattr(mounted_app, 'directory', None)
+                directory_path = Path(directory) if directory is not None else None
+                record['static_files'] = {
+                    'directory_configured': directory_path is not None,
+                    'directory_exists': bool(directory_path and directory_path.is_dir()),
+                    'html': bool(getattr(mounted_app, 'html', False)),
+                    'check_dir': bool(getattr(mounted_app, 'check_dir', False)),
+                    'follow_symlink': bool(getattr(mounted_app, 'follow_symlink', False)),
+                    'authorization_verified': False,
+                }
+        records.append(record)
+    records.sort(key=lambda item: (item['path'], item['route_type'], item['name']))
+    return {
+        'non_api_route_count': len(records),
+        'static_mount_count': sum('static_files' in item for item in records),
+        'routes': records,
+        'authorization_claim': False,
+    }
+
+def build_manifest(api_routes: Iterable[Any], app: Any = None, app_routes: Iterable[Any] | None = None) -> dict[str, Any]:
+    api_routes = list(api_routes)
     records: list[dict[str, Any]] = []
     for route in api_routes:
         path = str(getattr(route, "path", ""))
@@ -121,11 +160,14 @@ def build_manifest(api_routes: Iterable[Any], app: Any = None) -> dict[str, Any]
                 "runtime_protection_verified": False,
             })
     records.sort(key=lambda item: (item["path"], item["method"], item["endpoint"]))
-    ids = [item["route_id"] for item in records]
-    duplicate_ids = sorted({item for item in ids if ids.count(item) > 1})
+    counts = Counter(item["route_id"] for item in records)
+    duplicate_ids = sorted(route_id for route_id, count in counts.items() if count > 1)
+    if app_routes is None:
+        app_routes = getattr(app, "routes", []) if app is not None else []
+    non_api_surface = non_api_route_inventory(app_routes, api_routes)
     return {
-        "schema_version": 2,
-        "source": "FastAPI app.routes (APIRoute instances)",
+        "schema_version": 3,
+        "source": "FastAPI app.routes: APIRoute entries plus non-APIRoute Starlette routes/mounts",
         "authorization_claim": False,
         "note": (
             "Inventory only. Dependency presence does not prove authorization. "
@@ -140,6 +182,7 @@ def build_manifest(api_routes: Iterable[Any], app: Any = None) -> dict[str, Any]
             "authorization_claim": False,
             "source": "not supplied to build_manifest",
         },
+        "non_api_http_surface": non_api_surface,
         "route_count": len(records),
         "duplicate_route_ids": duplicate_ids,
         "routes": records,
