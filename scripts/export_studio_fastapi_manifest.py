@@ -9,8 +9,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Iterable
+
+# Running this file directly puts scripts/ on sys.path, not the repository root.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
 
 def callable_name(value: Any) -> str:
@@ -62,8 +68,13 @@ def build_manifest(api_routes: Iterable[Any]) -> dict[str, Any]:
                 "runtime_protection_verified": False,
             })
     records.sort(key=lambda item: (item["path"], item["method"], item["endpoint"]))
-    ids = [item["route_id"] for item in records]
-    duplicate_ids = sorted({item for item in ids if ids.count(item) > 1})
+    seen: set[str] = set()
+    duplicate_ids: set[str] = set()
+    for item in records:
+        route_id = item["route_id"]
+        if route_id in seen:
+            duplicate_ids.add(route_id)
+        seen.add(route_id)
     return {
         "schema_version": 1,
         "source": "FastAPI app.routes (APIRoute instances)",
@@ -74,7 +85,7 @@ def build_manifest(api_routes: Iterable[Any]) -> dict[str, Any]:
             "is the required target policy, not proof that runtime currently denies access."
         ),
         "route_count": len(records),
-        "duplicate_route_ids": duplicate_ids,
+        "duplicate_route_ids": sorted(duplicate_ids),
         "routes": records,
     }
 
