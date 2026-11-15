@@ -1,5 +1,7 @@
 import json
 import unittest
+import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 
 from scripts.export_studio_fastapi_manifest import (
@@ -32,6 +34,22 @@ class CORSMiddleware:
 
 class TraceMiddleware:
     pass
+
+
+class StaticFiles:
+    def __init__(self, directory):
+        self.directory = directory
+        self.html = False
+        self.check_dir = True
+        self.follow_symlink = False
+
+
+class Mount:
+    def __init__(self, path, app, name):
+        self.path = path
+        self.app = app
+        self.name = name
+        self.methods = None
 
 
 class RuntimeRouteManifestTests(unittest.TestCase):
@@ -123,6 +141,40 @@ class RuntimeRouteManifestTests(unittest.TestCase):
             "not supplied to build_manifest",
         )
         self.assertIn("Application object was not supplied", render_markdown(manifest))
+
+
+    def test_manifest_includes_static_mounts_without_exporting_filesystem_paths(self):
+        route = SimpleNamespace(
+            path="/api/example",
+            name="example",
+            endpoint=endpoint,
+            methods={"GET"},
+            operation_id=None,
+            tags=[],
+            dependant=dependency(endpoint),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            mount = Mount("/storage", StaticFiles(directory), "storage")
+            app = SimpleNamespace(
+                router=SimpleNamespace(dependencies=[]),
+                user_middleware=[],
+                routes=[route, mount],
+            )
+            manifest = build_manifest([route], app=app, app_routes=app.routes)
+        surface = manifest["non_api_http_surface"]
+        self.assertEqual(surface["non_api_route_count"], 1)
+        self.assertEqual(surface["static_mount_count"], 1)
+        static_record = surface["routes"][0]
+        self.assertEqual(static_record["route_type"], "Mount")
+        self.assertEqual(static_record["path"], "/storage")
+        self.assertTrue(static_record["static_files"]["directory_configured"])
+        self.assertTrue(static_record["static_files"]["directory_exists"])
+        self.assertFalse(static_record["static_files"]["authorization_verified"])
+        self.assertNotIn(directory, json.dumps(manifest))
+        markdown = render_markdown(manifest)
+        self.assertIn("StaticFiles mounts: **1**", markdown)
+        self.assertIn("/storage", markdown)
+        self.assertNotIn(directory, markdown)
 
 
 if __name__ == "__main__":
