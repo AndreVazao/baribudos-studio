@@ -3,6 +3,9 @@ import tempfile
 import unittest
 from types import SimpleNamespace
 
+from starlette.routing import Mount
+from starlette.staticfiles import StaticFiles
+
 from scripts.export_studio_fastapi_manifest import (
     application_security_surface,
     build_manifest,
@@ -35,20 +38,6 @@ class TraceMiddleware:
     pass
 
 
-class StaticFiles:
-    def __init__(self, directory):
-        self.directory = directory
-        self.html = False
-        self.check_dir = True
-        self.follow_symlink = False
-
-
-class Mount:
-    def __init__(self, path, app, name):
-        self.path = path
-        self.app = app
-        self.name = name
-        self.methods = None
 
 
 class RuntimeRouteManifestTests(unittest.TestCase):
@@ -153,7 +142,7 @@ class RuntimeRouteManifestTests(unittest.TestCase):
             dependant=dependency(endpoint),
         )
         with tempfile.TemporaryDirectory() as directory:
-            mount = Mount("/storage", StaticFiles(directory), "storage")
+            mount = Mount("/storage", app=StaticFiles(directory=directory), name="storage")
             app = SimpleNamespace(
                 router=SimpleNamespace(dependencies=[]),
                 user_middleware=[],
