@@ -71,7 +71,7 @@ jobs:
 
       - name: Generate registered FastAPI route and dependency manifest
         run: |
-          python scripts/export_studio_fastapi_manifest.py \
+          python -m scripts.export_studio_fastapi_manifest \
             --json-output "$RUNNER_TEMP/studio-fastapi-route-manifest.json" \
             --markdown-output "$RUNNER_TEMP/studio-fastapi-route-manifest.md"
           cat "$RUNNER_TEMP/studio-fastapi-route-manifest.md" >> "$GITHUB_STEP_SUMMARY"
