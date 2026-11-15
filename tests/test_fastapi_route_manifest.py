@@ -1,7 +1,6 @@
 import json
-import unittest
 import tempfile
-from pathlib import Path
+import unittest
 from types import SimpleNamespace
 
 from scripts.export_studio_fastapi_manifest import (
