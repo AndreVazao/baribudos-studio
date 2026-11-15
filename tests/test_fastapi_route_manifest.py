@@ -86,7 +86,7 @@ class RuntimeRouteManifestTests(unittest.TestCase):
             user_middleware=[
                 SimpleNamespace(
                     cls=CORSMiddleware,
-                    options={
+                    kwargs={
                         "allow_origins": ["*"],
                         "allow_credentials": True,
                         "allow_methods": ["*"],
