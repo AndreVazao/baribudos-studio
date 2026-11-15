@@ -195,12 +195,15 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         len(item["dependencies"].get("dependencies", [])) for item in routes
     )
     surface = manifest.get("application_security_surface", {})
+    non_api = manifest.get("non_api_http_surface", {})
     lines = [
         "# Studio FastAPI runtime route manifest",
         "",
         "> Generated from the imported FastAPI application. This is an inventory, not proof of access control.",
         "",
-        f"- Registered method/path entries: **{manifest['route_count']}**",
+        f"- Registered APIRoute method/path entries: **{manifest['route_count']}**",
+        f"- Additional non-APIRoute HTTP entries: **{non_api.get('non_api_route_count', 0)}**",
+        f"- StaticFiles mounts: **{non_api.get('static_mount_count', 0)}**",
         f"- Top-level route dependency edges: **{dependency_count}**",
         f"- Duplicate method/path IDs: **{len(manifest['duplicate_route_ids'])}**",
         "- Policy status: **UNCLASSIFIED for every route**",
@@ -221,7 +224,24 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         lines.append(f"- Middleware: `{middleware['middleware']}`{details}")
     if surface.get("source") == "not supplied to build_manifest":
         lines.append("- Application object was not supplied; global surface was not inspected.")
+    lines.extend(["", "## Non-APIRoute HTTP surface", ""])
+    if not non_api.get("routes"):
+        lines.append("- No non-APIRoute entries were supplied to the exporter.")
+    else:
+        lines.extend([
+            "| Type | Path | Name | Methods | Mounted application / static configuration |",
+            "|---|---|---|---|---|",
+        ])
+        for item in non_api["routes"]:
+            details = item.get("mounted_app", "")
+            if "static_files" in item:
+                details += " " + json.dumps(item["static_files"], ensure_ascii=False, sort_keys=True)
+            values = [item["route_type"], item["path"], item["name"], ", ".join(item["methods"]) or "—", details or "—"]
+            lines.append("| " + " | ".join(value.replace("|", "\\|").replace("\\n", " ") for value in values) + " |")
+
     lines.extend([
+        "",
+        "## API routes",
         "",
         "| Method | Path | Endpoint | Operation ID | Direct dependencies | Policy |",
         "|---|---|---|---|---:|---|",
@@ -239,6 +259,7 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         "",
         "- A dependency in this manifest is not automatically an authentication or authorization check.",
         "- Middleware names and configuration are inventory evidence, not proof that a request is authenticated or authorized.",
+        "- StaticFiles mounts are HTTP surfaces; filesystem paths are intentionally omitted from this artifact.",
         "- Review the complete nested dependency tree and trace each endpoint into service and storage operations.",
         "- Record the trusted principal source, permission, project/IP scope, public/private decision and negative HTTP tests in the reviewed policy manifest.",
         "- Do not change a route to public based only on its name, tags or current lack of dependencies.",
@@ -258,7 +279,7 @@ def main() -> int:
     from studio_core.api.main import app
 
     api_routes = [route for route in app.routes if isinstance(route, APIRoute)]
-    manifest = build_manifest(api_routes, app=app)
+    manifest = build_manifest(api_routes, app=app, app_routes=app.routes)
     if not manifest["route_count"]:
         raise SystemExit("No FastAPI APIRoute entries found; refusing to publish an empty manifest.")
     if manifest["duplicate_route_ids"]:
@@ -271,7 +292,11 @@ def main() -> int:
     args.markdown_output.parent.mkdir(parents=True, exist_ok=True)
     args.json_output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     args.markdown_output.write_text(render_markdown(manifest), encoding="utf-8")
-    print(f"Exported {manifest['route_count']} FastAPI method/path entries.")
+    print(
+        f"Exported {manifest['route_count']} APIRoute method/path entries, "
+        f"{manifest['non_api_http_surface']['non_api_route_count']} non-APIRoute entries, "
+        f"{manifest['non_api_http_surface']['static_mount_count']} StaticFiles mounts."
+    )
     return 0
 
 
