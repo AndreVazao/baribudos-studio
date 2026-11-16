@@ -70,10 +70,16 @@ jobs:
           cat "$RUNNER_TEMP/studio-route-inventory.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate registered FastAPI route and dependency manifest
+        env:
+          # Exercise the conditional /storage mount using an empty, isolated
+          # directory. Never point this audit at a developer or production store.
+          BARIBUDOS_STORAGE_ROOT: ${{ runner.temp }}/baribudos-storage-root
         run: |
+          mkdir -p "$BARIBUDOS_STORAGE_ROOT"
           python -m scripts.export_studio_fastapi_manifest \
             --json-output "$RUNNER_TEMP/studio-fastapi-route-manifest.json" \
             --markdown-output "$RUNNER_TEMP/studio-fastapi-route-manifest.md"
+          python -c "import json, os; p=os.path.join(os.environ['RUNNER_TEMP'], 'studio-fastapi-route-manifest.json'); m=json.load(open(p, encoding='utf-8')); mounts=[r for r in m['non_api_http_surface']['routes'] if r['path']=='/storage']; assert len(mounts)==1 and mounts[0]['static_files']['directory_exists'] and mounts[0]['static_files']['authorization_verified'] is False, 'Expected isolated /storage StaticFiles mount to be inventoried'"
           cat "$RUNNER_TEMP/studio-fastapi-route-manifest.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload route authorization evidence
