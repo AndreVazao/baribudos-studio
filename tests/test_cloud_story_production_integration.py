@@ -312,10 +312,25 @@ class StoryBundleIntegrityTests(unittest.TestCase):
                 from studio_core.services.story_bundle_service import build_parent_guide
                 build_parent_guide(bundle, output_path=Path(temp) / "guide.md")
         bundle["stories"] = stories
+        bundle["stories"][-1]["ip_slug"] = "baribudos"
         bundle["stories"][-1]["id"] = bundle["stories"][0]["id"]
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(ValueError, "bundle_requires_five_distinct_story_ids"):
                 from studio_core.services.story_bundle_service import build_parent_guide
+                build_parent_guide(bundle, output_path=Path(temp) / "guide.md")
+
+    def test_declared_story_ids_must_match_frozen_members(self) -> None:
+        from studio_core.services.story_bundle_service import build_parent_guide
+        stories = [self._story(f"story-{i}") for i in range(1, 6)]
+        bundle = {
+            "ip_slug": "baribudos",
+            "saga_slug": "floresta",
+            "language": "pt-PT",
+            "story_ids": ["story-1", "story-2", "story-3", "story-4", "different-story"],
+            "stories": stories,
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(ValueError, "bundle_story_ids_do_not_match_members"):
                 build_parent_guide(bundle, output_path=Path(temp) / "guide.md")
 
     def test_compilation_rejects_assets_outside_storage_root(self) -> None:
