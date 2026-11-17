@@ -9,7 +9,8 @@
 **Valor complementar:** Discernimento de confiança  
 **Personagens:** Magnus, Luma, Roko (11), Mila (6), Tilo (4)  
 **Elemento simbólico:** Eco da Floresta — representa pedidos de segredo que não são seguros  
-**Duração audiovisual proposta:** 3 min 30 s (alvo), com intervalo normal de 3–4 minutos; abertura e fecho incluídos na duração total, conforme decisão editorial de 17-11-2026. Um livro origina uma minissérie individual. Cinco livros formam um volume, com cinco episódios e uma série compilada de 15–20 minutos.\n**Duração audiobook pretendida:** aproximadamente 6 minutos, com pausas e leitura expressiva  
+**Duração audiovisual proposta:** 3 min 30 s (alvo), com intervalo normal de 3–4 minutos; abertura e fecho incluídos na duração total, conforme decisão editorial de 17-11-2026. Um livro origina uma minissérie individual. Cinco livros formam um volume, com cinco episódios e uma série compilada de 15–20 minutos.
+**Duração audiobook pretendida:** aproximadamente 6 minutos, com pausas e leitura expressiva  
 **Aprovação:** Não aprovada. Não publicar, distribuir ou incluir no catálogo comercial sem decisão editorial.
 
 ---
