@@ -1,6 +1,5 @@
 {
   "ip": "Os Baribudos",
-
   "core_identity": {
     "mission": "Histórias que Protegem",
     "purpose": "Desenvolvimento emocional infantil",
@@ -8,9 +7,7 @@
     "world_theme": "nature_as_learning_space",
     "magic_level": "subtle_symbolic"
   },
-
   "core_mission": "educar emocionalmente crianças através de histórias seguras",
-
   "tone_rules": {
     "calm": true,
     "educational": true,
@@ -18,7 +15,6 @@
     "never_scary": true,
     "reflective": true
   },
-
   "forbidden_elements": [
     "explicit_violence",
     "realistic_horror",
@@ -27,7 +23,6 @@
     "punishment_fear",
     "dark_psychology"
   ],
-
   "narrative_structure_standard": [
     "simple_introduction",
     "strange_element_or_problem",
@@ -37,7 +32,6 @@
     "implicit_moral",
     "final_strong_sentence"
   ],
-
   "episode_structure_standard": [
     "curiosity_event",
     "temptation_or_doubt",
@@ -46,7 +40,6 @@
     "family_conversation",
     "practical_moral"
   ],
-
   "story_rules": {
     "no_explicit_violence": true,
     "threat_symbolic": true,
@@ -54,14 +47,12 @@
     "safe_ending": true,
     "child_empowerment": true
   },
-
   "language_style": {
     "sentence_length": "short",
     "vocabulary": "simple",
     "emotional_clarity": true,
     "reflection_encouraged": true
   },
-
   "emotional_learning_focus": [
     "safety_awareness",
     "self_decision",
@@ -69,7 +60,6 @@
     "emotional_intelligence",
     "family_support"
   ],
-
   "values_pool": [
     "responsibility",
     "sharing",
@@ -80,7 +70,6 @@
     "critical_thinking",
     "trust_awareness"
   ],
-
   "main_characters_roles": {
     "Magnus": "rational_explainer",
     "Luma": "emotional_support",
@@ -88,7 +77,6 @@
     "Mila": "intuitive_questioning",
     "Tilo": "innocent_learning"
   },
-
   "villains_symbolic": [
     {
       "name": "Criatura Encapuzada",
@@ -107,22 +95,21 @@
       "represents": "unsafe_shortcuts"
     }
   ],
-
   "family_resolution_rule": true,
   "decision_focus_rule": true,
   "lesson_always_present": true,
-
   "final_phrase_rule": {
     "enabled": true,
     "default_phrase": "Na dúvida, escolhe o caminho seguro."
   },
-
-  "episode_duration_target_minutes": 5,
+  "episode_duration_target_minutes": 3.5,
   "audiobook_duration_target_minutes": 6,
-
   "story_page_structure": {
     "max_lines": 5,
     "simple_language": true,
     "centered_text": true
-  }
-    }
+  },
+  "episode_duration_min_minutes": 3,
+  "episode_duration_max_minutes": 4,
+  "episode_duration_note": "One audiovisual miniseries episode per book. The 3–4 minute runtime includes intro and outro."
+}
