@@ -169,7 +169,7 @@ def build_parent_guide(bundle: Dict[str, Any], *, output_path: str | Path) -> Di
     ])
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text("\\n".join(lines), encoding="utf-8")
+    target.write_text("\n".join(lines), encoding="utf-8")
     return {
         "format": "markdown",
         "file_path": str(target),
@@ -229,7 +229,7 @@ def build_five_story_compilation(
             for clip in clips:
                 escaped = clip.as_posix().replace("'", "'\\''")
                 entries.append(f"file '{escaped}'")
-            concat_file.write_text("\\n".join(entries) + "\\n", encoding="utf-8")
+            concat_file.write_text("\n".join(entries) + "\n", encoding="utf-8")
             subprocess.run(
                 [
                     ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
