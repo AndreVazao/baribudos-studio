@@ -163,6 +163,7 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
                 {
                     "id": item["story"]["id"],
                     "title": item["story"]["title"],
+                    "ip_slug": "baribudos",
                     "saga_slug": "baribudos",
                     "language": "pt-PT",
                     "sequence_number": index,
@@ -179,6 +180,7 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             bundle_output = build_five_story_bundle(
                 five_stories,
                 output_dir=root / "bundle",
+                storage_root=storage,
                 title="Baribudos — primeiras cinco histórias",
             )
             self.assertEqual(bundle_output["status"], "completed")
@@ -235,6 +237,7 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
         for index in range(1, 11):
             stories.append({
                 "id": f"approved-{index}",
+                "ip_slug": "baribudos",
                 "saga_slug": "baribudos",
                 "language": "pt-PT",
                 "sequence_number": index,
@@ -242,13 +245,14 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             })
         stories.extend([
             {"id": "draft", "saga_slug": "baribudos", "language": "pt-PT", "sequence_number": 7, "editorial_status": "draft"},
-            {"id": "other-ip", "saga_slug": "other-ip", "language": "pt-PT", "sequence_number": 1, "approved": True},
-            {"id": "other-language", "saga_slug": "baribudos", "language": "en", "sequence_number": 1, "approved": True},
+            {"id": "other-ip", "ip_slug": "other-ip", "saga_slug": "other-ip", "language": "pt-PT", "sequence_number": 1, "approved": True},
+            {"id": "other-language", "ip_slug": "baribudos", "saga_slug": "baribudos", "language": "en", "sequence_number": 1, "approved": True},
         ])
         groups = select_complete_story_groups(stories)
         self.assertEqual(len(groups), 2)
         self.assertEqual(groups[0]["story_ids"], [f"approved-{index}" for index in range(1, 6)])
         self.assertEqual(groups[1]["story_ids"], [f"approved-{index}" for index in range(6, 11)])
+        self.assertEqual(groups[0]["ip_slug"], "baribudos")
         self.assertEqual(groups[0]["saga_slug"], "baribudos")
         self.assertEqual(groups[0]["language"], "pt-PT")
         reversed_groups = select_complete_story_groups(list(reversed(stories)))
@@ -257,3 +261,75 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StoryBundleIntegrityTests(unittest.TestCase):
+    def _story(self, story_id: str, **overrides: Any) -> dict:
+        story = {
+            "id": story_id,
+            "ip_slug": "baribudos",
+            "saga_slug": "floresta",
+            "language": "pt-PT",
+            "sequence_number": int(story_id.rsplit("-", 1)[-1]) if story_id.rsplit("-", 1)[-1].isdigit() else 1,
+            "editorial_status": "approved",
+        }
+        story.update(overrides)
+        return story
+
+    def test_string_false_is_not_an_approval(self) -> None:
+        stories = [self._story(f"story-{i}", approved="false", editorial_status="draft") for i in range(1, 6)]
+        self.assertEqual(select_complete_story_groups(stories), [])
+
+    def test_same_saga_slug_in_different_ips_never_mixes(self) -> None:
+        stories = [self._story(f"a-{i}", ip_slug="ip-a") for i in range(1, 4)]
+        stories += [self._story(f"b-{i}", ip_slug="ip-b") for i in range(1, 4)]
+        self.assertEqual(select_complete_story_groups(stories), [])
+
+    def test_missing_ip_or_saga_is_rejected(self) -> None:
+        stories = [self._story(f"story-{i}") for i in range(1, 5)]
+        stories.append(self._story("story-5", ip_slug=""))
+        with self.assertRaisesRegex(ValueError, "approved_story_requires_ip_saga_and_language"):
+            select_complete_story_groups(stories)
+
+    def test_duplicate_story_ids_cannot_complete_a_bundle(self) -> None:
+        stories = [self._story(f"story-{i}") for i in range(1, 5)]
+        stories.append(self._story("story-1"))
+        with self.assertRaisesRegex(ValueError, "duplicate_story_id_in_editorial_group"):
+            select_complete_story_groups(stories)
+
+    def test_bundle_builders_reject_mixed_identity_and_duplicate_members(self) -> None:
+        stories = [self._story(f"story-{i}") for i in range(1, 6)]
+        bundle = {
+            "ip_slug": "baribudos",
+            "saga_slug": "floresta",
+            "language": "pt-PT",
+            "stories": stories,
+        }
+        bundle["stories"][-1]["ip_slug"] = "another-ip"
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(ValueError, "bundle_cannot_mix_ip_saga_or_language"):
+                from studio_core.services.story_bundle_service import build_parent_guide
+                build_parent_guide(bundle, output_path=Path(temp) / "guide.md")
+        bundle["stories"] = stories
+        bundle["stories"][-1]["id"] = bundle["stories"][0]["id"]
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(ValueError, "bundle_requires_five_distinct_story_ids"):
+                from studio_core.services.story_bundle_service import build_parent_guide
+                build_parent_guide(bundle, output_path=Path(temp) / "guide.md")
+
+    def test_compilation_rejects_assets_outside_storage_root(self) -> None:
+        from studio_core.services.story_bundle_service import build_five_story_compilation
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "approved"
+            root.mkdir()
+            outside = Path(temp) / "private.mp4"
+            outside.write_bytes(b"not-a-video")
+            stories = [self._story(f"story-{i}", mini_series_path=str(outside)) for i in range(1, 6)]
+            bundle = {
+                "ip_slug": "baribudos",
+                "saga_slug": "floresta",
+                "language": "pt-PT",
+                "stories": stories,
+            }
+            with self.assertRaisesRegex(ValueError, "mini_series_asset_outside_approved_storage"):
+                build_five_story_compilation(bundle, output_path=Path(temp) / "out.mp4", storage_root=root)
