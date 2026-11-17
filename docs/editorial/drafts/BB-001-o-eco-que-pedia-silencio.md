@@ -9,8 +9,7 @@
 **Valor complementar:** Discernimento de confiança  
 **Personagens:** Magnus, Luma, Roko (11), Mila (6), Tilo (4)  
 **Elemento simbólico:** Eco da Floresta — representa pedidos de segredo que não são seguros  
-**Duração audiovisual proposta:** 4 minutos, provisórios e sujeitos a decisão editorial. episode-canon.json aponta 4 minutos (intervalo 3–6); narrative-canon.json aponta 5 minutos. A divergência entre os dois documentos canónicos não está resolvida.  
-**Duração audiobook pretendida:** aproximadamente 6 minutos, com pausas e leitura expressiva  
+**Duração audiovisual proposta:** 3 min 30 s (alvo), com intervalo normal de 3–4 minutos; abertura e fecho incluídos na duração total, conforme decisão editorial de 17-11-2026. Um livro origina uma minissérie individual. Cinco livros formam um volume, com cinco episódios e uma série compilada de 15–20 minutos.\n**Duração audiobook pretendida:** aproximadamente 6 minutos, com pausas e leitura expressiva  
 **Aprovação:** Não aprovada. Não publicar, distribuir ou incluir no catálogo comercial sem decisão editorial.
 
 ---
@@ -148,21 +147,21 @@ Aplicar em todas as imagens:
 
 ---
 
-## 5. Storyboard audiovisual — proposta provisória de 4 minutos
+## 5. Storyboard audiovisual — proposta de 3 minutos e 30 segundos
 
 | Cena | Duração alvo | Imagem / ação | Áudio |
 |---|---:|---|---|
-| 1 | 25 s | Caminhada dos três irmãos na floresta | Ambiente natural suave e narração |
-| 2 | 25 s | Aparece o brilho do Eco | Efeito luminoso discreto |
-| 3 | 30 s | A folha dourada e o pedido de segredo | Diálogo curto, sem suspense |
-| 4 | 35 s | Os irmãos param e decidem pedir ajuda | Pausa musical serena |
-| 5 | 35 s | Luma escuta os três | Ambiente interior acolhedor |
-| 6 | 40 s | Magnus explica a diferença entre surpresa e segredo inseguro | Música discreta, diálogo claro |
-| 7 | 25 s | A família mantém-se junta ao reencontrar o Eco | Som da floresta, sem confronto |
-| 8 | 25 s | Família reunida e frase final | Fecho musical suave |
-| **Total** | **240 s** | **8 cenas** | **4 minutos (proposta)** |
+| 1 | 22 s | Caminhada dos três irmãos na floresta | Ambiente natural suave e narração |
+| 2 | 22 s | Aparece o brilho do Eco | Efeito luminoso discreto |
+| 3 | 26 s | A folha dourada e o pedido de segredo | Diálogo curto, sem suspense |
+| 4 | 30 s | Os irmãos param e decidem pedir ajuda | Pausa musical serena |
+| 5 | 30 s | Luma escuta os três | Ambiente interior acolhedor |
+| 6 | 34 s | Magnus explica a diferença entre surpresa e segredo inseguro | Música discreta, diálogo claro |
+| 7 | 22 s | A família mantém-se junta ao reencontrar o Eco | Som da floresta, sem confronto |
+| 8 | 24 s | Família reunida e frase final | Fecho musical suave |
+| **Total** | **210 s** | **8 cenas** | **3 min 30 s (alvo)** |
 
-Os 25 segundos da cena 1 incluem os 5 segundos de abertura canónica; os 25 segundos da cena 8 incluem os 7 segundos de encerramento. A abertura e o encerramento não são tempos adicionais. A proposta de 4 minutos segue provisoriamente episode-canon.json, mas narrative-canon.json define 5 minutos como alvo de episódio. A decisão canónica tem de ser reconciliada antes da aprovação final. O intervalo de 3–6 minutos está definido em episode-canon.json.
+A cena 1 inclui os 5 segundos de abertura canónica e a cena 8 inclui os 7 segundos de encerramento. A abertura e o encerramento não são tempos adicionais. O alvo aprovado é 3 min 30 s, dentro do intervalo normal de 3–4 minutos. A duração total deve manter-se entre 3 e 4 minutos sem alongamento artificial.
 
 O storyboard define intenção e temporização; não afirma que existe animação. A produção atual do Studio pode gerar vídeo a partir de imagens estáticas e áudio. Movimento de personagens, animação contínua e sincronização labial só podem ser anunciados quando efetivamente implementados e validados.
 
