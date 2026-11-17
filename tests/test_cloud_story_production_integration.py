@@ -334,3 +334,7 @@ class StoryBundleIntegrityTests(unittest.TestCase):
             }
             with self.assertRaisesRegex(ValueError, "mini_series_asset_outside_approved_storage"):
                 build_five_story_compilation(bundle, output_path=Path(temp) / "out.mp4", storage_root=root)
+
+
+if __name__ == "__main__":
+    unittest.main()
