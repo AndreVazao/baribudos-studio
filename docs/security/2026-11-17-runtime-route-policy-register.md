@@ -90,7 +90,7 @@ As contagens abaixo cobrem todas as 219 rotas registadas. O método/path define 
 | `system-smoke-v1` | 1 | owner/operator · ops.smoke.read |
 | `untagged` | 1 | PUBLIC_LIVENESS · anonymous · health.readiness (única exceção GET /api/health) |
 | `updater` | 3 | owner · device.updates.manage |
-| `users` | 5 | owner · users.manage (exceto login) |
+| `users` | 5 | owner · users.read/manage; login anónimo com rate limit |
 | `v1-readiness` | 1 | authenticated · publication.readiness.read; projeto |
 | `videos` | 1 | authenticated · media.export; projeto |
 | `voice-library` | 3 | authenticated · voice.read/record/manage; IP/projeto + lineage/consentimento |
