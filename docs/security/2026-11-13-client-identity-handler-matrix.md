@@ -1,0 +1,162 @@
+# Studio — matriz de handlers com identidade fornecida pelo cliente
+
+**Base:** `main` em `517e4d6b552b41eeceb9b743ef1952152caa86ed` (13-11-2026).
+**Fonte:** artefacto `studio-route-authorization-inventory` do workflow Studio CI, commit `dc4a0bfadb4c553bc5f45eb12471e7d87787f11e`.
+**Estado:** inventário estático inicial; nenhuma das entradas abaixo está ainda aprovada como segura. A presença dos parâmetros não prova que concedem permissões; a revisão deve seguir o fluxo até ao serviço e verificar a origem real da autorização.
+
+## Resumo
+
+- 29 handlers referenciam parâmetros/atributos `user_id`, `user_name` ou `user_role`.
+- O analisador é heurístico e não resolve dependências transitivas, middleware, closures nem verificações em serviços.
+- As 29 entradas foram revistas estaticamente até aos handlers e aos serviços/helpers diretamente chamados. A revisão não equivale a testes HTTP, prova de exploração em execução ou aprovação de segurança.
+
+## Ordem de revisão
+
+1. **P0 imediato:** `users.py`, `projects.py`, `publishing.py`, `publication_package.py`, `publish_readiness.py`, `project_commercial.py`, `project_integrity.py`.
+2. **P0 operacional/distribuição:** `distribution_hub.py`, `distribution_hub_v6.py`, `saga_loader.py`.
+3. **P1 — IP/canon:** `ip_creator.py`, `ip_branding.py`, `ip_canons.py`, `ip_characters.py`, `ip_metadata.py`, `ip_palette.py`.
+4. Para cada handler: seguir chamadas locais/importadas, identificar leituras/escritas/efeitos externos, definir principal server-side e permissão, criar testes 401/403 e tentativa de falsificação.
+
+## Matriz de handlers
+
+| Módulo:linha | Método e rota | Handler | Campos cliente | Revisão |
+|---|---|---|---|---|
+| `distribution_hub.py:151` | `PATCH /projects/{project_id}/channels/{channel_id}` | `patch_distribution_channel` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `distribution_hub.py:188` | `POST /projects/{project_id}/channels/{channel_id}/attempts` | `record_distribution_attempt` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `distribution_hub.py:219` | `POST /projects/{project_id}/channels/{channel_id}/publish-success` | `mark_distribution_publish_success` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `distribution_hub.py:251` | `POST /projects/{project_id}/channels/{channel_id}/publish-failed` | `mark_distribution_publish_failed` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `distribution_hub_v6.py:39` | `POST /{project_id}/refresh` | `refresh_distribution_hub_endpoint` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `distribution_hub_v6.py:56` | `PATCH /{project_id}` | `patch_distribution_hub_endpoint` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_branding.py:37` | `GET /{slug}` | `get_ip_branding` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_branding.py:85` | `POST /{slug}/upload` | `upload_ip_brand_asset` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_canons.py:41` | `GET /{slug}/{canon_type}` | `get_ip_canon` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_characters.py:101` | `GET /{slug}` | `get_characters` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_characters.py:118` | `GET /{slug}/consistency-summary` | `get_characters_consistency_summary` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_characters.py:131` | `GET /{slug}/character-lock-status` | `get_character_lock_status` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_creator.py:41` | `GET (raiz do router)` | `ips` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_creator.py:53` | `GET /{slug}` | `ip_by_slug` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_creator.py:103` | `GET /{slug}/permissions` | `ip_permissions` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_metadata.py:20` | `GET /{slug}` | `get_metadata` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `ip_palette.py:20` | `GET /{slug}` | `get_palette` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `project_commercial.py:51` | `PATCH /{project_id}` | `patch_project_commercial` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `project_integrity.py:43` | `POST /{project_id}/repair` | `repair_project` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `projects.py:55` | `GET (raiz do router)` | `list_projects` | `user_id, user_name, user_role` | Revisão estática concluída — ver findings |
+| `projects.py:121` | `PATCH /{project_id}` | `patch_project` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `publication_package.py:66` | `POST /{project_id}/freeze` | `freeze_publication_package` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `publish_readiness.py:162` | `POST /{project_id}/sync` | `sync_publish_readiness` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `publish_readiness.py:183` | `POST /{project_id}/mark-ready` | `mark_ready` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `publish_readiness.py:234` | `POST /{project_id}/unmark-ready` | `unmark_ready` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `publishing.py:42` | `POST /publish` | `publish_project` | `user_name, user_role` | Revisão estática concluída — ver findings |
+| `saga_loader.py:44` | `GET /{saga_id}/can-edit/{user_role}` | `can_edit_saga` | `user_role` | Revisão estática concluída — ver findings |
+| `users.py:52` | `PATCH /{user_id}` | `patch_user` | `user_id` | Revisão estática concluída — ver findings |
+| `users.py:81` | `PATCH /{user_id}/pin` | `patch_user_pin` | `user_id` | Revisão estática concluída — ver findings |
+
+## Evidência exigida para fechar cada linha
+
+- [ ] Dependências FastAPI efetivas identificadas (handler, router e aplicação).
+- [ ] Serviços chamados e funções transitivas relevantes identificados.
+- [ ] Dados lidos/escritos e side effects classificados.
+- [ ] Papel/identidade do cliente não é usado como prova de autorização.
+- [ ] Principal obtido exclusivamente de sessão/credencial validada no servidor.
+- [ ] Permissão e âmbito (projeto/IP/recurso) documentados.
+- [ ] Testes anónimos, papel insuficiente, identidade falsificada e utilizador desativado passam.
+
+## Limite e próxima etapa
+
+Esta matriz é uma lista de trabalho derivada do inventário CI, não a revisão manual concluída pedida na issue #43. O passo seguinte é seguir os handlers P0 e atualizar cada linha com referências concretas a serviços e testes. A migração de sessão/RBAC deve esperar pela conclusão dessa análise e pelo plano de compatibilidade desktop/mobile.
+
+
+## Primeira revisão manual — superfícies P0
+
+Revisão estática dos sete módulos prioritários em `main` (13-11-2026). Esta secção regista apenas comportamento diretamente visível nos handlers e helpers locais; ainda não substitui testes HTTP nem o rastreio completo de serviços.
+
+| Módulo | Evidência observada | Conclusão estática |
+|---|---|---|
+| `users.py` | `GET /users`, `POST /users`, `PATCH /users/{user_id}`, `PATCH /users/{user_id}/pin` não recebem principal nem dependência de autorização. Login compara PIN em texto simples e devolve o registo completo do utilizador. | **P0 confirmado no código da rota:** gestão de utilizadores e PIN sem gate de autorização visível; exposição de registo e credencial na resposta. |
+| `projects.py` | `GET /projects` usa `user_id`/`user_name` do pedido para filtrar visibilidade. `PATCH /projects/{project_id}` chama `_can_edit_or_publish(user_role, user_name)`; o helper aceita roles declaradas `owner/creator/admin` ou nomes fixos. | **P0 confirmado no código da rota:** autorização/visibilidade baseada em valores fornecidos pelo cliente. `POST /projects` também aceita `created_by` e `created_by_name` do payload. |
+| `publishing.py` | `POST /publishing/publish` autoriza com `user_role`/`user_name` do pedido; `requested_by` pode ser fornecido no payload. | **P0 confirmado no código da rota:** a decisão local de publicar é forjável pelo cliente. |
+| `publication_package.py` | `POST /publication-package/{project_id}/freeze` chama helper local que aceita `owner/creator/admin` ou nomes fixos vindos dos parâmetros; encaminha os mesmos valores ao serviço de freeze. | **P0 confirmado no gate da rota:** identidade/função do cliente controla o freeze; falta rastrear as verificações internas do serviço, sem assumir que são seguras. |
+| `publish_readiness.py` | `POST sync`, `mark-ready` e `unmark-ready` usam helper local baseado em `user_role`/`user_name` do pedido. | **P0 confirmado no gate da rota:** cliente pode declarar role/nome aceite pelo helper para alterar estado de prontidão. |
+| `project_commercial.py` | `PATCH /{project_id}` autoriza por `user_role`/`user_name` fornecidos pelo pedido; roles `owner/creator/admin` ou nomes `andre/andré/esposa`. | **P0 confirmado no gate da rota:** alterações comerciais aceitam identidade declarada pelo cliente. |
+| `project_integrity.py` | `POST /{project_id}/repair` usa o mesmo padrão de autorização por role/nome do pedido antes de alterar o projeto. | **P0 confirmado no gate da rota:** operação de reparação aceita identidade declarada pelo cliente. |
+
+### Decisão técnica
+
+- Não corrigir estes módulos individualmente com comparações adicionais dos mesmos campos: isso preservaria a falsificação.
+- O principal autenticado tem de ser derivado de sessão/credencial verificada no servidor e injetado por dependência central.
+- Rotas de leitura que hoje aceitam acesso sem principal (por exemplo, listagens de publicação, pacote, prontidão e integridade) também precisam de classificação explícita: público, familiar autenticado ou editorial/admin. Não as tornar públicas por omissão.
+- `requested_by`, `created_by` e `created_by_name` devem ser atribuídos pelo servidor após autenticação, não usados como prova de identidade quando enviados pelo cliente.
+- Antes da implementação: mapear dependências do serviço `freeze_publication_package_operationally`, `publish_package`, `validate_project_publishability`, `sync_ready_for_publish_with_readiness`, `repair_project_structure` e helpers de storage; depois escrever testes HTTP negativos e de regressão.
+
+### Estado desta revisão
+
+- [x] Inspeção estática dos sete módulos P0 acima.
+- [ ] Inspeção transitiva dos serviços e middleware da aplicação.
+- [ ] Testes HTTP 401/403 e falsificação de identidade.
+- [ ] Plano de migração de sessão/RBAC e compatibilidade desktop/mobile.
+- [ ] Prova dinâmica de que ficheiros internos não são servidos por HTTP.
+
+
+## Verificação da aplicação e serviços chamados
+
+A leitura de `studio_core/api/main.py` confirmou no estado atual de `main`:
+
+- A aplicação não regista middleware global de autenticação/autorização.
+- CORS está configurado com `allow_origins=["*"]`, `allow_credentials=True`, métodos e headers wildcard.
+- A raiz completa de storage é montada em `/storage` através de `StaticFiles`; a mesma raiz contém `data/*.json` e outros dados operacionais.
+- Os routers de utilizadores, projetos, publicação, controlo de base de dados, deploy e segredos são registados diretamente sem dependência global visível.
+
+Nos serviços inspecionados:
+
+- `freeze_publication_package_operationally` usa `user_name` e `user_role` para preencher `frozen_by` no snapshot; não valida a identidade nem a autorização.
+- `publish_package` constrói um registo de publicação e copia `requested_by`; não valida identidade nem autorização.
+- `repair_project_structure` normaliza estrutura de dados; não valida identidade nem autorização.
+- `sync_ready_for_publish_with_readiness` altera `ready_for_publish` e grava readiness; não valida identidade nem autorização.
+- Estes serviços não substituem o gate HTTP; a proteção tem de ocorrer antes da execução e usar um principal validado pelo servidor.
+
+**Conclusão P0 reforçada:** os handlers acima não têm uma camada central visível que compense os gates forjáveis. A montagem estática de storage também permanece uma exposição estrutural. Ainda falta prova dinâmica HTTP num ambiente isolado; não foi feito qualquer pedido a endpoints de dados nem alterado storage.
+
+### Contenção e plano de migração
+
+A correção deve ser coordenada: primeiro definir principal e sessão server-side, matriz RBAC, allowlist pública e migração de clientes; depois proteger routers/serviços, retirar a montagem de storage privado e migrar desktop/mobile. Não colocar um middleware de bloqueio global sem primeiro separar health, assets públicos e integração Website, pois isso pode interromper operações legítimas e publicação outbound.
+
+
+## Segunda revisão manual — distribuição, IP e canon
+
+Revisão estática de todos os módulos restantes na matriz, lendo os handlers e seguindo as chamadas diretas para serviços. A revisão cobre 18 handlers adicionais. Não foram executados pedidos HTTP contra dados reais e não foram alterados ficheiros de dados.
+
+| Módulo | Evidência observada | Conclusão estática |
+|---|---|---|
+| `distribution_hub.py` | Os quatro handlers de escrita chamam `_can_edit_or_publish(user_role, user_name)`; o helper aceita roles `owner/creator/admin` e nomes fixos. Depois leem projetos e escrevem `data/distribution_channel_states.json`. | **P0 confirmado:** qualquer cliente pode declarar um role/nome aceite e alterar estado, tentativas, sucesso/falha e notas dos canais de distribuição. |
+| `distribution_hub_v6.py` | Refresh e PATCH usam o mesmo helper forjável; chamam `refresh_distribution_hub` e `patch_distribution_hub`. Os serviços escrevem em `data/projects.json` sem validação de principal. | **P0 confirmado:** atualização do hub comercial e refresh persistido controlados por identidade declarada pelo cliente. |
+| `saga_loader.py` | `GET /{saga_id}/can-edit/{user_role}` passa o segmento da URL diretamente a `can_user_edit_saga`. O serviço compara o texto com `creator/owner` para Baribudos e devolve `True` para qualquer role em sagas não protegidas. As rotas de listagem, leitura e validação não têm dependência de autenticação visível. | **P0/P1 confirmado:** endpoint de permissões é uma decisão forjável e não constitui controlo de acesso; leitura de canon e validação estão sem gate local visível. |
+| `ip_creator.py` | `ips` e `ip_by_slug` usam identidade de query para filtrar visibilidade. `ip_permissions` devolve permissões calculadas a partir da mesma identidade. `patch_ip` e `ensure-folders` aceitam identidade no payload. `new_ip` cria IP sem principal. O serviço `can_edit_ip` confia em id/nome/role e ACL armazenados; `create_ip` aceita owner, roles, editores, estado e idiomas enviados no payload. | **P0 confirmado:** spoofing de identidade/ACL nas operações de leitura e escrita; criação de IP sem autenticação e com atribuição de owner/editores controlada pelo cliente. A proteção especial da IP exclusiva Baribudos em `update_ip` não protege as restantes IPs. |
+| `ip_branding.py` | GET, PATCH e upload constroem utilizador a partir de query, payload ou campos multipart e chamam `can_edit_ip`. Upload grava ficheiro em `public/brand/ips/{slug}` e atualiza o registo da IP. | **P0 confirmado:** leitura, alteração de branding e upload dependem de identidade forjável. Upload não tem limite de tamanho visível no handler; requer validação adicional de tamanho/conteúdo e limpeza atómica em caso de falha. |
+| `ip_canons.py` | GET e PATCH usam `can_edit_ip` com identidade obtida de query/payload. PATCH escreve JSON diretamente em `studio/sagas/{slug}/{canon}`. | **P0 confirmado:** canon interno pode ser lido ou substituído por cliente que falsifique uma identidade aceite. |
+| `ip_characters.py` | GET, resumo e lock usam identidade do cliente; além disso, comparam `owner_id` do registo com `user_id` também fornecido pelo cliente. PATCH usa `can_edit_ip` e substitui `main_characters`. | **P0 confirmado:** bypass adicional por falsificação direta do owner_id; escrita de personagens/canon visual protegida apenas por identidade declarada. |
+| `ip_metadata.py` | GET aceita `can_edit_ip` ou igualdade entre `owner_id` e id fornecido pelo cliente; PATCH usa `can_edit_ip` e altera metadata e idiomas. | **P0 confirmado:** leitura/escrita de metadados e configuração multilingue com autorização forjável. |
+| `ip_palette.py` | GET aceita `can_edit_ip` ou igualdade entre `owner_id` e id fornecido pelo cliente; PATCH usa `can_edit_ip` e altera a paleta. | **P0 confirmado:** leitura/escrita de identidade visual com autorização forjável. |
+
+### Observações transversais dos serviços
+
+- `can_edit_ip`, `can_publish_ip` e `is_editorial_admin` não autenticam o utilizador: avaliam os campos recebidos no objeto `user`. Se esse objeto for montado a partir de query/form/payload, o serviço herda a falsificação da rota.
+- `can_view_ip` também confia em `id` e `name` do objeto recebido. O campo `visible_to_owner_only` não é uma fronteira de segurança enquanto a identidade não vier de uma sessão validada.
+- `update_ip` protege a IP marcada como exclusiva, mas não verifica autorização. Para IPs não exclusivas, a autorização é inteiramente responsabilidade do handler; não existe segunda barreira no serviço.
+- `create_ip` aceita campos de propriedade, ACL, exclusividade, idiomas e estado diretamente do payload. A rota `POST /ip-creator` não recebe principal nem aplica permissão.
+- `distribution_hub_service.py` executa leituras e escritas de projeto sem receber principal ou contexto de autorização; depende totalmente do gate da rota.
+- `saga_loader_service.py` não autentica. A regra `can_user_edit_saga` é uma função de política baseada em texto, não uma decisão de autorização ligada a uma sessão.
+
+### Resultado consolidado da revisão estática
+
+- [x] 29/29 handlers da matriz inspecionados estaticamente.
+- [x] Serviços/helpers diretos relevantes dos módulos restantes inspecionados.
+- [x] Identificadas rotas de escrita com autorização baseada em campos controlados pelo cliente.
+- [x] Identificadas rotas de leitura internas sem principal/dependência local visível.
+- [ ] Rever todos os routers e dependências transitivas fora das 29 entradas.
+- [ ] Criar testes HTTP 401/403, papel insuficiente, utilizador desativado e spoofing de id/nome/role.
+- [ ] Definir matriz de permissões por recurso (Studio, IP, projeto, distribuição, canon, utilizadores).
+- [ ] Definir sessão/token, revogação e migração coordenada desktop/mobile.
+- [ ] Testar isolamento de storage e remover exposição de dados internos.
+- [ ] Testar limites de upload, MIME real, extensão, tamanho e rollback de ficheiros.
+
+**Conclusão:** a matriz deixa de estar pendente como inventário estático: as 29 entradas foram examinadas e os padrões de risco estão documentados. Continua **não aprovada para produção** até existir autenticação server-side, RBAC, testes negativos e prova dinâmica. Esta revisão não altera o runtime nem resolve por si só as vulnerabilidades.
