@@ -9,7 +9,7 @@
 **Valor complementar:** Discernimento de confiança  
 **Personagens:** Magnus, Luma, Roko (11), Mila (6), Tilo (4)  
 **Elemento simbólico:** Eco da Floresta — representa pedidos de segredo que não são seguros  
-**Duração audiovisual pretendida:** 4 minutos (canon: 3–6 minutos)  
+**Duração audiovisual proposta:** 4 minutos, provisórios e sujeitos a decisão editorial. episode-canon.json aponta 4 minutos (intervalo 3–6); narrative-canon.json aponta 5 minutos. A divergência entre os dois documentos canónicos não está resolvida.  
 **Duração audiobook pretendida:** aproximadamente 6 minutos, com pausas e leitura expressiva  
 **Aprovação:** Não aprovada. Não publicar, distribuir ou incluir no catálogo comercial sem decisão editorial.
 
@@ -148,7 +148,7 @@ Aplicar em todas as imagens:
 
 ---
 
-## 5. Storyboard audiovisual — episódio de 4 minutos
+## 5. Storyboard audiovisual — proposta provisória de 4 minutos
 
 | Cena | Duração alvo | Imagem / ação | Áudio |
 |---|---:|---|---|
@@ -160,7 +160,9 @@ Aplicar em todas as imagens:
 | 6 | 40 s | Magnus explica a diferença entre surpresa e segredo inseguro | Música discreta, diálogo claro |
 | 7 | 25 s | A família mantém-se junta ao reencontrar o Eco | Som da floresta, sem confronto |
 | 8 | 25 s | Família reunida e frase final | Fecho musical suave |
-| **Total** | **240 s** | **8 cenas** | **4 minutos** |
+| **Total** | **240 s** | **8 cenas** | **4 minutos (proposta)** |
+
+Os 25 segundos da cena 1 incluem os 5 segundos de abertura canónica; os 25 segundos da cena 8 incluem os 7 segundos de encerramento. A abertura e o encerramento não são tempos adicionais. A proposta de 4 minutos segue provisoriamente episode-canon.json, mas narrative-canon.json define 5 minutos como alvo de episódio. A decisão canónica tem de ser reconciliada antes da aprovação final. O intervalo de 3–6 minutos está definido em episode-canon.json.
 
 O storyboard define intenção e temporização; não afirma que existe animação. A produção atual do Studio pode gerar vídeo a partir de imagens estáticas e áudio. Movimento de personagens, animação contínua e sincronização labial só podem ser anunciados quando efetivamente implementados e validados.
 
