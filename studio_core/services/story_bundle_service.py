@@ -42,11 +42,16 @@ def _validate_bundle_members(bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
     if any(not isinstance(item, dict) or not _approved(item) for item in stories):
         raise ValueError("bundle_requires_five_explicitly_approved_stories")
 
+    if bundle.get("bundle_size", BUNDLE_SIZE) != BUNDLE_SIZE:
+        raise ValueError("bundle_size_must_be_five")
     ids = [_text(item.get("id")) for item in stories]
     if any(not item_id for item_id in ids):
         raise ValueError("bundle_requires_stable_story_ids")
     if len(set(ids)) != BUNDLE_SIZE:
         raise ValueError("bundle_requires_five_distinct_story_ids")
+    declared_ids = bundle.get("story_ids")
+    if declared_ids is not None and [_text(item) for item in declared_ids] != ids:
+        raise ValueError("bundle_story_ids_do_not_match_members")
 
     identities = {_identity(item) for item in stories}
     if len(identities) != 1:
