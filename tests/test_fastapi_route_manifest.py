@@ -1,6 +1,14 @@
 import json
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
+
+from starlette.routing import Mount
+from starlette.staticfiles import StaticFiles
 
 from scripts.export_studio_fastapi_manifest import (
     application_security_surface,
@@ -123,6 +131,89 @@ class RuntimeRouteManifestTests(unittest.TestCase):
             "not supplied to build_manifest",
         )
         self.assertIn("Application object was not supplied", render_markdown(manifest))
+
+    def test_manifest_includes_static_mounts_without_exporting_filesystem_paths(self):
+        route = SimpleNamespace(
+            path="/api/example",
+            name="example",
+            endpoint=endpoint,
+            methods={"GET"},
+            operation_id=None,
+            tags=[],
+            dependant=dependency(endpoint),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            mount = Mount("/storage", app=StaticFiles(directory=directory), name="storage")
+            app = SimpleNamespace(
+                router=SimpleNamespace(dependencies=[]),
+                user_middleware=[],
+                routes=[route, mount],
+            )
+            manifest = build_manifest([route], app=app, app_routes=app.routes)
+        surface = manifest["non_api_http_surface"]
+        self.assertEqual(surface["non_api_route_count"], 1)
+        self.assertEqual(surface["static_mount_count"], 1)
+        static_record = surface["routes"][0]
+        self.assertEqual(static_record["route_type"], "Mount")
+        self.assertEqual(static_record["path"], "/storage")
+        self.assertTrue(static_record["static_files"]["directory_configured"])
+        self.assertTrue(static_record["static_files"]["directory_exists"])
+        self.assertFalse(static_record["static_files"]["authorization_verified"])
+        self.assertNotIn(directory, json.dumps(manifest))
+        markdown = render_markdown(manifest)
+        self.assertIn("StaticFiles mounts: **1**", markdown)
+        self.assertIn("/storage", markdown)
+        self.assertNotIn(directory, markdown)
+
+    def test_real_application_inventories_storage_mount_when_root_exists(self):
+        repository_root = Path(__file__).resolve().parents[1]
+
+        with tempfile.TemporaryDirectory() as temporary_root:
+            temporary_path = Path(temporary_root)
+            storage_root = temporary_path / "isolated-storage"
+            storage_root.mkdir()
+            json_output = temporary_path / "manifest.json"
+            markdown_output = temporary_path / "manifest.md"
+
+            environment = os.environ.copy()
+            environment["BARIBUDOS_STORAGE_ROOT"] = str(storage_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "scripts.export_studio_fastapi_manifest",
+                    "--json-output",
+                    str(json_output),
+                    "--markdown-output",
+                    str(markdown_output),
+                ],
+                cwd=repository_root,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            manifest = json.loads(json_output.read_text(encoding="utf-8"))
+            storage_mounts = [
+                item
+                for item in manifest["non_api_http_surface"]["routes"]
+                if item["path"] == "/storage"
+            ]
+
+            self.assertEqual(len(storage_mounts), 1)
+            self.assertEqual(storage_mounts[0]["route_type"], "Mount")
+            self.assertTrue(storage_mounts[0]["static_files"]["directory_exists"])
+            self.assertFalse(storage_mounts[0]["static_files"]["authorization_verified"])
+            self.assertNotIn(str(storage_root), json.dumps(manifest))
+            self.assertNotIn(str(storage_root), markdown_output.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
