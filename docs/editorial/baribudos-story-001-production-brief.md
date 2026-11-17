@@ -1,7 +1,7 @@
 # Baribudos — História 001: O Eco que Pedia Silêncio
 
 **Documento:** pacote de produção editorial e audiovisual  
-**Versão:** 0.3  
+**Versão:** 0.4  
 **Data:** 2026-11-16  
 **Estado:** proposta editorial em revisão; não aprovada para publicação  
 **IP:** Os Baribudos  
@@ -107,24 +107,34 @@ As vozes são apenas direções artísticas; não autorizam clonagem ou síntese
 
 ## 7. Storyboard de episódio
 
-**Duração ainda por reconciliar:** episode-canon.json define 4 minutos como alvo, com intervalo de 3–6 minutos; narrative-canon.json define 5 minutos como alvo de episódio. Os documentos canónicos divergem e exigem decisão editorial explícita.  
-**Proposta provisória desta versão:** 4 minutos, seguindo temporariamente episode-canon.json; não tratar como canon consolidado nem como aprovação de produção.
+**Duração aprovada em 17-11-2026:** alvo de 3 min 30 s por minissérie individual, com intervalo normal de 3–4 minutos. A abertura de 5 s e o fecho de 7 s estão incluídos. Cada livro origina um episódio/minissérie. Cinco livros compõem um volume e originam cinco episódios; a série compilada do volume terá 15–20 minutos (alvo indicativo: 17 min 30 s).
 
 | Cena | Conteúdo | Duração proposta |
 |---|---|---:|
-| 1 | Abertura (5 s incluídos) e floresta | 25 s |
-| 2 | Descoberta do Eco | 25 s |
-| 3 | Pedido de segredo | 30 s |
-| 4 | Dúvida e decisão segura | 35 s |
-| 5 | Conversa com Luma | 35 s |
-| 6 | Orientação de Magnus | 40 s |
-| 7 | Caminhada familiar | 25 s |
-| 8 | Fecho e frase final (7 s incluídos) | 25 s |
-| **Total** | **8 cenas; abertura e encerramento incluídos** | **240 s (4 min)** |
+| 1 | Abertura (5 s incluídos) e floresta | 22 s |
+| 2 | Descoberta do Eco | 22 s |
+| 3 | Pedido de segredo | 26 s |
+| 4 | Dúvida e decisão segura | 30 s |
+| 5 | Conversa com Luma | 30 s |
+| 6 | Orientação de Magnus | 34 s |
+| 7 | Caminhada familiar | 22 s |
+| 8 | Fecho e frase final (7 s incluídos) | 24 s |
+| **Total** | **8 cenas; abertura e encerramento incluídos** | **210 s (3 min 30 s)** |
 
-A abertura de referência de 5 segundos está incluída na cena 1 e o encerramento de 7 segundos está incluído na cena 8; não se adicionam à duração total. Esta é uma temporização provisória baseada em episode-canon.json. Antes da aprovação final, a direção editorial deve reconciliar o alvo de 4 minutos deste ficheiro com os 5 minutos definidos em narrative-canon.json.
+A abertura de referência de 5 segundos está incluída na cena 1 e o encerramento de 7 segundos está incluído na cena 8; não se adicionam à duração total. O storyboard tem 210 segundos (3 min 30 s), dentro do intervalo normal de 3–4 minutos. A duração do audiobook permanece independente.
 
 **Limite técnico:** um vídeo composto apenas por imagens estáticas e áudio é um animatic/slideshow, não uma minissérie animada concluída. A entrega final exige movimento intencional, continuidade de personagens, sincronização audiovisual e validação do ficheiro renderizado.
+
+
+
+### Volume e série audiovisual
+
+- Esta história corresponde a um livro e origina uma minissérie individual.
+- Cada minissérie individual tem alvo de 3 min 30 s e duração normal entre 3 e 4 minutos, incluindo abertura e fecho.
+- Cinco livros aprovados formam um volume; o volume terá cinco minisséries individuais.
+- A série do volume é a montagem dos cinco episódios pela ordem editorial, com duração total de 15–20 minutos (alvo indicativo: 17 min 30 s).
+- Os episódios individuais permanecem disponíveis; a montagem não os substitui nem cria uma sexta história.
+- Compilações de vários volumes são uma fase futura, sujeita a edição e aprovação próprias.
 
 ## 8. Produtos derivados
 
