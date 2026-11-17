@@ -1,7 +1,7 @@
 # Baribudos — História 001: O Eco que Pedia Silêncio
 
 **Documento:** pacote de produção editorial e audiovisual  
-**Versão:** 0.2  
+**Versão:** 0.3  
 **Data:** 2026-11-16  
 **Estado:** proposta editorial em revisão; não aprovada para publicação  
 **IP:** Os Baribudos  
@@ -107,21 +107,22 @@ As vozes são apenas direções artísticas; não autorizam clonagem ou síntese
 
 ## 7. Storyboard de episódio
 
-**Duração-alvo canónica:** 4 minutos; intervalo permitido de 3 a 6 minutos.  
-**Proposta desta versão:** aproximadamente 4 minutos e 30 segundos, sujeita a temporização do guião final.
+**Duração ainda por reconciliar:** episode-canon.json define 4 minutos como alvo, com intervalo de 3–6 minutos; narrative-canon.json define 5 minutos como alvo de episódio. Os documentos canónicos divergem e exigem decisão editorial explícita.  
+**Proposta provisória desta versão:** 4 minutos, seguindo temporariamente episode-canon.json; não tratar como canon consolidado nem como aprovação de produção.
 
 | Cena | Conteúdo | Duração proposta |
 |---|---|---:|
-| 1 | Abertura e floresta | 25 s |
-| 2 | Descoberta do Eco | 30 s |
-| 3 | Pedido de segredo | 35 s |
+| 1 | Abertura (5 s incluídos) e floresta | 25 s |
+| 2 | Descoberta do Eco | 25 s |
+| 3 | Pedido de segredo | 30 s |
 | 4 | Dúvida e decisão segura | 35 s |
 | 5 | Conversa com Luma | 35 s |
-| 6 | Orientação de Magnus | 35 s |
-| 7 | Caminhada familiar | 30 s |
-| 8 | Fecho e frase final | 25 s |
+| 6 | Orientação de Magnus | 40 s |
+| 7 | Caminhada familiar | 25 s |
+| 8 | Fecho e frase final (7 s incluídos) | 25 s |
+| **Total** | **8 cenas; abertura e encerramento incluídos** | **240 s (4 min)** |
 
-A soma proposta é 4 minutos e 30 segundos. A abertura e o encerramento devem respeitar os elementos canónicos (abertura de referência de 5 segundos e encerramento de 7 segundos), ajustando os restantes planos sem ultrapassar seis minutos.
+A abertura de referência de 5 segundos está incluída na cena 1 e o encerramento de 7 segundos está incluído na cena 8; não se adicionam à duração total. Esta é uma temporização provisória baseada em episode-canon.json. Antes da aprovação final, a direção editorial deve reconciliar o alvo de 4 minutos deste ficheiro com os 5 minutos definidos em narrative-canon.json.
 
 **Limite técnico:** um vídeo composto apenas por imagens estáticas e áudio é um animatic/slideshow, não uma minissérie animada concluída. A entrega final exige movimento intencional, continuidade de personagens, sincronização audiovisual e validação do ficheiro renderizado.
 
