@@ -107,35 +107,36 @@ As vozes são apenas direções artísticas; não autorizam clonagem ou síntese
 
 ## 7. Storyboard de episódio
 
-**Duração aprovada em 17-11-2026:** alvo de 3 min 30 s por minissérie individual, com intervalo normal de 3–4 minutos. A abertura de 5 s e o fecho de 7 s estão incluídos. Cada livro origina um episódio/minissérie. Cinco livros compõem um volume e originam cinco episódios; a série compilada do volume terá 15–20 minutos (alvo indicativo: 17 min 30 s).
+**Orientação atualizada em 18-11-2026:** para Baribudos (4–10 anos), a minissérie individual tem alvo indicativo de aproximadamente 5 minutos e janela aconselhada de 4 min 30 s a 6 minutos. Não são limites rígidos. A abertura de 5 s e o fecho de 7 s estão incluídos na duração final.
 
-| Cena | Conteúdo | Duração proposta |
+| Cena | Conteúdo e intenção | Duração de referência |
 |---|---|---:|
-| 1 | Abertura (5 s incluídos) e floresta | 22 s |
-| 2 | Descoberta do Eco | 22 s |
-| 3 | Pedido de segredo | 26 s |
-| 4 | Dúvida e decisão segura | 30 s |
-| 5 | Conversa com Luma | 30 s |
-| 6 | Orientação de Magnus | 34 s |
-| 7 | Caminhada familiar | 22 s |
-| 8 | Fecho e frase final (7 s incluídos) | 24 s |
-| **Total** | **8 cenas; abertura e encerramento incluídos** | **210 s (3 min 30 s)** |
+| 1 | Abertura incluída e floresta | 28 s |
+| 2 | Caminhada e conversa entre irmãos | 24 s |
+| 3 | Descoberta do Eco | 26 s |
+| 4 | A folha dourada e a pergunta de Tilo | 32 s |
+| 5 | Pedido de segredo e reações | 36 s |
+| 6 | Os irmãos refletem e escolhem pedir ajuda | 34 s |
+| 7 | Luma escuta e acolhe | 35 s |
+| 8 | Magnus explica e responde às perguntas | 42 s |
+| 9 | Reencontro com o Eco junto da família | 26 s |
+| 10 | Resolução, frase final e fecho incluído | 17 s |
+| **Total indicativo** | **10 cenas; abertura e encerramento incluídos** | **300 s (5 min)** |
 
-A abertura de referência de 5 segundos está incluída na cena 1 e o encerramento de 7 segundos está incluído na cena 8; não se adicionam à duração total. O storyboard tem 210 segundos (3 min 30 s), dentro do intervalo normal de 3–4 minutos. A duração do audiobook permanece independente.
+A temporização é uma proposta de trabalho. O guião/storyboard deve ser revisto para garantir que cada cena acrescenta desenvolvimento, compreensão, reação emocional ou continuidade. Encurtar repetições; acrescentar cenas quando falte desenvolvimento; nunca criar enchimento nem remover conteúdo essencial apenas para cumprir o relógio. Uma duração fora da janela aconselhada pode ser aceite com fundamentação e revisão editorial.
+
+A duração do audiobook é independente (referência atual de aproximadamente 6 minutos). Preservar a história integral, a voz natural, as pausas e a expressividade. A minissérie tem guião e narração próprios; não cortar nem acelerar o audiobook para o reutilizar como faixa do episódio.
 
 **Limite técnico:** um vídeo composto apenas por imagens estáticas e áudio é um animatic/slideshow, não uma minissérie animada concluída. A entrega final exige movimento intencional, continuidade de personagens, sincronização audiovisual e validação do ficheiro renderizado.
-
-
 
 ### Volume e série audiovisual
 
 - Esta história corresponde a um livro e origina uma minissérie individual.
-- Cada minissérie individual tem alvo de 3 min 30 s e duração normal entre 3 e 4 minutos, incluindo abertura e fecho.
-- Cinco livros aprovados formam um volume; o volume terá cinco minisséries individuais.
-- A série do volume é a montagem dos cinco episódios pela ordem editorial, com duração total de 15–20 minutos (alvo indicativo: 17 min 30 s).
+- A duração da minissérie é adaptada à idade e ao conteúdo; para Baribudos, referência aproximada de 5 minutos e janela aconselhada de 4:30–6:00, sem limites rígidos.
+- Cinco livros aprovados formam um volume com cinco episódios individuais.
+- A série do volume é a soma real dos cinco episódios pela ordem editorial; não existe mínimo/máximo global nem duração artificial a atingir.
 - Os episódios individuais permanecem disponíveis; a montagem não os substitui nem cria uma sexta história.
 - Compilações de vários volumes são uma fase futura, sujeita a edição e aprovação próprias.
-
 ## 8. Produtos derivados
 
 ### E-book
