@@ -178,19 +178,21 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             self.assertEqual(len(groups), 1)
             self.assertEqual(groups[0]["story_count"], 5)
 
-            bundle_output = build_five_story_bundle(
-                five_stories,
-                output_dir=root / "bundle",
-                storage_root=storage,
-                title="Baribudos — primeiras cinco histórias",
-            )
-            self.assertEqual(bundle_output["status"], "completed")
-            self.assertEqual(bundle_output["story_count"], 5)
-            self.assertTrue(Path(bundle_output["guide"]["file_path"]).is_file())
-            self.assertTrue(Path(bundle_output["compilation"]["file_path"]).is_file())
-            self.assertEqual(bundle_output["compilation"]["video_codec"], "h264")
-            self.assertEqual(bundle_output["compilation"]["audio_codec"], "aac")
-            self.assertGreater(bundle_output["compilation"]["duration_seconds"], 0)
+            # These builder-generated synthetic episodes are deliberately short.
+            # The volume must be blocked instead of padding them to meet the canon.
+            with self.assertRaisesRegex(ValueError, "mini_series_duration_out_of_range"):
+                build_five_story_bundle(
+                    five_stories,
+                    output_dir=root / "bundle",
+                    storage_root=storage,
+                    title="Baribudos — volume de teste",
+                )
+            self.assertFalse((root / "bundle" / "parents-guide.md").exists())
+            self.assertFalse((root / "bundle" / "five-story-mini-film.mp4").exists())
+            bundle_output = {
+                "status": "blocked_by_episode_duration_gate",
+                "story_count": 5,
+            }
 
             report = {
                 "status": "passed",
@@ -208,11 +210,7 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
                     }
                     for item in production_outputs
                 ],
-                "five_story_bundle": {
-                    "story_count": bundle_output["story_count"],
-                    "guide": bundle_output["guide"]["file_path"],
-                    "compilation": bundle_output["compilation"],
-                },
+                "five_story_bundle": bundle_output,
             }
             report_path = root / "production-validation-report.json"
             report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -227,8 +225,6 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
                     *[Path(item["ebook"]["file_path"]) for item in production_outputs],
                     *[Path(item["audio"]["file_path"]) for item in production_outputs],
                     *[Path(item["mini_series"]["file_path"]) for item in production_outputs],
-                    Path(bundle_output["guide"]["file_path"]),
-                    Path(bundle_output["compilation"]["file_path"]),
                     report_path,
                 ):
                     shutil.copy2(source, artifact_dir / source.name)
