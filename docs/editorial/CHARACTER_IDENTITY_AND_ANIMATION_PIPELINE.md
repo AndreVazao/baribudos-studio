@@ -29,7 +29,7 @@ A recurring visual character is not production-ready until its package contains:
 5. Source model and material/texture references.
 6. Reusable rig with documented controls and skeleton.
 7. Approved wardrobe assets, separately versioned.
-8. Checksums and provenance for source assets.
+8. Checksums and provenance for source assets. Every required file path is relative to the IP canonical directory; `asset_checksums` must contain a SHA-256 hex digest for `model_source`, `rig_asset`, `expression_sheet`, `neutral_pose` and each `turnaround.front`, `turnaround.three_quarter`, `turnaround.side`, `turnaround.back`.
 
 A character can be text-only/non-visual only when editorially declared as such. A missing package must never be silently treated as approved.
 
@@ -37,7 +37,7 @@ A character can be text-only/non-visual only when editorially declared as such. 
 
 - Blender: canonical editable 3D source, materials, rigging, scene layout, animation and rendering.
 - FFmpeg/FFprobe: audio/video assembly, transcodes and technical inspection.
-- Python validation: stable IDs, revision references, required asset presence, checksums, render metadata and media-stream checks.
+- Python validation: stable IDs, revision references, required asset presence, root confinement, symlink rejection, SHA-256 verification, render metadata and media-stream checks. Absolute paths, path escapes, missing files and mismatched digests block production readiness.
 - Git/LFS or the approved asset store: source/version lineage. Large binary assets should not be committed blindly into ordinary Git history; storage and licensing must be reviewed before adoption.
 
 No paid generator or subscription is required by this architecture. Image generators may be used for exploration or environment concepts, but their per-shot character redraws are not canonical production assets.
@@ -63,7 +63,7 @@ Narrative length, audiobook pacing and animation runtime are recommendations sco
 
 - Runtime now preserves legacy Baribudos characters even when old records omit a display-name field.
 - The character schema carries identity invariants and visual-package status.
-- Production readiness validation rejects recurring visual characters whose package is not approved or lacks required source model, rig, turnarounds, expression sheet and neutral pose.
+- Production readiness validation rejects recurring visual characters whose package is not approved or lacks required source model, rig, turnarounds, expression sheet and neutral pose. It also resolves every asset beneath the IP canonical directory, rejects symlinks and path escapes, requires regular files, and verifies each SHA-256 digest.
 - The five Baribudos visual packages are still concept-only. No 3D model or rig has been approved yet.
 - Current video generation still produces a slideshow/animatic. Blender scene building, rig assets, animation rendering and lip-sync remain future implementation work.
 
