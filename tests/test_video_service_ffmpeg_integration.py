@@ -78,7 +78,7 @@ class VideoServiceFFmpegIntegrationTests(unittest.TestCase):
                         "project_id": "cloud-ffmpeg-integration",
                         "project_title": "Cloud FFmpeg integration",
                         "language": "pt-PT",
-                        "audio_path": str(audio_path),
+                        "series_audio_path": str(audio_path),
                         "sequence_frames": [
                             {"index": 1, "image_path": str(red_frame)},
                             {"index": 2, "image_path": str(blue_frame)},
@@ -90,7 +90,10 @@ class VideoServiceFFmpegIntegrationTests(unittest.TestCase):
             self.assertTrue(output_path.is_file(), "The video service did not create an MP4")
             self.assertGreater(output_path.stat().st_size, 10_000)
             self.assertEqual(result["format"], "mp4")
-            self.assertEqual(result["engine"], "ffmpeg-slideshow+audio")
+            self.assertEqual(result["engine"], "ffmpeg-slideshow+series-audio")
+            self.assertEqual(result["production_status"], "animatic_only")
+            self.assertEqual(result["audio_source"], "series_adaptation")
+            self.assertFalse(result["finalizable"])
             self.assertEqual(result["frames_used"], 2)
 
             probe = subprocess.run(
