@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import shutil
 import subprocess
 from pathlib import Path
@@ -290,95 +289,13 @@ def _build_silent_single(image_path: Path, output_path: Path, duration: int = 6)
 
 
 
-def _safe_record(value: Any) -> Dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _has_approved_decision(
-    record: Dict[str, Any],
-    *,
-    revision: str | None = None,
-    sha256: str | None = None,
-) -> bool:
-    decision = _safe_record(record.get("decision"))
-    if str(decision.get("decision", "")).strip().lower() != "approved":
-        return False
-    if not all(str(decision.get(field, "")).strip() for field in ("id", "decided_by", "decided_at")):
-        return False
-    if revision is not None and str(decision.get("revision", "")).strip() != revision:
-        return False
-    if sha256 is not None and str(decision.get("sha256", "")).strip().lower() != sha256:
-        return False
-    return True
-
-
 def resolve_approved_series_audio(project: Dict[str, Any], language: str) -> str | None:
-    """Return only a separately approved, consented and checksum-verified series track.
+    """Fail closed until an immutable, server-owned editorial approval ledger exists.
 
-    Legacy audiobook output records and the legacy audio_path argument are deliberately ignored.
+    Project JSON fields and client-provided approval claims are not an authoritative
+    approval source. No series narration is currently eligible for rendering.
     """
-    outputs = _safe_record(project.get("outputs"))
-    adaptations = _safe_record(outputs.get("series_adaptations"))
-    adaptation = _safe_record(adaptations.get(str(language).strip()))
-    if str(adaptation.get("status", "")).strip().lower() != "approved":
-        return None
-
-    script = _safe_record(adaptation.get("script"))
-    script_text = str(script.get("text", ""))
-    script_revision = str(script.get("revision", "")).strip()
-    script_sha256 = str(script.get("sha256", "")).strip().lower()
-    if (
-        str(script.get("status", "")).strip().lower() != "approved"
-        or not script_text.strip()
-        or not script_revision
-        or len(script_sha256) != 64
-        or any(char not in "0123456789abcdef" for char in script_sha256)
-        or hashlib.sha256(script_text.encode("utf-8")).hexdigest() != script_sha256
-        or not _has_approved_decision(script, revision=script_revision, sha256=script_sha256)
-    ):
-        return None
-
-    audio = _safe_record(adaptation.get("audio"))
-    audio_path_value = str(audio.get("file_path", "")).strip()
-    audio_sha256 = str(audio.get("sha256", "")).strip().lower()
-    voice_id = str(audio.get("voice_id", "")).strip()
-    if (
-        str(audio.get("status", "")).strip().lower() != "approved"
-        or not audio_path_value
-        or not voice_id
-        or len(audio_sha256) != 64
-        or any(char not in "0123456789abcdef" for char in audio_sha256)
-        or not _has_approved_decision(audio, sha256=audio_sha256)
-    ):
-        return None
-
-    consent = _safe_record(audio.get("voice_consent"))
-    if (
-        str(consent.get("status", "")).strip().lower() != "granted"
-        or str(consent.get("voice_id", "")).strip() != voice_id
-        or str(consent.get("scope", "")).strip() != "series_narration"
-        or not all(str(consent.get(field, "")).strip() for field in ("id", "granted_by", "granted_at"))
-        or consent.get("revoked_at")
-    ):
-        return None
-
-    audio_path = Path(audio_path_value)
-    if not audio_path.is_file():
-        return None
-    try:
-        if _sha256_file(audio_path) != audio_sha256:
-            return None
-    except OSError:
-        return None
-    return str(audio_path)
+    return None
 
 
 def build_series_episode(
