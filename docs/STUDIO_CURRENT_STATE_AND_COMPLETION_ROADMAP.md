@@ -628,3 +628,31 @@ O publisher do Studio em main já serializa o envelope congelado uma vez, repete
 5. Prosseguir a migração de segurança integral do Studio, sem remendos parciais.
 6. Executar ensaio audiovisual real da PR #38.
 7. Validar login, checkout, webhooks e biblioteca em sandbox, sem pagamentos reais.
+
+
+
+## 13. Revalidação de segurança e produto — 18 de novembro de 2026
+
+Esta secção atualiza a evidência operacional posterior à secção 12. Não representa uma validação dinâmica completa nem autoriza alterações de runtime.
+
+### 13.1 Segurança P0 — estado confirmado em main
+
+- Base observada: `0bf7157cf9c976ed84acb53a965051f944f06f35`.
+- `studio_core/api/main.py` mantém CORS `allow_origins=["*"]` com credenciais.
+- A raiz de storage continua montada integralmente em `/storage` através de `StaticFiles`.
+- Não foi identificada dependência/middleware global de autenticação na aplicação.
+- O inventário ASGI mais recente usado pela PR #52 regista 219 rotas ativas; o inventário AST complementar aponta 233 handlers, 29 com referências a identidade enviada pelo cliente e 97 superfícies sensíveis/operacionais. Os últimos valores são heurísticos, não prova de exploração.
+- A issue #43 continua aberta: falta completar a matriz manual handler → dependências → serviços → dados/side effects → principal server-side → permissão.
+
+### 13.2 PRs de segurança e identidade
+
+- PR #52, `security/runtime-route-policy-register-2026-11-17`: 2 commits à frente, 0 atrás de main; Studio CI #529 passou. É uma política-alvo documental por grupos de rotas, não uma implementação nem uma matriz handler-to-service concluída. Mantém-se Draft.
+- PR #56, `feat/immutable-character-canon-runtime-2026-11-18`: 8 commits à frente, 0 atrás; Studio CI #577 e Distribution Hub V6 Smoke #65 passaram. Corrige a perda de personagens legados sem nome e acrescenta gates de pacote visual.
+- Revisão da PR #56: o gate atual verifica strings de paths não vazias, mas ainda não prova existência, confinamento do path, MIME/tamanho ou SHA-256 dos bytes. O teste de pacote aprovado usa paths fictícios. A PR recebeu comentário de revisão e permanece Draft. A normalização também alterou `age` de string para valor bruto; confirmar o contrato antes de integrar.
+
+### 13.3 Salvaguardas e sequência
+
+- Não foi alterado CORS, autenticação, PIN, sessões, RBAC, mounts, storage, dados ou credenciais.
+- Não introduzir middleware parcial antes da migração coordenada de API, React, Tauri/desktop e Capacitor/mobile.
+- Próxima sequência: concluir a matriz de 233 handlers; mapear clientes/modelos; implementar hashes de credenciais, sessão server-side assinada/expirada, RBAC e negação por defeito; testar 401/403, expiração, revogação, utilizador desativado e role forgery; migrar serving público/privado de assets em paralelo com os clientes.
+- Os repositórios históricos `baribudos-studio-primary` e `baribudos-studio-home-edition` continuam existentes, `archived=false`, e não foram alterados.
