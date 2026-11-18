@@ -370,7 +370,20 @@ def ensure_ip_folder_structure(slug: str) -> str:
             "color_rules": {}
         },
         "characters-master.json": {
+            "schema_version": "2.0.0",
+            "ip": slug,
             "visual_dna": {},
+            "color_rules": {},
+            "design_rules": {},
+            "identity_policy": {
+                "scope": "per_ip_character",
+                "stable_character_id_required": True,
+                "identity_invariants_locked": True,
+                "wardrobe_modular": True,
+                "pose_expression_environment_may_vary": True,
+                "ageing_requires_new_approved_revision": True,
+                "approved_model_and_rig_required_for_animated_production": True
+            },
             "family": []
         }
     }
