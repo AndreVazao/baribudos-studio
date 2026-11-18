@@ -11,13 +11,11 @@
     "texture": "soft_fuzzy",
     "realism_level": "low_cartoon"
   },
-
   "color_rules": {
     "fur_base": "#8B5E3C",
     "eye_color": "#3A7D44",
     "palette_locked": true
   },
-
   "family": [
     {
       "id": "magnus",
@@ -29,9 +27,24 @@
         "explains",
         "protective"
       ],
-      "scarf_color": "#2F5E2E"
+      "scarf_color": "#2F5E2E",
+      "name": "Magnus",
+      "visual_package": {
+        "status": "concept_only",
+        "approved_revision": null,
+        "turnaround": {
+          "front": null,
+          "three_quarter": null,
+          "side": null,
+          "back": null
+        },
+        "expression_sheet": null,
+        "neutral_pose": null,
+        "model_source": null,
+        "rig_asset": null,
+        "wardrobe_assets": []
+      }
     },
-
     {
       "id": "luma",
       "role": "mother",
@@ -41,9 +54,24 @@
         "gentle",
         "emotionally_guiding"
       ],
-      "scarf_color": "#6FA86A"
+      "scarf_color": "#6FA86A",
+      "name": "Luma",
+      "visual_package": {
+        "status": "concept_only",
+        "approved_revision": null,
+        "turnaround": {
+          "front": null,
+          "three_quarter": null,
+          "side": null,
+          "back": null
+        },
+        "expression_sheet": null,
+        "neutral_pose": null,
+        "model_source": null,
+        "rig_asset": null,
+        "wardrobe_assets": []
+      }
     },
-
     {
       "id": "roko",
       "role": "child",
@@ -54,9 +82,24 @@
         "wants_to_prove",
         "sometimes_impulsive"
       ],
-      "scarf_color": "#D4A73C"
+      "scarf_color": "#D4A73C",
+      "name": "Roko",
+      "visual_package": {
+        "status": "concept_only",
+        "approved_revision": null,
+        "turnaround": {
+          "front": null,
+          "three_quarter": null,
+          "side": null,
+          "back": null
+        },
+        "expression_sheet": null,
+        "neutral_pose": null,
+        "model_source": null,
+        "rig_asset": null,
+        "wardrobe_assets": []
+      }
     },
-
     {
       "id": "mila",
       "role": "child",
@@ -67,9 +110,24 @@
         "curious",
         "emotionally_perceptive"
       ],
-      "scarf_color": "#F4A259"
+      "scarf_color": "#F4A259",
+      "name": "Mila",
+      "visual_package": {
+        "status": "concept_only",
+        "approved_revision": null,
+        "turnaround": {
+          "front": null,
+          "three_quarter": null,
+          "side": null,
+          "back": null
+        },
+        "expression_sheet": null,
+        "neutral_pose": null,
+        "model_source": null,
+        "rig_asset": null,
+        "wardrobe_assets": []
+      }
     },
-
     {
       "id": "tilo",
       "role": "child",
@@ -80,15 +138,41 @@
         "curious",
         "learning_by_experience"
       ],
-      "scarf_color": "#9BD770"
+      "scarf_color": "#9BD770",
+      "name": "Tilo",
+      "visual_package": {
+        "status": "concept_only",
+        "approved_revision": null,
+        "turnaround": {
+          "front": null,
+          "three_quarter": null,
+          "side": null,
+          "back": null
+        },
+        "expression_sheet": null,
+        "neutral_pose": null,
+        "model_source": null,
+        "rig_asset": null,
+        "wardrobe_assets": []
+      }
     }
   ],
-
   "design_rules": {
     "never_change_body_shape": true,
     "never_change_eye_size": true,
     "never_realistic_fur": true,
     "never_animal_specific": true,
     "always_soft_expression": true
+  },
+  "schema_version": "2.0.0",
+  "identity_policy": {
+    "scope": "per_ip_character",
+    "stable_character_id_required": true,
+    "identity_invariants_locked": true,
+    "wardrobe_modular": true,
+    "pose_expression_environment_may_vary": true,
+    "ageing_requires_new_approved_revision": true,
+    "approved_model_and_rig_required_for_animated_production": true,
+    "visual_package_status": "concept_only_pending_model_assets"
   }
 }
