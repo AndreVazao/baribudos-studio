@@ -136,3 +136,69 @@ Immediate review priorities from the runtime manifest include:
 - static `/storage` removal and a separate content review of `/public`.
 
 The manifest artifact is an inventory snapshot from CI, not a live production probe and not proof that any route was successfully exploited. Keep all route policies denied/unclassified until each is reviewed against its service and storage effects and covered by HTTP tests.
+
+## Prioritized route review from the CI evidence artifact (2026-11-18)
+
+The downloadable `studio-route-authorization-evidence` artifact from Studio CI run **616** (GitHub run ID `44312969350`, commit `420ab2e9630e4386f8d7ddbb98794888935360b1`, PR #60 head) was inspected. Both CI jobs completed successfully. The artifact contains:
+- `studio-fastapi-route-manifest.json/.md`: 219 runtime method/path entries plus six non-APIRoute HTTP entries.
+- `studio-route-inventory.json/.md`: 233 source-level handler candidates across 78 modules.
+
+The following endpoints are prioritized for policy review. **They remain UNCLASSIFIED**; the group labels below are review targets, not implemented permissions or proof of current runtime denial.
+
+### P0 — owner-only review target
+- `GET /api/users`
+- `POST /api/users`
+- `PATCH /api/users/{user_id}`
+- `PATCH /api/users/{user_id}/pin`
+- `GET /api/secret-control/vaults`
+- `POST /api/secret-control/vaults`
+- `GET /api/secret-control/vault/{vault_id}`
+- `PATCH /api/secret-control/vault/{vault_id}`
+- `DELETE /api/secret-control/vault/{vault_id}`
+- `GET /api/secret-control/export/{vault_id}`
+- `GET /api/db-control/readiness`
+- `GET /api/db-control/status`
+- `GET /api/deploy-control/vercel/deployments`
+- `GET /api/deploy-control/vercel/summary`
+- `GET /api/settings`
+- `POST /api/settings`
+- `POST /api/updater/check`
+- `POST /api/updater/download`
+
+### P1 — editor/owner or scoped machine identity review target
+- `POST /api/assets/{asset_id}/publish`
+- `GET /api/publish-readiness/{project_id}`
+- `POST /api/publish-readiness/{project_id}/mark-ready`
+- `POST /api/publish-readiness/{project_id}/sync`
+- `POST /api/publish-readiness/{project_id}/unmark-ready`
+- `GET /api/publishing`
+- `POST /api/publishing/publish`
+- `POST /api/website-publisher/publish/{project_id}`
+- `POST /api/website-publisher/revalidate/{project_id}`
+- `POST /api/website-publisher/unpublish/{project_id}`
+- `POST /api/website-bundles/publish/{group_id}`
+- `POST /api/website-visual-sets/publish-all`
+- `POST /api/website-visual-sets/publish/{item_id}`
+- `PATCH /api/website-admin/products/{product_id}/pricing`
+- `PATCH /api/website-admin/products/{product_id}/visibility`
+
+### P1 — private voice/media review target
+- `GET /api/voice-library`
+- `POST /api/voice-library/upload`
+- `GET /api/voice-library/{voice_id}`
+- `POST /api/voice-preview`
+- `GET /api/voice-profiles`
+- `POST /api/voice-profiles`
+- `PATCH /api/voice-profiles/{voice_profile_id}`
+- `GET /api/voice-profiles/{voice_profile_id}/validate`
+
+### Non-APIRoute HTTP surface
+- `/storage`: remove the broad StaticFiles mount; replace only after authenticated asset delivery and client-consumer migration are tested.
+- `/public`: retain only after an explicit file-level public allowlist review.
+- `/docs`, `/docs/oauth2-redirect`, `/openapi.json`, `/redoc`: disable outside controlled development or put behind owner/developer authorization; do not assume they are harmless metadata.
+
+### Evidence and CI correction
+
+The artifact inspected above belongs to Studio CI **run number 616** (run ID `44312969350`) and both `frontend-build` and `backend-validate` succeeded. The earlier conversational reference to **CI #619** is not substantiated by the run evidence retrieved in this check; do not report #619 as passed or pending without retrieving its exact run record. This is an evidence correction, not a code or runtime change.
+
+The 233 source-level candidates are heuristic and not a route authorization map. The 219 runtime entries are the definitive route enumeration for that tested app construction. Reconcile handlers to runtime endpoints before authoring any allowlist. No route policy is implemented by this annex.
