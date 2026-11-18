@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -167,6 +169,7 @@ def _normalize_characters_master(value: Any) -> Dict[str, Any]:
             "model_source": visual_package.get("model_source"),
             "rig_asset": visual_package.get("rig_asset"),
             "wardrobe_assets": visual_package.get("wardrobe_assets", []) if isinstance(visual_package.get("wardrobe_assets", []), list) else [],
+            "asset_checksums": _normalize_dict(visual_package.get("asset_checksums", {})),
         }
         normalized_family.append({
             **item,
@@ -338,6 +341,89 @@ def build_saga_runtime_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _validate_visual_package_assets(package: Dict[str, Any], root_path: str) -> List[str]:
+    """Verify canonical visual assets are confined files with matching SHA-256."""
+    errors: List[str] = []
+    root_raw = str(root_path or "").strip()
+    if not root_raw:
+        return ["visual asset root_path em falta"]
+
+    try:
+        root = Path(root_raw).resolve(strict=True)
+    except (OSError, RuntimeError):
+        return ["visual asset root_path não existe ou não é acessível"]
+
+    if not root.is_dir():
+        return ["visual asset root_path não é uma diretoria"]
+
+    assets: Dict[str, Any] = {
+        "model_source": package.get("model_source"),
+        "rig_asset": package.get("rig_asset"),
+        "expression_sheet": package.get("expression_sheet"),
+        "neutral_pose": package.get("neutral_pose"),
+    }
+    turnaround = _normalize_dict(package.get("turnaround"))
+    for view in ("front", "three_quarter", "side", "back"):
+        assets[f"turnaround.{view}"] = turnaround.get(view)
+
+    checksums = _normalize_dict(package.get("asset_checksums", {}))
+    for asset_key, raw_path in assets.items():
+        relative = str(raw_path or "").strip()
+        if not relative:
+            errors.append(f"{asset_key}: caminho em falta")
+            continue
+
+        candidate_path = Path(relative)
+        if candidate_path.is_absolute():
+            errors.append(f"{asset_key}: caminho absoluto não permitido")
+            continue
+
+        try:
+            candidate = root / candidate_path
+            cursor = root
+            symlink_found = False
+            for part in candidate_path.parts:
+                if part in {"", "."}:
+                    continue
+                if part == "..":
+                    cursor = cursor.parent
+                else:
+                    cursor = cursor / part
+                if cursor.is_symlink():
+                    symlink_found = True
+                    break
+            if symlink_found:
+                errors.append(f"{asset_key}: symlink não permitido")
+                continue
+
+            resolved = candidate.resolve(strict=True)
+            resolved.relative_to(root)
+            if not resolved.is_file():
+                errors.append(f"{asset_key}: não é um ficheiro regular")
+                continue
+        except (OSError, RuntimeError, ValueError):
+            errors.append(f"{asset_key}: ficheiro inexistente ou fora da diretoria canónica")
+            continue
+
+        expected = str(checksums.get(asset_key, "")).strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", expected):
+            errors.append(f"{asset_key}: SHA-256 em falta ou inválido")
+            continue
+
+        digest = hashlib.sha256()
+        try:
+            with resolved.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+        except OSError:
+            errors.append(f"{asset_key}: não foi possível calcular SHA-256")
+            continue
+
+        if digest.hexdigest() != expected:
+            errors.append(f"{asset_key}: SHA-256 não corresponde")
+    return errors
+
+
 def validate_saga_runtime(runtime: Dict[str, Any]) -> Dict[str, Any]:
     errors: List[str] = []
     warnings: List[str] = []
@@ -403,6 +489,15 @@ def validate_saga_runtime(runtime: Dict[str, Any]) -> Dict[str, Any]:
         )
         if not package_ready:
             message = f"character.{character_id}.visual_package_not_approved_or_incomplete"
+            if status in production_statuses:
+                errors.append(message)
+            else:
+                warnings.append(message)
+            continue
+
+        asset_errors = _validate_visual_package_assets(package, str(runtime.get("root_path", "")))
+        for asset_error in asset_errors:
+            message = f"character.{character_id}.visual_package_asset_invalid: {asset_error}"
             if status in production_statuses:
                 errors.append(message)
             else:
