@@ -365,6 +365,10 @@ def _validate_visual_package_assets(package: Dict[str, Any], root_path: str) -> 
     turnaround = _normalize_dict(package.get("turnaround"))
     for view in ("front", "three_quarter", "side", "back"):
         assets[f"turnaround.{view}"] = turnaround.get(view)
+    wardrobe_assets = package.get("wardrobe_assets", [])
+    if isinstance(wardrobe_assets, list):
+        for index, wardrobe_path in enumerate(wardrobe_assets):
+            assets[f"wardrobe_assets.{index}"] = wardrobe_path
 
     checksums = _normalize_dict(package.get("asset_checksums", {}))
     for asset_key, raw_path in assets.items():
