@@ -157,6 +157,17 @@ def _normalize_characters_master(value: Any) -> Dict[str, Any]:
         traits = item.get("traits", item.get("personality", []))
         if not isinstance(traits, list):
             traits = []
+        visual_package = _normalize_dict(item.get("visual_package"))
+        visual_package = {
+            "status": str(visual_package.get("status", "not_created")).strip() or "not_created",
+            "approved_revision": visual_package.get("approved_revision"),
+            "turnaround": _normalize_dict(visual_package.get("turnaround")),
+            "expression_sheet": visual_package.get("expression_sheet"),
+            "neutral_pose": visual_package.get("neutral_pose"),
+            "model_source": visual_package.get("model_source"),
+            "rig_asset": visual_package.get("rig_asset"),
+            "wardrobe_assets": visual_package.get("wardrobe_assets", []) if isinstance(visual_package.get("wardrobe_assets", []), list) else [],
+        }
         normalized_family.append({
             **item,
             "id": character_id,
@@ -179,16 +190,7 @@ def _normalize_characters_master(value: Any) -> Dict[str, Any]:
                 "scarf_color": str(item.get("scarf_color", "")).strip(),
                 "design_rules": design_rules,
             },
-            "visual_package": {
-                "status": "not_created",
-                "approved_revision": None,
-                "turnaround": {},
-                "expression_sheet": None,
-                "neutral_pose": None,
-                "model_source": None,
-                "rig_asset": None,
-                "wardrobe_assets": [],
-            },
+            "visual_package": visual_package,
         })
 
     return {
@@ -374,6 +376,37 @@ def validate_saga_runtime(runtime: Dict[str, Any]) -> Dict[str, Any]:
 
     if not resolved.get("narrative_structure_standard"):
         warnings.append("resolved.narrative_structure_standard vazio")
+
+    character_master = _normalize_dict(canons.get("characters", {}))
+    family = character_master.get("family", [])
+    if not isinstance(family, list):
+        family = []
+    status = str(_normalize_dict(runtime.get("permissions", {})).get("status", "draft")).strip().lower()
+    production_statuses = {"production_ready", "approved", "published"}
+    for character in family:
+        if not isinstance(character, dict):
+            continue
+        character_id = str(character.get("id", "unknown")).strip() or "unknown"
+        package = _normalize_dict(character.get("visual_package", {}))
+        required_assets = [
+            package.get("model_source"),
+            package.get("rig_asset"),
+            package.get("expression_sheet"),
+            package.get("neutral_pose"),
+        ]
+        turnaround = _normalize_dict(package.get("turnaround", {}))
+        required_assets.extend(turnaround.get(view) for view in ("front", "three_quarter", "side", "back"))
+        package_ready = (
+            str(package.get("status", "")).lower() == "approved"
+            and bool(str(package.get("approved_revision") or "").strip())
+            and all(bool(str(asset or "").strip()) for asset in required_assets)
+        )
+        if not package_ready:
+            message = f"character.{character_id}.visual_package_not_approved_or_incomplete"
+            if status in production_statuses:
+                errors.append(message)
+            else:
+                warnings.append(message)
 
     return {
         "ok": len(errors) == 0,
