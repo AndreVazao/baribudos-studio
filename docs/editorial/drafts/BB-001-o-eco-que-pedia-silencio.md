@@ -9,7 +9,7 @@
 **Valor complementar:** Discernimento de confiança  
 **Personagens:** Magnus, Luma, Roko (11), Mila (6), Tilo (4)  
 **Elemento simbólico:** Eco da Floresta — representa pedidos de segredo que não são seguros  
-**Duração audiovisual proposta:** 3 min 30 s (alvo), com intervalo normal de 3–4 minutos; abertura e fecho incluídos na duração total, conforme decisão editorial de 17-11-2026. Um livro origina uma minissérie individual. Cinco livros formam um volume, com cinco episódios e uma série compilada de 15–20 minutos.
+**Duração audiovisual proposta:** alvo indicativo de 5 minutos, com janela aconselhada de 4 min 30 s a 6 minutos para a faixa atual (4–10 anos); não é um limite rígido. A abertura e o fecho estão incluídos. Um livro origina uma minissérie individual; cinco livros formam um volume cuja série compilada soma as durações reais dos cinco episódios.
 **Duração audiobook pretendida:** aproximadamente 6 minutos, com pausas e leitura expressiva  
 **Aprovação:** Não aprovada. Não publicar, distribuir ou incluir no catálogo comercial sem decisão editorial.
 
@@ -148,24 +148,30 @@ Aplicar em todas as imagens:
 
 ---
 
-## 5. Storyboard audiovisual — proposta de 3 minutos e 30 segundos
+## 5. Storyboard audiovisual — proposta adaptativa
 
-| Cena | Duração alvo | Imagem / ação | Áudio |
+**Orientação:** alvo aproximado de 5 minutos, com janela aconselhada de 4 min 30 s a 6 minutos para Baribudos (4–10 anos). A duração não é um gate rígido. A abertura de 5 segundos está incluída na cena 1 e o fecho de 7 segundos na cena 10.
+
+| Cena | Duração de referência | Imagem / ação e intenção dramática | Áudio |
 |---|---:|---|---|
-| 1 | 22 s | Caminhada dos três irmãos na floresta | Ambiente natural suave e narração |
-| 2 | 22 s | Aparece o brilho do Eco | Efeito luminoso discreto |
-| 3 | 26 s | A folha dourada e o pedido de segredo | Diálogo curto, sem suspense |
-| 4 | 30 s | Os irmãos param e decidem pedir ajuda | Pausa musical serena |
-| 5 | 30 s | Luma escuta os três | Ambiente interior acolhedor |
-| 6 | 34 s | Magnus explica a diferença entre surpresa e segredo inseguro | Música discreta, diálogo claro |
-| 7 | 22 s | A família mantém-se junta ao reencontrar o Eco | Som da floresta, sem confronto |
-| 8 | 24 s | Família reunida e frase final | Fecho musical suave |
-| **Total** | **210 s** | **8 cenas** | **3 min 30 s (alvo)** |
+| 1 | 28 s | Abertura incluída; manhã luminosa, os três irmãos entram no trilho e estabelecem o ambiente | Identificação breve, floresta suave e narração |
+| 2 | 24 s | Caminhada; pequena conversa entre irmãos que revela curiosidade e relação familiar | Diálogo natural, sem pressa |
+| 3 | 26 s | O brilho do Eco aparece entre as folhas; cada criança reage de forma própria | Efeito luminoso subtil, sem suspense |
+| 4 | 32 s | A folha dourada cai; Tilo observa-a e pergunta o que é | Narração e pequenas reações |
+| 5 | 36 s | O Eco pede segredo; mostrar as expressões e o desconforto crescente sem transformar a entidade numa ameaça | Diálogo claro, pausas para compreensão |
+| 6 | 34 s | Os irmãos conversam entre si; identificam que não precisam de decidir nem guardar algo que os deixa desconfortáveis | Troca de falas fluida e emocionalmente legível |
+| 7 | 35 s | Luma escuta as crianças, valida o que sentem e reforça que fizeram bem em falar | Voz acolhedora, sem interrupções |
+| 8 | 42 s | Magnus explica a diferença entre uma surpresa feliz e um segredo que preocupa ou impede pedir ajuda; as crianças fazem perguntas | Diálogo com pausas naturais e exemplos simples |
+| 9 | 26 s | No dia seguinte, o Eco reaparece; as crianças permanecem junto da família e não o confrontam | Ambiente tranquilo; decisão segura |
+| 10 | 17 s | Resolução familiar, frase final e fecho incluído (7 s) | Frase canónica e música suave |
 
-A cena 1 inclui os 5 segundos de abertura canónica e a cena 8 inclui os 7 segundos de encerramento. A abertura e o encerramento não são tempos adicionais. O alvo aprovado é 3 min 30 s, dentro do intervalo normal de 3–4 minutos. A duração total deve manter-se entre 3 e 4 minutos sem alongamento artificial.
+| **Total de referência** | **300 s** | **10 cenas; alvo aproximado de 5 minutos** | **Abertura e fecho incluídos** |
 
-O storyboard define intenção e temporização; não afirma que existe animação. A produção atual do Studio pode gerar vídeo a partir de imagens estáticas e áudio. Movimento de personagens, animação contínua e sincronização labial só podem ser anunciados quando efetivamente implementados e validados.
+A distribuição temporal é provisória e serve para orientar a adaptação, não para forçar o conteúdo. Durante a revisão do guião, a equipa deve confirmar se as cenas adicionais acrescentam compreensão, reação emocional ou continuidade. Se forem redundantes, devem ser encurtadas/removidas; se faltar desenvolvimento, devem ser acrescentadas cenas justificadas. O tempo final pode ficar fora da janela aconselhada se a qualidade narrativa o justificar, mediante revisão editorial.
 
+O audiobook mantém a história integral e a sua duração de referência independente (aproximadamente 6 minutos). A minissérie deve ter guião e narração próprios; não reutilizar nem acelerar/cortar artificialmente o audiobook.
+
+O storyboard define intenção e temporização; não afirma que existe animação. A produção atual do Studio pode gerar vídeo a partir de imagens estáticas e áudio. Movimento real dos personagens, animação contínua e sincronização labial só podem ser anunciados quando efetivamente implementados e validados.
 ---
 
 ## 6. Guia breve para pais
