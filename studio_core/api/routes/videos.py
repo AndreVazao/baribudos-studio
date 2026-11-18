@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.illustration_integration_service import build_video_frame_sequence
-from studio_core.services.video_service import build_series_episode
+from studio_core.services.video_service import build_series_episode, resolve_approved_series_audio
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
@@ -31,8 +31,7 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
         language = str(payload.get("language", project.get("language", "pt-PT"))).strip()
         story = (project.get("language_variants", {}) or {}).get(language) or project.get("story", {}) or {}
         outputs = project.get("outputs", {}) or {}
-        audiobook_map = (outputs.get("audiobook", {}) or {})
-        audio_output = audiobook_map.get(language) or {}
+        series_audio_path = resolve_approved_series_audio(project, language) or ""
         cover_output = (outputs.get("covers", {}) or {})
         sequence_frames = build_video_frame_sequence(project).get("frames", [])
 
@@ -46,7 +45,7 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
                 "project_title": project.get("title", "Projeto"),
                 "language": language,
                 "cover_path": cover_output.get("file_path") or project.get("cover_image", ""),
-                "audio_path": audio_output.get("file_path", ""),
+                "series_audio_path": series_audio_path,
                 "sequence_frames": sequence_frames,
             },
         )
