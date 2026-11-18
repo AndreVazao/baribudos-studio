@@ -1,14 +1,40 @@
 {
   "ip": "Os Baribudos",
   "episode_format": {
-    "target_duration_minutes": 3.5,
-    "min_duration": 3,
-    "max_duration": 4,
+    "target_duration_minutes": 5,
+    "recommended_min_duration_minutes": 4.5,
+    "recommended_max_duration_minutes": 6,
+    "duration_policy": "advisory_age_and_content_adaptive",
+    "hard_min_duration_minutes": null,
+    "hard_max_duration_minutes": null,
     "intro_seconds": 5,
     "outro_seconds": 7,
     "runtime_includes_intro_and_outro": true,
     "unit": "one_book_one_miniseries_episode",
-    "duration_note": "Target approximately 3 minutes 30 seconds; acceptable range 3 to 4 minutes. Opening and closing are included in this total, not added on top."
+    "audience_age_range_years": {
+      "min": 4,
+      "max": 10
+    },
+    "duration_note": "For the current Baribudos audience (4–10 years), aim for approximately 5 minutes, with an advisory production window of 4 minutes 30 seconds to 6 minutes. These are editorial recommendations, not hard acceptance limits. Adapt the duration to the actual story, age, comprehension, pacing and audiovisual needs. Opening and closing are included in the total."
+  },
+  "adaptation_policy": {
+    "preserve_original_story_meaning": true,
+    "allow_dialogue_reorganization": true,
+    "allow_redundancy_reduction": true,
+    "allow_missing_bridge_or_development_scenes": true,
+    "never_add_filler_to_reach_duration": true,
+    "never_remove_essential_story_or_safety_content": true,
+    "out_of_recommended_window_requires_editorial_assessment": true,
+    "substantive_script_changes_require_new_version_and_review": true,
+    "quality_priorities": [
+      "age_appropriateness",
+      "narrative_fluency",
+      "child_comprehension",
+      "emotional_clarity",
+      "engagement",
+      "pedagogical_safety",
+      "natural_voice_performance"
+    ]
   },
   "intro_standard": {
     "logo_required": true,
