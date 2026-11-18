@@ -135,29 +135,74 @@ def _normalize_main_characters(value: Any) -> List[Dict[str, Any]]:
 
 def _normalize_characters_master(value: Any) -> Dict[str, Any]:
     source = _normalize_dict(value)
+    visual_dna = _normalize_dict(source.get("visual_dna", {}))
+    color_rules = _normalize_dict(source.get("color_rules", {}))
+    design_rules = _normalize_dict(source.get("design_rules", {}))
     family = source.get("family", [])
     if not isinstance(family, list):
         family = []
 
     normalized_family: List[Dict[str, Any]] = []
+    seen_ids = set()
     for index, item in enumerate(family, start=1):
         if not isinstance(item, dict):
             continue
-        name = str(item.get("name", "")).strip()
-        if not name:
+        character_id = str(item.get("id", f"family-{index}")).strip() or f"family-{index}"
+        if character_id in seen_ids:
             continue
+        seen_ids.add(character_id)
+        # Legacy canons used the stable ID but omitted the display name.
+        # Preserve the character instead of silently dropping the canonical entry.
+        name = str(item.get("name") or character_id.replace("-", " ").title()).strip()
+        traits = item.get("traits", item.get("personality", []))
+        if not isinstance(traits, list):
+            traits = []
         normalized_family.append({
-            "id": str(item.get("id", f"family-{index}")).strip() or f"family-{index}",
+            **item,
+            "id": character_id,
             "name": name,
             "role": str(item.get("role", "")).strip(),
-            "age": str(item.get("age", "")).strip(),
-            "traits": item.get("traits", []) if isinstance(item.get("traits"), list) else [],
-            "description": str(item.get("description", "")).strip(),
+            "age": item.get("age"),
+            "traits": [str(trait).strip() for trait in traits if str(trait).strip()],
+            "description": str(item.get("description") or item.get("archetype", "")).strip(),
+            "identity_invariants": {
+                "body_shape": visual_dna.get("body_shape", ""),
+                "fur_style": visual_dna.get("fur_style", ""),
+                "eyes": visual_dna.get("eyes", ""),
+                "eye_color": color_rules.get("eye_color", ""),
+                "nose": visual_dna.get("nose", ""),
+                "hands": visual_dna.get("hands", ""),
+                "feet": visual_dna.get("feet", ""),
+                "ears": visual_dna.get("ears", ""),
+                "texture": visual_dna.get("texture", ""),
+                "fur_base": color_rules.get("fur_base", ""),
+                "scarf_color": str(item.get("scarf_color", "")).strip(),
+                "design_rules": design_rules,
+            },
+            "visual_package": {
+                "status": "not_created",
+                "approved_revision": None,
+                "turnaround": {},
+                "expression_sheet": None,
+                "neutral_pose": None,
+                "model_source": None,
+                "rig_asset": None,
+                "wardrobe_assets": [],
+            },
         })
 
     return {
-        "visual_dna": _normalize_dict(source.get("visual_dna", {})),
+        "visual_dna": visual_dna,
+        "color_rules": color_rules,
+        "design_rules": design_rules,
         "family": normalized_family,
+        "identity_policy": {
+            "stable_character_ids": True,
+            "identity_invariants_locked": True,
+            "wardrobe_is_separate": True,
+            "ageing_requires_new_approved_revision": True,
+            "production_ready_requires_approved_visual_package": True,
+        },
     }
 
 
