@@ -1,15 +1,12 @@
 {
   "ip": "Os Baribudos",
-
   "series_model": "continuous_growth",
-
   "arc_principle": {
     "each_story_teaches_one_value": true,
     "characters_evolve_slowly": true,
     "lessons_repeat_in_new_forms": true,
     "family_bond_strengthens": true
   },
-
   "character_growth_rules": {
     "Tilo": {
       "arc": "innocence_to_awareness",
@@ -32,13 +29,6 @@
       "growth_speed": "stable"
     }
   },
-
-  "season_structure": {
-    "episodes_per_season": 8,
-    "books_per_volume": 5,
-    "volume_creates_major_theme": true
-  },
-
   "emotional_progression": [
     "basic_safety",
     "decision_awareness",
@@ -47,22 +37,54 @@
     "social_responsibility",
     "independence_with_guidance"
   ],
-
   "villain_recurrence": {
     "symbolic_entities_return": true,
     "never_defeated_permanently": true,
     "represent_internal_challenges": true
   },
-
   "continuity_rules": {
     "memory_of_previous_events": true,
     "no_personality_reset": true,
     "lessons_accumulate": true
   },
-
   "mini_movie_rule": {
     "enabled": true,
     "created_after_each_volume": true,
-    "structure": "compiled_story_arc"
+    "structure": "compiled_five_episode_volume_series",
+    "duration_policy": "sum_of_actual_approved_episode_durations",
+    "expected_duration_note": "With the current Baribudos guidance of about 5 minutes per episode, a five-episode volume will often be around 25 minutes, but the actual runtime is the sum of the approved episodes.",
+    "hard_min_duration_minutes": null,
+    "hard_max_duration_minutes": null,
+    "preserve_five_individual_episodes": true,
+    "no_padding_or_looping": true
+  },
+  "volume_structure": {
+    "books_per_volume": 5,
+    "miniseries_episodes_per_volume": 5,
+    "relationship": "one_book_produces_one_miniseries_episode",
+    "one_volume_creates_one_series": true,
+    "volume_creates_major_theme": true
+  },
+  "volume_series_format": {
+    "episode_count": 5,
+    "episode_duration_target_minutes": 5,
+    "episode_duration_recommended_min_minutes": null,
+    "episode_duration_recommended_max_minutes": null,
+    "compiled_series_duration_policy": "sum_actual_episode_runtimes_in_book_order",
+    "compiled_series_duration_target_minutes": null,
+    "compiled_series_duration_min_minutes": null,
+    "compiled_series_duration_max_minutes": null,
+    "compilation_method": "join_the_five_individual_miniseries_episodes_in_book_order",
+    "preserve_individual_episodes": true,
+    "add_new_story_content": false,
+    "intro_and_outro_included_in_each_episode_runtime": true
+  },
+  "long_form_compilation_rule": {
+    "enabled": true,
+    "created_after_multiple_volumes_are_available": true,
+    "source": "approved_volume_series_and_their_individual_episodes",
+    "method": "later_editorial_video_editing_of_existing_material",
+    "automatic_generation": false,
+    "requires_editorial_approval": true
   }
 }

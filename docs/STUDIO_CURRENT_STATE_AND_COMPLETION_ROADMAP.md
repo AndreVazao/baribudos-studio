@@ -645,7 +645,7 @@ A PR draft #40 (`feat/five-story-production-cloud-2026-11-13`) acrescenta uma pr
 - Serviço `story_bundle_service.py` seleciona apenas histórias explicitamente aprovadas, com ID estável, agrupadas por IP/saga e idioma.
 - Só grupos completos de cinco são elegíveis; grupos incompletos ficam em espera e IPs/idiomas nunca são misturados.
 - O bundle gera guia para pais e compila as cinco minisséries existentes num MP4.
-- Para Baribudos, esta unidade corresponde ao volume editorial aprovado: cinco livros, cinco episódios individuais, uma série compilada de 15–20 minutos e um guia para pais. Arcos narrativos podem atravessar volumes; outras IPs só adotam esta estrutura mediante canon próprio.
+- Para Baribudos, esta unidade corresponde ao volume editorial aprovado: cinco livros, cinco episódios individuais, uma série compilada com a soma das durações reais e um guia para pais. Cerca de 25 minutos é apenas uma expectativa aproximada quando cada episódio ronda os cinco minutos; não existe duração global fixa. Arcos narrativos podem atravessar volumes; outras IPs só adotam esta estrutura mediante canon próprio.
 - A integração automática com API/dashboard e persistência editorial ainda não está implementada.
 
 ### Evidência cloud
@@ -660,7 +660,7 @@ A PR draft #40 (`feat/five-story-production-cloud-2026-11-13`) acrescenta uma pr
 
 ### Limites e gates
 
-A implementação runtime passou a aplicar os limites canónicos: cada episódio individual tem de durar 180–240 segundos e o compilatório do volume 900–1200 segundos. FFprobe valida fontes e resultado. Clips sintéticos curtos são bloqueados, sem padding ou alongamento artificial. A CI de 18 Nov executou 38 testes com sucesso; ainda não demonstra uma compilação de cinco episódios editoriais completos.
+A implementação runtime deixou de impor limites universais de 180–240 segundos por episódio ou 900–1200 segundos por volume. FFprobe valida a integridade técnica e a duração positiva/finita; recomendações específicas são consultivas e a compilação preserva a soma real dos cinco episódios. A CI de 18 Nov executou 38 testes com sucesso; ainda não demonstra uma compilação de cinco episódios editoriais completos.
 
 - Os fixtures são sintéticos; nenhum conteúdo privado ou dado de produção foi usado.
 - A geração narrativa principal continua baseada em templates determinísticos, não num provider generativo real.

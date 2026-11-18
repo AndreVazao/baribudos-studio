@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
+from studio_core.services.illustration_integration_service import build_video_frame_sequence
 from studio_core.services.video_service import build_series_episode
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -33,6 +34,7 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
         audiobook_map = (outputs.get("audiobook", {}) or {})
         audio_output = audiobook_map.get(language) or {}
         cover_output = (outputs.get("covers", {}) or {})
+        sequence_frames = build_video_frame_sequence(project).get("frames", [])
 
         result = build_series_episode(
             {
@@ -45,6 +47,7 @@ def export_video(project_id: str, payload: dict | None = None) -> dict:
                 "language": language,
                 "cover_path": cover_output.get("file_path") or project.get("cover_image", ""),
                 "audio_path": audio_output.get("file_path", ""),
+                "sequence_frames": sequence_frames,
             },
         )
 

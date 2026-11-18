@@ -31,7 +31,7 @@ O agrupamento é isolado por IP, saga e idioma. Histórias em rascunho, sem ID e
 
 - `studio_core/services/story_bundle_service.py` seleciona grupos completos e determinísticos de cinco histórias aprovadas.
 - `build_parent_guide` gera um guia Markdown com perguntas adequadas à conversa familiar e salvaguardas pedagógicas.
-- `build_five_story_compilation` exige cinco episódios existentes dentro da raiz de storage aprovada, valida cada duração com FFprobe (180–240 s), concatena pela ordem congelada, re-encoda H.264/AAC e valida o compilatório final (900–1200 s).
+- `build_five_story_compilation` exige cinco episódios existentes dentro da raiz de storage aprovada, valida com FFprobe a integridade técnica e duração positiva/finita, concatena pela ordem congelada, re-encoda H.264/AAC e valida o resultado. Não impõe limites universais: o volume preserva a soma real dos cinco episódios aprovados.
 - `build_five_story_bundle` não cria volume enquanto não existir um grupo completo e exige seleção explícita quando há mais do que um grupo pronto. Se qualquer episódio estiver fora da duração canónica, bloqueia o volume; não aplica padding, loops nem alongamento artificial.
 - O serviço é ainda uma capacidade invocável e testável; não está ligado automaticamente à API ou ao dashboard. A integração no fluxo de aprovação requer persistência/versionamento e autorização server-side, atualmente bloqueada pela auditoria de segurança P0.
 - A CI atual gera episódios sintéticos curtos para validar os builders individuais e comprova que o gate recusa esses ficheiros como episódios de volume. Não prova ainda uma compilação de 15–20 minutos com cinco episódios editoriais completos.
