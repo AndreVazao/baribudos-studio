@@ -12,10 +12,6 @@ from typing import Any, Dict, Iterable, List
 from uuid import uuid4, uuid5, NAMESPACE_URL
 
 BUNDLE_SIZE = 5
-EPISODE_MIN_SECONDS = 180.0
-EPISODE_MAX_SECONDS = 240.0
-VOLUME_MIN_SECONDS = 900.0
-VOLUME_MAX_SECONDS = 1200.0
 
 
 def _text(value: Any) -> str:
@@ -231,24 +227,60 @@ def _probe_media(path: Path, ffprobe: str) -> Dict[str, Any]:
     return metadata
 
 
-def _validate_episode_duration(story_id: str, duration_seconds: float) -> None:
-    if (
-        not math.isfinite(duration_seconds)
-        or duration_seconds < EPISODE_MIN_SECONDS
-        or duration_seconds > EPISODE_MAX_SECONDS
+def _duration_recommendation(
+    item: Dict[str, Any], format_key: str
+) -> Dict[str, float]:
+    """Read optional per-IP/age-band advisory bounds; never invent universal limits."""
+    policies = item.get("duration_recommendations")
+    if not isinstance(policies, dict):
+        policies = item.get("duration_policy")
+    if not isinstance(policies, dict):
+        return {}
+    recommendation = policies.get(format_key)
+    if not isinstance(recommendation, dict):
+        return {}
+    result: Dict[str, float] = {}
+    for source_key, target_key in (
+        ("recommended_min_seconds", "min_seconds"),
+        ("recommended_max_seconds", "max_seconds"),
+        ("min_seconds", "min_seconds"),
+        ("max_seconds", "max_seconds"),
     ):
-        raise ValueError(
-            f"mini_series_duration_out_of_range:{story_id}:{duration_seconds:.3f}"
-        )
+        value = recommendation.get(source_key)
+        if value is None:
+            continue
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(parsed) and parsed > 0:
+            result[target_key] = parsed
+    return result
+
+
+def _validate_episode_duration(
+    story_id: str,
+    duration_seconds: float,
+    recommendation: Dict[str, float] | None = None,
+) -> List[str]:
+    """Reject corrupt media only; editorial duration bounds produce advisory warnings."""
+    if not math.isfinite(duration_seconds) or duration_seconds <= 0:
+        raise ValueError(f"mini_series_duration_invalid:{story_id}:{duration_seconds}")
+    recommendation = recommendation or {}
+    warnings: List[str] = []
+    minimum = recommendation.get("min_seconds")
+    maximum = recommendation.get("max_seconds")
+    if minimum is not None and duration_seconds < minimum:
+        warnings.append(f"below_advisory_duration_window:{story_id}:{duration_seconds:.3f}<{minimum:.3f}")
+    if maximum is not None and duration_seconds > maximum:
+        warnings.append(f"above_advisory_duration_window:{story_id}:{duration_seconds:.3f}>{maximum:.3f}")
+    return warnings
 
 
 def _validate_volume_duration(duration_seconds: float) -> None:
-    if (
-        not math.isfinite(duration_seconds)
-        or duration_seconds < VOLUME_MIN_SECONDS
-        or duration_seconds > VOLUME_MAX_SECONDS
-    ):
-        raise ValueError(f"volume_series_duration_out_of_range:{duration_seconds:.3f}")
+    """A compilation has no universal duration gate; only invalid media is rejected."""
+    if not math.isfinite(duration_seconds) or duration_seconds <= 0:
+        raise ValueError(f"volume_series_duration_invalid:{duration_seconds}")
 
 
 def _safe_compilation_target(output_path: str | Path, storage_root: Path) -> tuple[Path, Path]:
@@ -289,8 +321,9 @@ def build_five_story_compilation(
     if not ffmpeg or not ffprobe:
         raise RuntimeError("ffmpeg_and_ffprobe_are_required")
 
-    # Each standalone episode must already satisfy the editorial runtime.
-    # Never pad, loop or stretch short source media to manufacture a valid volume.
+    # Runtime recommendations are specific to the IP, age band and format.
+    # They generate review warnings, never automatic rejection or padding.
+    duration_warnings: List[str] = []
     for story, clip in zip(stories, clips):
         clip_metadata = _probe_media(clip, ffprobe)
         clip_streams = clip_metadata.get("streams", [])
@@ -299,7 +332,11 @@ def build_five_story_compilation(
         if not any(item.get("codec_type") == "audio" for item in clip_streams):
             raise ValueError(f"mini_series_has_no_audio_stream:{_text(story.get('id'))}")
         clip_duration = float(clip_metadata.get("format", {}).get("duration", 0))
-        _validate_episode_duration(_text(story.get("id")), clip_duration)
+        duration_warnings.extend(_validate_episode_duration(
+            _text(story.get("id")),
+            clip_duration,
+            _duration_recommendation(story, "miniseries"),
+        ))
 
     target, temporary_target = _safe_compilation_target(output_path, root)
     try:
@@ -332,6 +369,11 @@ def build_five_story_compilation(
             raise RuntimeError("compilation_has_no_audio_stream")
         volume_duration = float(metadata.get("format", {}).get("duration", 0))
         _validate_volume_duration(volume_duration)
+        duration_warnings.extend(_validate_episode_duration(
+            "volume",
+            volume_duration,
+            _duration_recommendation(bundle, "compilation"),
+        ))
         os.replace(temporary_target, target)
     finally:
         temporary_target.unlink(missing_ok=True)
@@ -342,6 +384,8 @@ def build_five_story_compilation(
         "story_count": BUNDLE_SIZE,
         "story_ids": [_text(item.get("id")) for item in stories],
         "duration_seconds": float(metadata.get("format", {}).get("duration", 0)),
+        "duration_warnings": duration_warnings,
+        "duration_policy": "advisory_only_no_universal_hard_limits",
         "size_bytes": target.stat().st_size,
         "video_codec": next(item.get("codec_name") for item in streams if item.get("codec_type") == "video"),
         "audio_codec": next(item.get("codec_name") for item in streams if item.get("codec_type") == "audio"),
