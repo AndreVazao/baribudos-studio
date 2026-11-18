@@ -133,7 +133,6 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
                         "project_id": project_id,
                         "project_title": story["title"],
                         "language": "pt-PT",
-                        "audio_path": str(audio_path),
                         "sequence_frames": [
                             {"index": 1, "image_path": str(first)},
                             {"index": 2, "image_path": str(second)},
@@ -144,6 +143,8 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             self.assertTrue(mini_path.is_file())
             self.assertGreater(mini_path.stat().st_size, 1000)
             self.assertEqual(mini_series["format"], "mp4")
+            self.assertEqual(mini_series["production_status"], "animatic_only")
+            self.assertEqual(mini_series["audio_source"], "none")
 
             production_outputs = [
                 {"story": story, "ebook": ebook, "audio": audio, "mini_series": mini_series}
@@ -235,6 +236,8 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
 
             report = {
                 "status": "passed",
+                "validation_scope": "synthetic fixture validation only; no editorial approval or publication",
+                "human_editorial_approvals": 0,
                 "story_id": story["id"],
                 "ebook": {"format": ebook["format"], "bytes": epub_path.stat().st_size},
                 "audiobook": {"format": audio["format"], "bytes": audio_path.stat().st_size, "segments": audio["segments_count"]},
