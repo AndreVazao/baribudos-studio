@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import tempfile
 import unittest
+from pathlib import Path
 
 from studio_core.services.saga_runtime_service import _normalize_characters_master, validate_saga_runtime
 
@@ -130,37 +133,70 @@ class CharacterIdentityRuntimeTests(unittest.TestCase):
         self.assertEqual(package["wardrobe_assets"], ["characters/hero/wardrobe/default.blend"])
 
     def test_complete_approved_visual_package_passes_production_gate(self) -> None:
-        package = {
-            "status": "approved",
-            "approved_revision": "hero-v1",
-            "model_source": "model.blend",
-            "rig_asset": "rig.blend",
-            "expression_sheet": "expressions.png",
-            "neutral_pose": "neutral.png",
-            "turnaround": {
-                "front": "front.png",
-                "three_quarter": "three-quarter.png",
-                "side": "side.png",
-                "back": "back.png",
-            },
+        asset_paths = {
+            "model_source": "characters/hero/model.blend",
+            "rig_asset": "characters/hero/rig.blend",
+            "expression_sheet": "characters/hero/expressions.png",
+            "neutral_pose": "characters/hero/neutral.png",
+            "turnaround.front": "characters/hero/front.png",
+            "turnaround.three_quarter": "characters/hero/three-quarter.png",
+            "turnaround.side": "characters/hero/side.png",
+            "turnaround.back": "characters/hero/back.png",
         }
-        runtime = {
-            "slug": "test-ip",
-            "name": "Test IP",
-            "metadata": {},
-            "palette": {},
-            "permissions": {"status": "production_ready"},
-            "canons": {
-                "characters": {"family": [{"id": "hero", "visual_package": package}]},
-                "narrative": {},
-                "visual": {},
-            },
-            "resolved": {},
-        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            checksums = {}
+            for key, relative_path in asset_paths.items():
+                asset = root / relative_path
+                asset.parent.mkdir(parents=True, exist_ok=True)
+                asset.write_bytes(f"approved-asset:{key}".encode("utf-8"))
+                checksums[key] = hashlib.sha256(asset.read_bytes()).hexdigest()
 
-        result = validate_saga_runtime(runtime)
-        self.assertTrue(result["ok"])
-        self.assertFalse(any("character.hero.visual_package" in item for item in result["errors"]))
+            package = {
+                "status": "approved",
+                "approved_revision": "hero-v1",
+                "model_source": asset_paths["model_source"],
+                "rig_asset": asset_paths["rig_asset"],
+                "expression_sheet": asset_paths["expression_sheet"],
+                "neutral_pose": asset_paths["neutral_pose"],
+                "turnaround": {
+                    "front": asset_paths["turnaround.front"],
+                    "three_quarter": asset_paths["turnaround.three_quarter"],
+                    "side": asset_paths["turnaround.side"],
+                    "back": asset_paths["turnaround.back"],
+                },
+                "asset_checksums": checksums,
+            }
+            runtime = {
+                "slug": "test-ip",
+                "name": "Test IP",
+                "metadata": {},
+                "palette": {},
+                "permissions": {"status": "production_ready"},
+                "root_path": str(root),
+                "canons": {
+                    "characters": {"family": [{"id": "hero", "visual_package": package}]},
+                    "narrative": {},
+                    "visual": {},
+                },
+                "resolved": {},
+            }
+
+            result = validate_saga_runtime(runtime)
+            self.assertTrue(result["ok"], result["errors"])
+            self.assertFalse(any("character.hero.visual_package" in item for item in result["errors"]))
+
+            package["asset_checksums"]["model_source"] = "0" * 64
+            mismatch_result = validate_saga_runtime(runtime)
+            self.assertFalse(mismatch_result["ok"])
+            self.assertTrue(any("SHA-256 não corresponde" in item for item in mismatch_result["errors"]))
+
+            package["asset_checksums"]["model_source"] = checksums["model_source"]
+            package["model_source"] = "../outside/model.blend"
+            traversal_result = validate_saga_runtime(runtime)
+            self.assertFalse(traversal_result["ok"])
+            self.assertTrue(any("fora da diretoria canónica" in item for item in traversal_result["errors"]))
+
 
 
 if __name__ == "__main__":
