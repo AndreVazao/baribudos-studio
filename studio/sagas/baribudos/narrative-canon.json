@@ -102,14 +102,25 @@
     "enabled": true,
     "default_phrase": "Na dúvida, escolhe o caminho seguro."
   },
-  "episode_duration_target_minutes": 3.5,
+  "duration_policy": {
+    "mode": "advisory_age_and_content_adaptive",
+    "universal_hard_minimum": null,
+    "universal_hard_maximum": null,
+    "age_band_and_format_specific_recommendations_required_per_ip": true,
+    "story_duration_is_derived_from_content_and_age": true,
+    "audiobook_preserves_full_approved_story": true,
+    "audiobook_must_not_be_forced_to_match_miniseries": true,
+    "miniseries_is_an_adaptation_with_its_own_script_and_narration": true,
+    "duration_outside_advisory_window_requires_editorial_review_not_automatic_rejection": true
+  },
+  "episode_duration_target_minutes": 5,
+  "episode_duration_recommended_min_minutes": 4.5,
+  "episode_duration_recommended_max_minutes": 6,
   "audiobook_duration_target_minutes": 6,
+  "audiobook_duration_is_advisory": true,
   "story_page_structure": {
     "max_lines": 5,
     "simple_language": true,
     "centered_text": true
-  },
-  "episode_duration_min_minutes": 3,
-  "episode_duration_max_minutes": 4,
-  "episode_duration_note": "One audiovisual miniseries episode per book. The 3–4 minute runtime includes intro and outro."
+  }
 }
