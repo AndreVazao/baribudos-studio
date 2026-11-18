@@ -1,21 +1,47 @@
 {
   "ip": "Os Baribudos",
-
   "episode_format": {
-    "target_duration_minutes": 4,
-    "min_duration": 3,
-    "max_duration": 6,
+    "target_duration_minutes": 5,
+    "recommended_min_duration_minutes": null,
+    "recommended_max_duration_minutes": null,
+    "duration_policy": "advisory_age_and_content_adaptive",
+    "hard_min_duration_minutes": null,
+    "hard_max_duration_minutes": null,
     "intro_seconds": 5,
-    "outro_seconds": 7
+    "outro_seconds": 7,
+    "runtime_includes_intro_and_outro": true,
+    "unit": "one_book_one_miniseries_episode",
+    "audience_age_range_years": {
+      "min": 4,
+      "max": 10
+    },
+    "duration_note": "For the current Baribudos audience (4–10 years), approximately 5 minutes is an initial editorial reference, not a fixed target or acceptance window. Adapt duration to the actual story, age, comprehension, pacing and audiovisual needs. Opening and closing are included in the total."
   },
-
+  "adaptation_policy": {
+    "preserve_original_story_meaning": true,
+    "allow_dialogue_reorganization": true,
+    "allow_redundancy_reduction": true,
+    "allow_missing_bridge_or_development_scenes": true,
+    "never_add_filler_to_reach_duration": true,
+    "never_remove_essential_story_or_safety_content": true,
+    "out_of_recommended_window_requires_editorial_assessment": true,
+    "substantive_script_changes_require_new_version_and_review": true,
+    "quality_priorities": [
+      "age_appropriateness",
+      "narrative_fluency",
+      "child_comprehension",
+      "emotional_clarity",
+      "engagement",
+      "pedagogical_safety",
+      "natural_voice_performance"
+    ]
+  },
   "intro_standard": {
     "logo_required": true,
     "forest_ambience": true,
     "soft_music": true,
     "narrator_voice": "calm"
   },
-
   "scene_structure_standard": [
     "establishing_peaceful_scene",
     "curiosity_event",
@@ -26,7 +52,6 @@
     "family_resolution",
     "moral_sentence"
   ],
-
   "visual_rules": {
     "soft_colors": true,
     "bright_forest": true,
@@ -34,33 +59,28 @@
     "character_visibility": "clear",
     "emotional_readability": true
   },
-
   "dialogue_rules": {
     "short_sentences": true,
     "pauses_required": true,
     "emotionally_clear": true,
     "no_fast_talking": true
   },
-
   "sound_design": {
     "ambient_forest": true,
     "soft_background_music": true,
     "no_sudden_loud_sounds": true,
     "gentle_effects": true
   },
-
   "animation_style": {
     "movement_speed": "slow_gentle",
     "camera_motion": "minimal",
     "focus_on_expression": true
   },
-
   "lesson_delivery": {
     "implicit": true,
     "never_preachy": true,
     "family_discussion": true
   },
-
   "closing_rule": {
     "phrase_required": true,
     "default_phrase": "Na dúvida, escolhe o caminho seguro."

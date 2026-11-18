@@ -7,6 +7,7 @@ from studio_core.core.models import now_iso
 from studio_core.core.storage import append_json_item, read_json, update_json_item
 from studio_core.services.audiobook_service import build_audiobook
 from studio_core.services.ebook_service import build_epub
+from studio_core.services.illustration_integration_service import build_video_frame_sequence
 from studio_core.services.project_factory_engine import run_project_factory_engine
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.story_generation_engine import generate_canon_story
@@ -213,6 +214,7 @@ def _run_manual_outputs(
         _append_log(logs, "A gerar vídeo/série.")
         video_outputs: Dict[str, Any] = {}
         audiobook_outputs = _safe_dict(result.get("audiobook", {}))
+        sequence_frames = _safe_list(build_video_frame_sequence(project).get("frames", []))
         for language, story in story_variants.items():
             audio_path = _safe_dict(audiobook_outputs.get(language, {})).get("file_path", "")
             video_outputs[language] = build_series_episode(
@@ -223,6 +225,7 @@ def _run_manual_outputs(
                     "language": language,
                     "cover_path": (cover_output or {}).get("file_path") or project.get("cover_image", ""),
                     "audio_path": audio_path,
+                    "sequence_frames": sequence_frames,
                 },
             )
         result["video"] = video_outputs

@@ -630,29 +630,47 @@ O publisher do Studio em main já serializa o envelope congelado uma vez, repete
 7. Validar login, checkout, webhooks e biblioteca em sandbox, sem pagamentos reais.
 
 
+## 16. Atualização — linha de produção editorial e validação cloud (2026-11-13)
 
-## 13. Revalidação de segurança e produto — 18 de novembro de 2026
+A PR draft #40 (`feat/five-story-production-cloud-2026-11-13`) acrescenta uma primeira implementação testável do ciclo de outputs por história e do bundle complementar de cinco histórias.
 
-Esta secção atualiza a evidência operacional posterior à secção 12. Não representa uma validação dinâmica completa nem autoriza alterações de runtime.
+### Unidade por história
 
-### 13.1 Segurança P0 — estado confirmado em main
+- Uma história aprovada deve originar um EPUB, um audiobook e uma minissérie associada à mesma versão/IP/idioma.
+- A CI cloud agora instala FFmpeg, FFprobe e eSpeak NG numa VM Ubuntu efémera e executa os builders reais do Studio com fixtures sintéticas.
+- A validação confirmou EPUB ZIP/OPF/TOC, WAV produzido por TTS real, MP4 com vídeo/áudio e compilação H.264/AAC.
 
-- Base observada: `0bf7157cf9c976ed84acb53a965051f944f06f35`.
-- `studio_core/api/main.py` mantém CORS `allow_origins=["*"]` com credenciais.
-- A raiz de storage continua montada integralmente em `/storage` através de `StaticFiles`.
-- Não foi identificada dependência/middleware global de autenticação na aplicação.
-- O inventário ASGI mais recente usado pela PR #52 regista 219 rotas ativas; o inventário AST complementar aponta 233 handlers, 29 com referências a identidade enviada pelo cliente e 97 superfícies sensíveis/operacionais. Os últimos valores são heurísticos, não prova de exploração.
-- A issue #43 continua aberta: falta completar a matriz manual handler → dependências → serviços → dados/side effects → principal server-side → permissão.
+### Bundle de cinco histórias
 
-### 13.2 PRs de segurança e identidade
+- Serviço `story_bundle_service.py` seleciona apenas histórias explicitamente aprovadas, com ID estável, agrupadas por IP/saga e idioma.
+- Só grupos completos de cinco são elegíveis; grupos incompletos ficam em espera e IPs/idiomas nunca são misturados.
+- O bundle gera guia para pais e compila as cinco minisséries existentes num MP4.
+- Para Baribudos, esta unidade corresponde ao volume editorial aprovado: cinco livros, cinco episódios individuais, uma série compilada com a soma das durações reais e um guia para pais. Cerca de 25 minutos é apenas uma expectativa aproximada quando cada episódio ronda os cinco minutos; não existe duração global fixa. Arcos narrativos podem atravessar volumes; outras IPs só adotam esta estrutura mediante canon próprio.
+- A integração automática com API/dashboard e persistência editorial ainda não está implementada.
 
-- PR #52, `security/runtime-route-policy-register-2026-11-17`: 2 commits à frente, 0 atrás de main; Studio CI #529 passou. É uma política-alvo documental por grupos de rotas, não uma implementação nem uma matriz handler-to-service concluída. Mantém-se Draft.
-- PR #56, `feat/immutable-character-canon-runtime-2026-11-18`: 8 commits à frente, 0 atrás; Studio CI #577 e Distribution Hub V6 Smoke #65 passaram. Corrige a perda de personagens legados sem nome e acrescenta gates de pacote visual.
-- Revisão da PR #56: o gate atual verifica strings de paths não vazias, mas ainda não prova existência, confinamento do path, MIME/tamanho ou SHA-256 dos bytes. O teste de pacote aprovado usa paths fictícios. A PR recebeu comentário de revisão e permanece Draft. A normalização também alterou `age` de string para valor bruto; confirmar o contrato antes de integrar.
+### Evidência cloud
 
-### 13.3 Salvaguardas e sequência
+- Story Production Cloud Validation #43424340639: success.
+- Studio CI #43424340684: success.
+- Distribution Hub V6 Smoke #43424340465: success.
+- 20 testes Python passaram.
+- Cinco histórias sintéticas independentes produziram cada uma EPUB, audiobook WAV (3 segmentos) e minissérie MP4 através dos builders reais.
+- O guia para pais e filme compilatório foram produzidos a partir dos cinco outputs; FFprobe confirmou H.264/AAC e 71,93 segundos.
+- Artifact `baribudos-story-production-validation` (3,74 MB), retenção de 14 dias (expira em 27 Nov 2026).
 
-- Não foi alterado CORS, autenticação, PIN, sessões, RBAC, mounts, storage, dados ou credenciais.
-- Não introduzir middleware parcial antes da migração coordenada de API, React, Tauri/desktop e Capacitor/mobile.
-- Próxima sequência: concluir a matriz de 233 handlers; mapear clientes/modelos; implementar hashes de credenciais, sessão server-side assinada/expirada, RBAC e negação por defeito; testar 401/403, expiração, revogação, utilizador desativado e role forgery; migrar serving público/privado de assets em paralelo com os clientes.
-- Os repositórios históricos `baribudos-studio-primary` e `baribudos-studio-home-edition` continuam existentes, `archived=false`, e não foram alterados.
+### Limites e gates
+
+A implementação runtime deixou de impor limites universais de 180–240 segundos por episódio ou 900–1200 segundos por volume. FFprobe valida a integridade técnica e a duração positiva/finita; recomendações específicas são consultivas e a compilação preserva a soma real dos cinco episódios. A CI de 18 Nov executou 38 testes com sucesso; ainda não demonstra uma compilação de cinco episódios editoriais completos.
+
+- Os fixtures são sintéticos; nenhum conteúdo privado ou dado de produção foi usado.
+- A geração narrativa principal continua baseada em templates determinísticos, não num provider generativo real.
+- A tradução/localização continua simulada.
+- TTS técnico não equivale a voz artística/editorial aprovada.
+- Minissérie/filme continuam slideshow/animatic de imagens estáticas, sem animação fluida nem lip-sync.
+- Não houve writes em produção, publicação ou sync Website.
+
+### Próximos trabalhos registados
+
+- Issue #41: ligar bundle de cinco histórias ao fluxo editorial aprovado, com persistência, idempotência, versionamento, jobs e dashboard; depende da migração de segurança P0.
+- Issue #42: provider generativo de histórias, validação de canon/idade/segurança, versões imutáveis e aprovação adulta.
+- Manter PR #40 draft até revisão. Não confundir CI verde com prontidão editorial/comercial.
