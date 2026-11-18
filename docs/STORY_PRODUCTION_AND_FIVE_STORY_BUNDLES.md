@@ -12,22 +12,29 @@ Cada história é uma unidade autónoma de produção. A partir de uma versão e
 
 Os três outputs devem apontar para a mesma história, versão, IP/saga e locale. Um output não deve ser considerado concluído apenas porque uma função terminou: o ficheiro tem de existir, ser legível e passar validação técnica.
 
-## Bundle de cinco histórias
+## Volume editorial de cinco livros
 
-Depois de existirem cinco histórias explicitamente aprovadas, o Studio pode preparar um bundle complementar com:
+A unidade aprovada para Baribudos é um volume composto por exatamente cinco livros aprovados e cinco episódios/minisséries individuais:
 
-- Guia para pais cobrindo as cinco histórias, temas, perguntas de conversa e ações sugeridas aos adultos.
-- Filme compilatório que concatena as cinco minisséries/episódios existentes.
+- Um livro origina um episódio individual.
+- Cada episódio tem alvo de 3 min 30 s e intervalo permitido de 3–4 minutos.
+- Os 5 segundos de abertura e os 7 segundos de fecho estão incluídos na duração do episódio.
+- A série do volume concatena os cinco episódios pela ordem editorial dos livros, preservando também os cinco ficheiros individuais.
+- A série compilada tem de durar 15–20 minutos, com alvo de 17 min 30 s.
+- O volume inclui um guia para pais associado aos mesmos cinco livros.
+- O audiobook tem duração independente e não determina a duração do episódio.
+- Uma compilação de vários volumes é uma fase posterior, manual/editorial e sujeita a aprovação própria.
 
-O agrupamento é isolado por IP/saga e idioma. Histórias em rascunho, sem ID estável ou de outra IP/idioma não contam para completar o grupo. Grupos incompletos ficam em espera. O tamanho de cinco é a regra aprovada para este bundle, não uma regra universal para volumes, temporadas ou coleções comerciais.
+O agrupamento é isolado por IP, saga e idioma. Histórias em rascunho, sem ID estável ou de outra IP/idioma não contam para completar o volume. A sequência dos livros é preservada; não se misturam versões nem se alteram os episódios individuais.
 
 ## Implementação atual
 
 - `studio_core/services/story_bundle_service.py` seleciona grupos completos e determinísticos de cinco histórias aprovadas.
 - `build_parent_guide` gera um guia Markdown com perguntas adequadas à conversa familiar e salvaguardas pedagógicas.
-- `build_five_story_compilation` exige cinco vídeos existentes, concatena-os com FFmpeg, re-encoda H.264/AAC e verifica os streams com FFprobe.
-- `build_five_story_bundle` não cria bundle enquanto não existir um grupo completo e exige seleção explícita quando há mais do que um grupo pronto.
+- `build_five_story_compilation` exige cinco episódios existentes dentro da raiz de storage aprovada, valida cada duração com FFprobe (180–240 s), concatena pela ordem congelada, re-encoda H.264/AAC e valida o compilatório final (900–1200 s).
+- `build_five_story_bundle` não cria volume enquanto não existir um grupo completo e exige seleção explícita quando há mais do que um grupo pronto. Se qualquer episódio estiver fora da duração canónica, bloqueia o volume; não aplica padding, loops nem alongamento artificial.
 - O serviço é ainda uma capacidade invocável e testável; não está ligado automaticamente à API ou ao dashboard. A integração no fluxo de aprovação requer persistência/versionamento e autorização server-side, atualmente bloqueada pela auditoria de segurança P0.
+- A CI atual gera episódios sintéticos curtos para validar os builders individuais e comprova que o gate recusa esses ficheiros como episódios de volume. Não prova ainda uma compilação de 15–20 minutos com cinco episódios editoriais completos.
 
 ## Validação cloud
 
