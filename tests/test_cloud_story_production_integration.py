@@ -15,6 +15,7 @@ from PIL import Image
 
 from studio_core.services import audiobook_service, ebook_service, video_service
 from studio_core.services.story_bundle_service import (
+    _safe_compilation_target,
     build_five_story_bundle,
     select_complete_story_groups,
 )
@@ -24,6 +25,40 @@ from studio_core.services.story_bundle_service import (
     shutil.which("ffmpeg") and shutil.which("ffprobe") and (shutil.which("espeak-ng") or shutil.which("espeak")),
     "FFmpeg, FFprobe and eSpeak are required for cloud production integration",
 )
+class VolumeOutputPathSecurityTests(unittest.TestCase):
+    def test_output_path_must_resolve_inside_approved_storage(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baribudos-volume-path-") as temp:
+            root = Path(temp) / "storage"
+            root.mkdir()
+            target, temporary = _safe_compilation_target(
+                root / "volumes" / "volume-001.mp4",
+                root.resolve(),
+            )
+            self.assertEqual(target.parent, (root / "volumes").resolve())
+            self.assertTrue(target.is_relative_to(root.resolve()))
+            self.assertTrue(temporary.parent.is_relative_to(root.resolve()))
+
+            outside = Path(temp) / "outside" / "volume.mp4"
+            with self.assertRaisesRegex(ValueError, "compilation_output_outside_approved_storage"):
+                _safe_compilation_target(outside, root.resolve())
+
+    def test_output_path_rejects_symlinked_parent_and_target(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baribudos-volume-symlink-") as temp:
+            base = Path(temp)
+            root = base / "storage"
+            root.mkdir()
+            outside = base / "outside"
+            outside.mkdir()
+            (root / "escape").symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "compilation_output_outside_approved_storage"):
+                _safe_compilation_target(root / "escape" / "volume.mp4", root.resolve())
+
+            target = root / "linked.mp4"
+            target.symlink_to(outside / "existing.mp4")
+            with self.assertRaisesRegex(ValueError, "compilation_output_must_not_be_symlink"):
+                _safe_compilation_target(target, root.resolve())
+
+
 class CloudStoryProductionIntegrationTests(unittest.TestCase):
     def test_one_story_generates_epub_real_audiobook_and_miniseries_then_five_story_bundle(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baribudos-production-cloud-") as temp:
