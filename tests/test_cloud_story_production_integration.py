@@ -183,12 +183,12 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "mini_series_duration_out_of_range"):
                 build_five_story_bundle(
                     five_stories,
-                    output_dir=root / "bundle",
+                    output_dir=storage / "bundle",
                     storage_root=storage,
                     title="Baribudos — volume de teste",
                 )
-            self.assertFalse((root / "bundle" / "parents-guide.md").exists())
-            self.assertFalse((root / "bundle" / "five-story-mini-film.mp4").exists())
+            self.assertFalse((storage / "bundle" / "parents-guide.md").exists())
+            self.assertFalse((storage / "bundle" / "five-story-mini-film.mp4").exists())
             bundle_output = {
                 "status": "blocked_by_episode_duration_gate",
                 "story_count": 5,
