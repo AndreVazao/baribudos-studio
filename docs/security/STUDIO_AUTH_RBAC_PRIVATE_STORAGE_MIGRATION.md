@@ -112,3 +112,27 @@ Do not combine all seven phases into one high-risk deployment. Each phase needs 
 ## Operational boundaries
 
 This specification does not authorize changes to production data, schemas, credentials, secrets, Supabase, Vercel, storage providers, deployments or paid services. No live production data should be used in security tests. Implementation must first pass isolated tests and CI; production rollout requires its own explicit approval.
+
+
+## CI route-inventory evidence (2026-11-18)
+
+The Studio CI run for this branch completed successfully (run 618, commit `41dd59ea3ca0766a5a747a4638cab2ac008e72b6`). Its uploaded route-authorization artifact was inspected after the run.
+
+Runtime manifest snapshot:
+- **219** registered FastAPI method/path entries: 100 GET, 97 POST, 19 PATCH, 2 DELETE and 1 PUT.
+- **219/219** entries remain `UNCLASSIFIED`; none has a reviewed route policy.
+- **6** additional non-APIRoute HTTP entries: `/docs`, `/docs/oauth2-redirect`, `/openapi.json`, `/redoc`, and two static mounts.
+- **2** StaticFiles mounts: `/public` and `/storage`. Both were detected with an isolated CI storage root; the exporter explicitly records `authorization_verified: false`. This confirms the mount registration in the tested CI app, not access to any production file.
+- **0** global FastAPI dependencies.
+- One registered CORS middleware with `allow_origins=["*"]`, `allow_credentials=true`, `allow_methods=["*"]` and `allow_headers=["*"]`.
+
+The separate heuristic scanner reports 233 handler candidates across 78 route modules, including 97 handlers flagged as sensitive/operational and 29 referencing client identity fields. These 233 static handler candidates and the 219 runtime method/path entries are different measurements; do not treat them as a one-to-one discrepancy or infer that the remaining 14 handlers are missing routes without reconciling their source locations.
+
+Immediate review priorities from the runtime manifest include:
+- `/api/users` and `/api/users/{user_id}` credential/account operations;
+- `/api/secret-control/*`, `/api/settings`, `/api/db-control/*`, `/api/deploy-control/*`, `/api/updater/*` and `/api/diagnostics`;
+- publication, readiness and website-publisher mutation routes;
+- voice library/profile upload and mutation routes;
+- static `/storage` removal and a separate content review of `/public`.
+
+The manifest artifact is an inventory snapshot from CI, not a live production probe and not proof that any route was successfully exploited. Keep all route policies denied/unclassified until each is reviewed against its service and storage effects and covered by HTTP tests.
