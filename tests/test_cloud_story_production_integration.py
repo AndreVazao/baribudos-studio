@@ -196,6 +196,8 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
                     "mini_series": next_video,
                 })
 
+            # The grouping gate is exercised with synthetic approved-shaped fixtures only.
+            # These are not five distinct canonical stories or human editorial decisions.
             five_stories = [
                 {
                     "id": item["story"]["id"],
@@ -228,8 +230,14 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             self.assertTrue((storage / "bundle" / "five-story-mini-film.mp4").is_file())
             self.assertGreater(bundle_result["compilation"]["duration_seconds"], 0)
             bundle_output = {
-                "status": bundle_result["status"],
+                "technical_status": bundle_result["status"],
+                "editorial_status": "not_approved",
                 "story_count": bundle_result["story_count"],
+                "distinct_canonical_stories": False,
+                "story_fixture_strategy": "one synthetic story repeated with generated labels/text prefixes",
+                "animatic_fixture_count": 5,
+                "final_miniseries_count": 0,
+                "season_created": False,
                 "duration_seconds": bundle_result["compilation"]["duration_seconds"],
                 "duration_policy": bundle_result["compilation"]["duration_policy"],
             }
