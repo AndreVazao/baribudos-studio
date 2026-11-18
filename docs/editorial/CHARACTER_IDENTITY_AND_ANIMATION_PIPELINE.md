@@ -29,7 +29,7 @@ A recurring visual character is not production-ready until its package contains:
 5. Source model and material/texture references.
 6. Reusable rig with documented controls and skeleton.
 7. Approved wardrobe assets, separately versioned.
-8. Checksums and provenance for source assets. Every required file path is relative to the IP canonical directory; `asset_checksums` must contain a SHA-256 hex digest for `model_source`, `rig_asset`, `expression_sheet`, `neutral_pose` and each `turnaround.front`, `turnaround.three_quarter`, `turnaround.side`, `turnaround.back`.
+8. Checksums and provenance for source assets. Every required file path is relative to the IP canonical directory; `asset_checksums` must contain a SHA-256 hex digest for `model_source`, `rig_asset`, `expression_sheet`, `neutral_pose` and each `turnaround.front`, `turnaround.three_quarter`, `turnaround.side`, `turnaround.back`; every supplied `wardrobe_assets` entry also requires a matching `wardrobe_assets.N` digest.
 
 A character can be text-only/non-visual only when editorially declared as such. A missing package must never be silently treated as approved.
 
