@@ -1,0 +1,55 @@
+from __future__ import annotations
+
+import unittest
+
+from studio_core.services.saga_runtime_service import _normalize_characters_master
+
+
+class CharacterIdentityRuntimeTests(unittest.TestCase):
+    def test_legacy_baribudos_characters_are_not_dropped_without_name_field(self) -> None:
+        source = {
+            "visual_dna": {
+                "body_shape": "small_rounded",
+                "fur_style": "short_soft",
+                "eyes": "large_expressive",
+                "nose": "small_round",
+                "hands": "4_fingers",
+                "feet": "short",
+                "ears": "small_rounded",
+                "texture": "soft_fuzzy",
+            },
+            "color_rules": {"fur_base": "#8B5E3C", "eye_color": "#3A7D44"},
+            "family": [
+                {"id": "magnus", "role": "father", "archetype": "mentor_protector", "personality": ["calm"], "scarf_color": "#2F5E2E"},
+                {"id": "luma", "role": "mother", "archetype": "emotional_intuition", "personality": ["empathetic"], "scarf_color": "#6FA86A"},
+                {"id": "roko", "role": "child", "age": 11, "personality": ["responsible"], "scarf_color": "#D4A73C"},
+                {"id": "mila", "role": "child", "age": 6, "personality": ["curious"], "scarf_color": "#F4A259"},
+                {"id": "tilo", "role": "child", "age": 4, "personality": ["curious"], "scarf_color": "#9BD770"},
+            ],
+        }
+
+        normalized = _normalize_characters_master(source)
+        family = normalized["family"]
+
+        self.assertEqual([item["id"] for item in family], ["magnus", "luma", "roko", "mila", "tilo"])
+        self.assertEqual([item["name"] for item in family], ["Magnus", "Luma", "Roko", "Mila", "Tilo"])
+        self.assertEqual(family[0]["traits"], ["calm"])
+        self.assertEqual(family[0]["identity_invariants"]["body_shape"], "small_rounded")
+        self.assertEqual(family[0]["identity_invariants"]["fur_base"], "#8B5E3C")
+        self.assertEqual(family[0]["identity_invariants"]["scarf_color"], "#2F5E2E")
+        self.assertEqual(family[0]["visual_package"]["status"], "not_created")
+        self.assertTrue(normalized["identity_policy"]["identity_invariants_locked"])
+
+    def test_duplicate_character_ids_are_not_duplicated_in_runtime(self) -> None:
+        normalized = _normalize_characters_master({
+            "family": [
+                {"id": "mila", "role": "child"},
+                {"id": "mila", "name": "Mila duplicate", "role": "child"},
+            ]
+        })
+        self.assertEqual(len(normalized["family"]), 1)
+        self.assertEqual(normalized["family"][0]["name"], "Mila")
+
+
+if __name__ == "__main__":
+    unittest.main()
