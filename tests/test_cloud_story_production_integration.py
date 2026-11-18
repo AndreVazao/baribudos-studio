@@ -213,20 +213,24 @@ class CloudStoryProductionIntegrationTests(unittest.TestCase):
             self.assertEqual(len(groups), 1)
             self.assertEqual(groups[0]["story_count"], 5)
 
-            # These builder-generated synthetic episodes are deliberately short.
-            # The volume must be blocked instead of padding them to meet the canon.
-            with self.assertRaisesRegex(ValueError, "mini_series_duration_out_of_range"):
-                build_five_story_bundle(
-                    five_stories,
-                    output_dir=storage / "bundle",
-                    storage_root=storage,
-                    title="Baribudos — volume de teste",
-                )
-            self.assertFalse((storage / "bundle" / "parents-guide.md").exists())
-            self.assertFalse((storage / "bundle" / "five-story-mini-film.mp4").exists())
+            # Short synthetic clips remain valid media. Duration is advisory;
+            # compilation must preserve real runtimes without padding or rejection.
+            bundle_result = build_five_story_bundle(
+                five_stories,
+                output_dir=storage / "bundle",
+                storage_root=storage,
+                title="Baribudos — volume de teste",
+            )
+            self.assertEqual(bundle_result["status"], "completed")
+            self.assertEqual(bundle_result["story_count"], 5)
+            self.assertTrue((storage / "bundle" / "parents-guide.md").is_file())
+            self.assertTrue((storage / "bundle" / "five-story-mini-film.mp4").is_file())
+            self.assertGreater(bundle_result["compilation"]["duration_seconds"], 0)
             bundle_output = {
-                "status": "blocked_by_episode_duration_gate",
-                "story_count": 5,
+                "status": bundle_result["status"],
+                "story_count": bundle_result["story_count"],
+                "duration_seconds": bundle_result["compilation"]["duration_seconds"],
+                "duration_policy": bundle_result["compilation"]["duration_policy"],
             }
 
             report = {
