@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -135,29 +137,77 @@ def _normalize_main_characters(value: Any) -> List[Dict[str, Any]]:
 
 def _normalize_characters_master(value: Any) -> Dict[str, Any]:
     source = _normalize_dict(value)
+    visual_dna = _normalize_dict(source.get("visual_dna", {}))
+    color_rules = _normalize_dict(source.get("color_rules", {}))
+    design_rules = _normalize_dict(source.get("design_rules", {}))
     family = source.get("family", [])
     if not isinstance(family, list):
         family = []
 
     normalized_family: List[Dict[str, Any]] = []
+    seen_ids = set()
     for index, item in enumerate(family, start=1):
         if not isinstance(item, dict):
             continue
-        name = str(item.get("name", "")).strip()
-        if not name:
+        character_id = str(item.get("id", f"family-{index}")).strip() or f"family-{index}"
+        if character_id in seen_ids:
             continue
+        seen_ids.add(character_id)
+        # Legacy canons used the stable ID but omitted the display name.
+        # Preserve the character instead of silently dropping the canonical entry.
+        name = str(item.get("name") or character_id.replace("-", " ").title()).strip()
+        traits = item.get("traits", item.get("personality", []))
+        if not isinstance(traits, list):
+            traits = []
+        visual_package = _normalize_dict(item.get("visual_package"))
+        visual_package = {
+            "status": str(visual_package.get("status", "not_created")).strip() or "not_created",
+            "approved_revision": visual_package.get("approved_revision"),
+            "turnaround": _normalize_dict(visual_package.get("turnaround")),
+            "expression_sheet": visual_package.get("expression_sheet"),
+            "neutral_pose": visual_package.get("neutral_pose"),
+            "model_source": visual_package.get("model_source"),
+            "rig_asset": visual_package.get("rig_asset"),
+            "wardrobe_assets": visual_package.get("wardrobe_assets", []) if isinstance(visual_package.get("wardrobe_assets", []), list) else [],
+            "asset_checksums": _normalize_dict(visual_package.get("asset_checksums", {})),
+        }
         normalized_family.append({
-            "id": str(item.get("id", f"family-{index}")).strip() or f"family-{index}",
+            **item,
+            "id": character_id,
             "name": name,
             "role": str(item.get("role", "")).strip(),
-            "age": str(item.get("age", "")).strip(),
-            "traits": item.get("traits", []) if isinstance(item.get("traits"), list) else [],
-            "description": str(item.get("description", "")).strip(),
+            "age": item.get("age"),
+            "traits": [str(trait).strip() for trait in traits if str(trait).strip()],
+            "description": str(item.get("description") or item.get("archetype", "")).strip(),
+            "identity_invariants": {
+                "body_shape": visual_dna.get("body_shape", ""),
+                "fur_style": visual_dna.get("fur_style", ""),
+                "eyes": visual_dna.get("eyes", ""),
+                "eye_color": color_rules.get("eye_color", ""),
+                "nose": visual_dna.get("nose", ""),
+                "hands": visual_dna.get("hands", ""),
+                "feet": visual_dna.get("feet", ""),
+                "ears": visual_dna.get("ears", ""),
+                "texture": visual_dna.get("texture", ""),
+                "fur_base": color_rules.get("fur_base", ""),
+                "scarf_color": str(item.get("scarf_color", "")).strip(),
+                "design_rules": design_rules,
+            },
+            "visual_package": visual_package,
         })
 
     return {
-        "visual_dna": _normalize_dict(source.get("visual_dna", {})),
+        "visual_dna": visual_dna,
+        "color_rules": color_rules,
+        "design_rules": design_rules,
         "family": normalized_family,
+        "identity_policy": {
+            "stable_character_ids": True,
+            "identity_invariants_locked": True,
+            "wardrobe_is_separate": True,
+            "ageing_requires_new_approved_revision": True,
+            "production_ready_requires_approved_visual_package": True,
+        },
     }
 
 
@@ -291,6 +341,93 @@ def build_saga_runtime_profile(runtime: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _validate_visual_package_assets(package: Dict[str, Any], root_path: str) -> List[str]:
+    """Verify canonical visual assets are confined files with matching SHA-256."""
+    errors: List[str] = []
+    root_raw = str(root_path or "").strip()
+    if not root_raw:
+        return ["visual asset root_path em falta"]
+
+    try:
+        root = Path(root_raw).resolve(strict=True)
+    except (OSError, RuntimeError):
+        return ["visual asset root_path não existe ou não é acessível"]
+
+    if not root.is_dir():
+        return ["visual asset root_path não é uma diretoria"]
+
+    assets: Dict[str, Any] = {
+        "model_source": package.get("model_source"),
+        "rig_asset": package.get("rig_asset"),
+        "expression_sheet": package.get("expression_sheet"),
+        "neutral_pose": package.get("neutral_pose"),
+    }
+    turnaround = _normalize_dict(package.get("turnaround"))
+    for view in ("front", "three_quarter", "side", "back"):
+        assets[f"turnaround.{view}"] = turnaround.get(view)
+    wardrobe_assets = package.get("wardrobe_assets", [])
+    if isinstance(wardrobe_assets, list):
+        for index, wardrobe_path in enumerate(wardrobe_assets):
+            assets[f"wardrobe_assets.{index}"] = wardrobe_path
+
+    checksums = _normalize_dict(package.get("asset_checksums", {}))
+    for asset_key, raw_path in assets.items():
+        relative = str(raw_path or "").strip()
+        if not relative:
+            errors.append(f"{asset_key}: caminho em falta")
+            continue
+
+        candidate_path = Path(relative)
+        if candidate_path.is_absolute():
+            errors.append(f"{asset_key}: caminho absoluto não permitido")
+            continue
+
+        try:
+            candidate = root / candidate_path
+            cursor = root
+            symlink_found = False
+            for part in candidate_path.parts:
+                if part in {"", "."}:
+                    continue
+                if part == "..":
+                    cursor = cursor.parent
+                else:
+                    cursor = cursor / part
+                if cursor.is_symlink():
+                    symlink_found = True
+                    break
+            if symlink_found:
+                errors.append(f"{asset_key}: symlink não permitido")
+                continue
+
+            resolved = candidate.resolve(strict=True)
+            resolved.relative_to(root)
+            if not resolved.is_file():
+                errors.append(f"{asset_key}: não é um ficheiro regular")
+                continue
+        except (OSError, RuntimeError, ValueError):
+            errors.append(f"{asset_key}: ficheiro inexistente ou fora da diretoria canónica")
+            continue
+
+        expected = str(checksums.get(asset_key, "")).strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", expected):
+            errors.append(f"{asset_key}: SHA-256 em falta ou inválido")
+            continue
+
+        digest = hashlib.sha256()
+        try:
+            with resolved.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+        except OSError:
+            errors.append(f"{asset_key}: não foi possível calcular SHA-256")
+            continue
+
+        if digest.hexdigest() != expected:
+            errors.append(f"{asset_key}: SHA-256 não corresponde")
+    return errors
+
+
 def validate_saga_runtime(runtime: Dict[str, Any]) -> Dict[str, Any]:
     errors: List[str] = []
     warnings: List[str] = []
@@ -329,6 +466,46 @@ def validate_saga_runtime(runtime: Dict[str, Any]) -> Dict[str, Any]:
 
     if not resolved.get("narrative_structure_standard"):
         warnings.append("resolved.narrative_structure_standard vazio")
+
+    character_master = _normalize_dict(canons.get("characters", {}))
+    family = character_master.get("family", [])
+    if not isinstance(family, list):
+        family = []
+    status = str(_normalize_dict(runtime.get("permissions", {})).get("status", "draft")).strip().lower()
+    production_statuses = {"production_ready", "approved", "published"}
+    for character in family:
+        if not isinstance(character, dict):
+            continue
+        character_id = str(character.get("id", "unknown")).strip() or "unknown"
+        package = _normalize_dict(character.get("visual_package", {}))
+        required_assets = [
+            package.get("model_source"),
+            package.get("rig_asset"),
+            package.get("expression_sheet"),
+            package.get("neutral_pose"),
+        ]
+        turnaround = _normalize_dict(package.get("turnaround", {}))
+        required_assets.extend(turnaround.get(view) for view in ("front", "three_quarter", "side", "back"))
+        package_ready = (
+            str(package.get("status", "")).lower() == "approved"
+            and bool(str(package.get("approved_revision") or "").strip())
+            and all(bool(str(asset or "").strip()) for asset in required_assets)
+        )
+        if not package_ready:
+            message = f"character.{character_id}.visual_package_not_approved_or_incomplete"
+            if status in production_statuses:
+                errors.append(message)
+            else:
+                warnings.append(message)
+            continue
+
+        asset_errors = _validate_visual_package_assets(package, str(runtime.get("root_path", "")))
+        for asset_error in asset_errors:
+            message = f"character.{character_id}.visual_package_asset_invalid: {asset_error}"
+            if status in production_statuses:
+                errors.append(message)
+            else:
+                warnings.append(message)
 
     return {
         "ok": len(errors) == 0,
