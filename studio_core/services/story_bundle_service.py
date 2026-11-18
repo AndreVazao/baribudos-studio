@@ -280,9 +280,23 @@ def build_five_story_compilation(
         clip_duration = float(clip_metadata.get("format", {}).get("duration", 0))
         _validate_episode_duration(_text(story.get("id")), clip_duration)
 
-    target = Path(output_path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary_target = target.with_name(f".{target.stem}.tmp{target.suffix or '.mp4'}")
+    requested_target = Path(output_path)
+    requested_target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        resolved_parent = requested_target.parent.resolve(strict=True)
+        resolved_parent.relative_to(root)
+    except (OSError, ValueError):
+        raise ValueError("compilation_output_outside_approved_storage") from None
+    if requested_target.is_symlink():
+        raise ValueError("compilation_output_must_not_be_symlink")
+    if not requested_target.name or requested_target.name in {".", ".."}:
+        raise ValueError("compilation_output_filename_invalid")
+    target = resolved_parent / requested_target.name
+    temporary_target = target.with_name(
+        f".{target.stem}.{os.getpid()}.{uuid5(NAMESPACE_URL, str(target)).hex[:12]}.tmp{target.suffix or '.mp4'}"
+    )
+    if temporary_target.is_symlink():
+        raise ValueError("compilation_temporary_output_must_not_be_symlink")
     try:
         with tempfile.TemporaryDirectory(prefix="baribudos-five-story-") as temp_dir:
             concat_file = Path(temp_dir) / "concat.txt"
