@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from studio_core.services.saga_runtime_service import _normalize_characters_master
+from studio_core.services.saga_runtime_service import _normalize_characters_master, validate_saga_runtime
 
 
 class CharacterIdentityRuntimeTests(unittest.TestCase):
@@ -49,6 +49,48 @@ class CharacterIdentityRuntimeTests(unittest.TestCase):
         })
         self.assertEqual(len(normalized["family"]), 1)
         self.assertEqual(normalized["family"][0]["name"], "Mila")
+
+    def test_production_ready_ip_is_blocked_without_approved_visual_assets(self) -> None:
+        runtime = {
+            "slug": "test-ip",
+            "name": "Test IP",
+            "metadata": {},
+            "palette": {},
+            "permissions": {"status": "production_ready"},
+            "canons": {
+                "characters": {"family": [{"id": "hero", "visual_package": {"status": "not_created"}}]},
+                "narrative": {},
+                "visual": {},
+            },
+            "resolved": {},
+        }
+        result = validate_saga_runtime(runtime)
+        self.assertFalse(result["ok"])
+        self.assertIn(
+            "character.hero.visual_package_not_approved_or_incomplete",
+            result["errors"],
+        )
+
+    def test_draft_ip_receives_warning_instead_of_production_error(self) -> None:
+        runtime = {
+            "slug": "test-ip",
+            "name": "Test IP",
+            "metadata": {},
+            "palette": {},
+            "permissions": {"status": "draft"},
+            "canons": {
+                "characters": {"family": [{"id": "hero", "visual_package": {"status": "not_created"}}]},
+                "narrative": {},
+                "visual": {},
+            },
+            "resolved": {},
+        }
+        result = validate_saga_runtime(runtime)
+        self.assertTrue(result["ok"])
+        self.assertIn(
+            "character.hero.visual_package_not_approved_or_incomplete",
+            result["warnings"],
+        )
 
 
 if __name__ == "__main__":
