@@ -9,7 +9,7 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
-from uuid import uuid5, NAMESPACE_URL
+from uuid import uuid4, uuid5, NAMESPACE_URL
 
 BUNDLE_SIZE = 5
 EPISODE_MIN_SECONDS = 180.0
@@ -265,7 +265,7 @@ def _safe_compilation_target(output_path: str | Path, storage_root: Path) -> tup
         raise ValueError("compilation_output_filename_invalid")
     target = resolved_parent / requested_target.name
     temporary_target = target.with_name(
-        f".{target.stem}.{os.getpid()}.{uuid5(NAMESPACE_URL, str(target)).hex[:12]}.tmp{target.suffix or '.mp4'}"
+        f".{target.stem}.{os.getpid()}.{uuid4().hex}.tmp{target.suffix or '.mp4'}"
     )
     if temporary_target.is_symlink():
         raise ValueError("compilation_temporary_output_must_not_be_symlink")
