@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -11,6 +12,10 @@ from typing import Any, Dict, Iterable, List
 from uuid import uuid5, NAMESPACE_URL
 
 BUNDLE_SIZE = 5
+EPISODE_MIN_SECONDS = 180.0
+EPISODE_MAX_SECONDS = 240.0
+VOLUME_MIN_SECONDS = 900.0
+VOLUME_MAX_SECONDS = 1200.0
 
 
 def _text(value: Any) -> str:
@@ -207,6 +212,45 @@ def _approved_clip_path(story: Dict[str, Any], language: str, storage_root: Path
     return resolved
 
 
+def _probe_media(path: Path, ffprobe: str) -> Dict[str, Any]:
+    probe = subprocess.run(
+        [
+            ffprobe, "-v", "error", "-show_entries",
+            "format=duration,size:stream=codec_type,codec_name",
+            "-of", "json", str(path),
+        ],
+        check=True,
+        timeout=30,
+        capture_output=True,
+        text=True,
+    )
+    metadata = json.loads(probe.stdout)
+    duration = float(metadata.get("format", {}).get("duration", 0))
+    if not math.isfinite(duration) or duration <= 0:
+        raise ValueError(f"media_duration_invalid:{path.name}")
+    return metadata
+
+
+def _validate_episode_duration(story_id: str, duration_seconds: float) -> None:
+    if (
+        not math.isfinite(duration_seconds)
+        or duration_seconds < EPISODE_MIN_SECONDS
+        or duration_seconds > EPISODE_MAX_SECONDS
+    ):
+        raise ValueError(
+            f"mini_series_duration_out_of_range:{story_id}:{duration_seconds:.3f}"
+        )
+
+
+def _validate_volume_duration(duration_seconds: float) -> None:
+    if (
+        not math.isfinite(duration_seconds)
+        or duration_seconds < VOLUME_MIN_SECONDS
+        or duration_seconds > VOLUME_MAX_SECONDS
+    ):
+        raise ValueError(f"volume_series_duration_out_of_range:{duration_seconds:.3f}")
+
+
 def build_five_story_compilation(
     bundle: Dict[str, Any],
     *,
@@ -223,6 +267,18 @@ def build_five_story_compilation(
     ffprobe = shutil.which("ffprobe")
     if not ffmpeg or not ffprobe:
         raise RuntimeError("ffmpeg_and_ffprobe_are_required")
+
+    # Each standalone episode must already satisfy the editorial runtime.
+    # Never pad, loop or stretch short source media to manufacture a valid volume.
+    for story, clip in zip(stories, clips):
+        clip_metadata = _probe_media(clip, ffprobe)
+        clip_streams = clip_metadata.get("streams", [])
+        if not any(item.get("codec_type") == "video" for item in clip_streams):
+            raise ValueError(f"mini_series_has_no_video_stream:{_text(story.get('id'))}")
+        if not any(item.get("codec_type") == "audio" for item in clip_streams):
+            raise ValueError(f"mini_series_has_no_audio_stream:{_text(story.get('id'))}")
+        clip_duration = float(clip_metadata.get("format", {}).get("duration", 0))
+        _validate_episode_duration(_text(story.get("id")), clip_duration)
 
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -249,23 +305,14 @@ def build_five_story_compilation(
                 stderr=subprocess.PIPE,
             )
 
-        probe = subprocess.run(
-            [
-                ffprobe, "-v", "error", "-show_entries",
-                "format=duration,size:stream=codec_type,codec_name",
-                "-of", "json", str(temporary_target),
-            ],
-            check=True,
-            timeout=30,
-            capture_output=True,
-            text=True,
-        )
-        metadata = json.loads(probe.stdout)
+        metadata = _probe_media(temporary_target, ffprobe)
         streams = metadata.get("streams", [])
         if not any(item.get("codec_type") == "video" for item in streams):
             raise RuntimeError("compilation_has_no_video_stream")
         if not any(item.get("codec_type") == "audio" for item in streams):
             raise RuntimeError("compilation_has_no_audio_stream")
+        volume_duration = float(metadata.get("format", {}).get("duration", 0))
+        _validate_volume_duration(volume_duration)
         os.replace(temporary_target, target)
     finally:
         temporary_target.unlink(missing_ok=True)
@@ -303,14 +350,16 @@ def build_five_story_bundle(
         bundle = groups[0]
     else:
         raise ValueError("multiple_complete_groups_require_bundle_id")
-    bundle["title"] = title or "Guia para Pais e Filme — cinco histórias"
+    bundle["title"] = title or "Guia para Pais e Série — volume de cinco livros"
     root = Path(output_dir)
-    guide = build_parent_guide(bundle, output_path=root / "parents-guide.md")
+    # Compile and validate the five episodes before emitting the guide. A failed
+    # audiovisual gate must not leave a seemingly complete volume behind.
     compilation = build_five_story_compilation(
         bundle,
         output_path=root / "five-story-mini-film.mp4",
         storage_root=storage_root,
     )
+    guide = build_parent_guide(bundle, output_path=root / "parents-guide.md")
     return {
         "id": bundle["id"],
         "status": "completed",
