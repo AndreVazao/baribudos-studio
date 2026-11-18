@@ -142,6 +142,7 @@ class CharacterIdentityRuntimeTests(unittest.TestCase):
             "turnaround.three_quarter": "characters/hero/three-quarter.png",
             "turnaround.side": "characters/hero/side.png",
             "turnaround.back": "characters/hero/back.png",
+            "wardrobe_assets.0": "characters/hero/wardrobe/default.blend",
         }
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -165,6 +166,7 @@ class CharacterIdentityRuntimeTests(unittest.TestCase):
                     "side": asset_paths["turnaround.side"],
                     "back": asset_paths["turnaround.back"],
                 },
+                "wardrobe_assets": [asset_paths["wardrobe_assets.0"]],
                 "asset_checksums": checksums,
             }
             runtime = {
