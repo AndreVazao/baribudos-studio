@@ -93,5 +93,75 @@ class CharacterIdentityRuntimeTests(unittest.TestCase):
         )
 
 
+
+    def test_existing_approved_visual_package_assets_survive_normalization(self) -> None:
+        source = {
+            "family": [{
+                "id": "hero",
+                "name": "Hero",
+                "visual_package": {
+                    "status": "approved",
+                    "approved_revision": "hero-v1",
+                    "model_source": "characters/hero/model.blend",
+                    "rig_asset": "characters/hero/rig.blend",
+                    "expression_sheet": "characters/hero/expressions.png",
+                    "neutral_pose": "characters/hero/neutral.png",
+                    "turnaround": {
+                        "front": "characters/hero/front.png",
+                        "three_quarter": "characters/hero/three-quarter.png",
+                        "side": "characters/hero/side.png",
+                        "back": "characters/hero/back.png",
+                    },
+                    "wardrobe_assets": ["characters/hero/wardrobe/default.blend"],
+                },
+            }],
+        }
+
+        normalized = _normalize_characters_master(source)
+        package = normalized["family"][0]["visual_package"]
+
+        self.assertEqual(package["status"], "approved")
+        self.assertEqual(package["approved_revision"], "hero-v1")
+        self.assertEqual(package["model_source"], "characters/hero/model.blend")
+        self.assertEqual(package["rig_asset"], "characters/hero/rig.blend")
+        self.assertEqual(package["expression_sheet"], "characters/hero/expressions.png")
+        self.assertEqual(package["neutral_pose"], "characters/hero/neutral.png")
+        self.assertEqual(package["turnaround"]["back"], "characters/hero/back.png")
+        self.assertEqual(package["wardrobe_assets"], ["characters/hero/wardrobe/default.blend"])
+
+    def test_complete_approved_visual_package_passes_production_gate(self) -> None:
+        package = {
+            "status": "approved",
+            "approved_revision": "hero-v1",
+            "model_source": "model.blend",
+            "rig_asset": "rig.blend",
+            "expression_sheet": "expressions.png",
+            "neutral_pose": "neutral.png",
+            "turnaround": {
+                "front": "front.png",
+                "three_quarter": "three-quarter.png",
+                "side": "side.png",
+                "back": "back.png",
+            },
+        }
+        runtime = {
+            "slug": "test-ip",
+            "name": "Test IP",
+            "metadata": {},
+            "palette": {},
+            "permissions": {"status": "production_ready"},
+            "canons": {
+                "characters": {"family": [{"id": "hero", "visual_package": package}]},
+                "narrative": {},
+                "visual": {},
+            },
+            "resolved": {},
+        }
+
+        result = validate_saga_runtime(runtime)
+        self.assertTrue(result["ok"])
+        self.assertFalse(any("character.hero.visual_package" in item for item in result["errors"]))
+
+
 if __name__ == "__main__":
     unittest.main()
