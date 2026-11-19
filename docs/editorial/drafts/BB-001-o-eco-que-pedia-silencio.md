@@ -60,7 +60,7 @@ A luz respondeu: — É o nosso segredo.
 ### Página 4 — Uma pausa para pensar
 
 Roko ficou curioso, mas não precisava de aceitar o presente.  
-Mila perguntou: — E se este segredo nos deixar desconfortáveis?  
+Mila perguntou: — E se este segredo nos fizer sentir mal?  
 Tilo sentiu-se confuso.  
 — Podemos pedir ajuda — disse Roko.  
 Os três foram falar com a família.
@@ -77,7 +77,7 @@ Luma ouviu sem os interromper.
 
 Magnus sentou-se junto deles.  
 — Há surpresas felizes, que podemos contar mais tarde.  
-— Mas um segredo que vos assusta, preocupa, deixa desconfortáveis ou vos impede de pedir ajuda deve ser contado.  
+— Mas um segredo que vos faz sentir mal, vos preocupa ou vos impede de pedir ajuda deve ser contado.  
 — Mesmo que alguém peça para não dizer? — perguntou Tilo.  
 — Sim. Podem sempre pedir ajuda — respondeu Magnus.
 
