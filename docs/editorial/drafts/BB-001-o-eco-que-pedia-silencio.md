@@ -12,6 +12,7 @@
 **Duração audiovisual proposta:** alvo indicativo de aproximadamente 5 minutos para a faixa atual (4–10 anos), sem mínimo ou máximo fixo; a duração adapta-se à história, idade, compreensão, ritmo e necessidades audiovisuais. A abertura e o fecho estão incluídos. Um livro origina uma minissérie individual; cinco livros formam um volume cuja série compilada soma as durações reais dos cinco episódios.
 **Duração audiobook pretendida:** aproximadamente 6 minutos, com pausas e leitura expressiva  
 **Aprovação:** Não aprovada. Não publicar, distribuir ou incluir no catálogo comercial sem decisão editorial.
+**Revisão proposta:** 19-11-2026 — pequenas alterações de segurança pedagógica sugeridas por IA; pendentes de revisão humana.
 
 ---
 
@@ -52,21 +53,21 @@ Mila ficou a observar.
 
 O Eco deixou cair uma folha dourada.  
 — É um presente só vosso. Não contem a ninguém.  
-Tilo pegou na folha e perguntou:  
+Tilo observou a folha, sem a tocar, e perguntou:  
 — Porque não podemos contar?  
 A luz respondeu: — É o nosso segredo.
 
 ### Página 4 — Uma pausa para pensar
 
-Roko quis guardar a folha, mas parou.  
-Mila perguntou: — E se não gostarmos deste segredo?  
+Roko ficou curioso, mas não precisava de aceitar o presente.  
+Mila perguntou: — E se este segredo nos deixar desconfortáveis?  
 Tilo sentiu-se confuso.  
-— Não precisamos de decidir já — disse Roko.  
-Os três decidiram falar com a família.
+— Podemos pedir ajuda — disse Roko.  
+Os três foram falar com a família.
 
 ### Página 5 — Luma escuta
 
-Luma recebeu-os com um abraço tranquilo.  
+Luma recebeu-os com carinho e perguntou se queriam um abraço.  
 Os três contaram o que tinha acontecido.  
 Luma ouviu sem os interromper.  
 — Fizeram bem em vir falar comigo.  
@@ -76,7 +77,7 @@ Luma ouviu sem os interromper.
 
 Magnus sentou-se junto deles.  
 — Há surpresas felizes, que podemos contar mais tarde.  
-— Mas um segredo que assusta ou preocupa deve ser contado.  
+— Mas um segredo que vos assusta, preocupa, deixa desconfortáveis ou vos impede de pedir ajuda deve ser contado.  
 — Mesmo que alguém peça para não dizer? — perguntou Tilo.  
 — Sim. Podem sempre pedir ajuda — respondeu Magnus.
 
@@ -92,7 +93,7 @@ A floresta continuou tranquila.
 
 — Podemos falar convosco sempre? — perguntou Tilo.  
 — Sempre que precisares — respondeu Luma.  
-— E também podemos procurar outro adulto de confiança — disse Magnus.  
+— Se um adulto não vos ouvir ou não puder ajudar, procurem outro adulto de confiança — disse Magnus.  
 Mila sorriu. Já sabia o que fazer.  
 Na dúvida, escolhe o caminho seguro.
 
