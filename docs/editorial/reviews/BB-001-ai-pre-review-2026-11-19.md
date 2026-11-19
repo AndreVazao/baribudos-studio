@@ -32,14 +32,14 @@ Canon checked:
 1. **Page 3 — no touching the unknown object:** Tilo observes the leaf instead of picking it up. This removes an unnecessary action without changing the story.
 2. **Page 4 — help, not self-management:** Roko is curious but does not need to accept the gift; the children go to their family rather than being framed as solving the situation independently.
 3. **Page 5 — bodily autonomy:** Luma asks whether the children want a hug rather than assuming touch.
-4. **Page 6 — clearer warning signs:** the adult guidance includes discomfort and being prevented from asking for help, not only fear/worry.
+4. **Page 6 — clearer, simpler warning signs:** the adult guidance uses simpler words for younger readers (feeling bad/worried) and includes being prevented from asking for help.
 5. **Page 8 — escalation path:** if an adult cannot listen or help, the child is encouraged to seek another trusted adult.
 
 These are proposed draft revisions, not approval. The story continues to depict the Eco asking for secrecy because that is the lesson's context; the adult response must clearly counter the request.
 
 ## Human review still required
 
-- A human editor/pedagogical reviewer must decide whether the wording, lesson and emotional progression are suitable for the target ages, especially 4–5.
+- A human editor/pedagogical reviewer must decide whether the wording, lesson and emotional progression are suitable for the target ages, especially 4–5; the simpler phrase “sentir mal” still needs age-readability confirmation.
 - Read aloud with age-appropriate reviewers/guardians as a controlled review; no child should be pressured to disclose personal experiences.
 - Confirm the final PT-PT text and canon.
 - Visual continuity review against the official character master. **No character models, illustrations, animation, voice or consent records were created or approved.**
