@@ -35,6 +35,9 @@ class ProjectFactoryVideoSequenceTests(unittest.TestCase):
                     "id": "project-1",
                     "title": "A floresta dos Baribudos",
                     "cover_image": "/tmp/cover.png",
+                    "outputs": {
+                        "audiobook": {"pt-PT": {"file_path": "/tmp/audiobook.wav"}}
+                    },
                 },
                 story_variants={
                     "pt-PT": {
@@ -43,14 +46,12 @@ class ProjectFactoryVideoSequenceTests(unittest.TestCase):
                     }
                 },
                 cover_output=None,
-                audiobook_outputs={
-                    "pt-PT": {"file_path": "/tmp/audiobook.wav"}
-                },
             )
 
         self.assertEqual(captured["payload"]["sequence_frames"], frames)
         self.assertEqual(captured["payload"]["cover_path"], frames[0]["image_path"])
-        self.assertEqual(captured["payload"]["audio_path"], "/tmp/audiobook.wav")
+        self.assertEqual(captured["payload"]["series_audio_path"], "")
+        self.assertNotIn("audio_path", captured["payload"])
         self.assertEqual(result["pt-PT"]["storyboard_frames_count"], 2)
 
     def test_passes_empty_sequence_when_no_approved_frames_exist(self) -> None:
@@ -82,11 +83,11 @@ class ProjectFactoryVideoSequenceTests(unittest.TestCase):
                     }
                 },
                 cover_output=None,
-                audiobook_outputs={},
             )
 
         self.assertEqual(captured["payload"]["sequence_frames"], [])
         self.assertEqual(captured["payload"]["cover_path"], "/tmp/cover.png")
+        self.assertEqual(captured["payload"]["series_audio_path"], "")
         self.assertEqual(result["pt-PT"]["storyboard_frames_count"], 0)
 
 
@@ -134,6 +135,8 @@ class ProjectFactoryVideoSequenceTests(unittest.TestCase):
             )
 
         self.assertEqual(captured["payload"]["sequence_frames"], frames)
+        self.assertEqual(captured["payload"]["series_audio_path"], "")
+        self.assertNotIn("audio_path", captured["payload"])
         self.assertEqual(result["video"]["pt-PT"]["frames_used"], 2)
 
     def test_direct_video_export_route_passes_approved_storyboard_frames(self) -> None:
@@ -174,6 +177,8 @@ class ProjectFactoryVideoSequenceTests(unittest.TestCase):
 
         self.assertTrue(result["ok"])
         self.assertEqual(captured["payload"]["sequence_frames"], frames)
+        self.assertEqual(captured["payload"]["series_audio_path"], "")
+        self.assertNotIn("audio_path", captured["payload"])
         self.assertEqual(result["result"]["frames_used"], 2)
 
 

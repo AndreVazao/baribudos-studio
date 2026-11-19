@@ -12,7 +12,7 @@ from studio_core.services.illustration_integration_service import (
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.story_generation_engine import generate_canon_story
 from studio_core.services.story_service import generate_volume_guide
-from studio_core.services.video_service import build_series_episode
+from studio_core.services.video_service import build_series_episode, resolve_approved_series_audio
 
 
 def _safe_dict(value: Any) -> Dict[str, Any]:
@@ -145,7 +145,6 @@ def _build_video_outputs(
     project: Dict[str, Any],
     story_variants: Dict[str, Dict[str, Any]],
     cover_output: Dict[str, Any] | None,
-    audiobook_outputs: Dict[str, Any],
 ) -> Dict[str, Any]:
     outputs: Dict[str, Any] = {}
     project_id = str(project.get("id", "")).strip()
@@ -156,7 +155,7 @@ def _build_video_outputs(
     approved_frames = _safe_dict(video_sequence).get("frames", [])
 
     for language, story in story_variants.items():
-        audio_path = _safe_dict(audiobook_outputs.get(language, {})).get("file_path", "")
+        series_audio_path = resolve_approved_series_audio(project, language) or ""
 
         if isinstance(approved_frames, list) and approved_frames:
             hero_image = str(_safe_dict(approved_frames[0]).get("image_path", "")).strip() or cover_path
@@ -170,7 +169,7 @@ def _build_video_outputs(
                 "project_title": project_title,
                 "language": language,
                 "cover_path": hero_image,
-                "audio_path": audio_path,
+                "series_audio_path": series_audio_path,
                 "sequence_frames": approved_frames,
             },
         )
@@ -229,7 +228,7 @@ def run_project_factory_engine(
     cover_output = _build_cover_output(runtime=runtime, project=project, payload=payload) if create_cover else None
     ebook_outputs = _build_ebook_outputs(runtime=runtime, project=project, story_variants=story_variants, cover_output=cover_output) if create_epub else {}
     audiobook_outputs = _build_audiobook_outputs(project=project, story_variants=story_variants) if create_audiobook else {}
-    video_outputs = _build_video_outputs(project=project, story_variants=story_variants, cover_output=cover_output, audiobook_outputs=audiobook_outputs) if create_series else {}
+    video_outputs = _build_video_outputs(project=project, story_variants=story_variants, cover_output=cover_output) if create_series else {}
 
     guide_output = generate_volume_guide({
         "project_title": project_title,

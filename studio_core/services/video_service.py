@@ -288,6 +288,16 @@ def _build_silent_single(image_path: Path, output_path: Path, duration: int = 6)
     )
 
 
+
+def resolve_approved_series_audio(project: Dict[str, Any], language: str) -> str | None:
+    """Fail closed until an immutable, server-owned editorial approval ledger exists.
+
+    Project JSON fields and client-provided approval claims are not an authoritative
+    approval source. No series narration is currently eligible for rendering.
+    """
+    return None
+
+
 def build_series_episode(
     story: Dict[str, Any],
     payload: Dict[str, Any]
@@ -296,7 +306,9 @@ def build_series_episode(
     project_title = str(payload.get("project_title", "Projeto")).strip()
     language = str(payload.get("language", story.get("language", "pt-PT"))).strip()
     cover_path = str(payload.get("cover_path", "")).strip()
-    audio_path = str(payload.get("audio_path", "")).strip()
+    # Never consume the legacy audiobook audio_path field.
+    series_audio_path = str(payload.get("series_audio_path", "")).strip()
+    audio_path = Path(series_audio_path) if series_audio_path and Path(series_audio_path).is_file() else None
     sequence_frames = _normalize_sequence_frames(payload.get("sequence_frames", []))
 
     output_dir = resolve_storage_path("exports", project_id, "videos")
@@ -320,16 +332,16 @@ def build_series_episode(
 
     try:
         if sequence_frames:
-            if audio_path and Path(audio_path).exists():
-                _build_video_with_audio_slideshow(sequence_frames, Path(audio_path), file_path, temp_dir)
-                engine = "ffmpeg-slideshow+audio"
+            if audio_path is not None:
+                _build_video_with_audio_slideshow(sequence_frames, audio_path, file_path, temp_dir)
+                engine = "ffmpeg-slideshow+series-audio"
             else:
                 _build_silent_slideshow(sequence_frames, file_path, temp_dir, total_duration=6)
                 engine = "ffmpeg-slideshow-silent"
         else:
-            if audio_path and Path(audio_path).exists():
-                _build_video_with_audio_single(fallback_image, Path(audio_path), file_path)
-                engine = "ffmpeg-single+audio"
+            if audio_path is not None:
+                _build_video_with_audio_single(fallback_image, audio_path, file_path)
+                engine = "ffmpeg-single+series-audio"
             else:
                 _build_silent_single(fallback_image, file_path, duration=6)
                 engine = "ffmpeg-single-silent"
@@ -346,4 +358,10 @@ def build_series_episode(
         "file_path": str(file_path),
         "engine": engine,
         "frames_used": len(sequence_frames),
+        "status": "animatic_only",
+        "artifact_kind": "animatic",
+        "production_status": "animatic_only",
+        "finalizable": False,
+        "blocked_reason": "real_character_animation_pipeline_not_implemented",
+        "audio_source": "series_adaptation" if audio_path is not None else "none",
         }

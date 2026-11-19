@@ -11,7 +11,7 @@ from studio_core.services.illustration_integration_service import build_video_fr
 from studio_core.services.project_factory_engine import run_project_factory_engine
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.story_generation_engine import generate_canon_story
-from studio_core.services.video_service import build_series_episode
+from studio_core.services.video_service import build_series_episode, resolve_approved_series_audio
 
 PROJECTS_FILE = "data/projects.json"
 PRODUCTION_RUNS_FILE = "data/production_runs.json"
@@ -213,10 +213,9 @@ def _run_manual_outputs(
     if bool(payload.get("createSeries", False)):
         _append_log(logs, "A gerar vídeo/série.")
         video_outputs: Dict[str, Any] = {}
-        audiobook_outputs = _safe_dict(result.get("audiobook", {}))
         sequence_frames = _safe_list(build_video_frame_sequence(project).get("frames", []))
         for language, story in story_variants.items():
-            audio_path = _safe_dict(audiobook_outputs.get(language, {})).get("file_path", "")
+            series_audio_path = resolve_approved_series_audio(project, language) or ""
             video_outputs[language] = build_series_episode(
                 story,
                 {
@@ -224,7 +223,7 @@ def _run_manual_outputs(
                     "project_title": project_title,
                     "language": language,
                     "cover_path": (cover_output or {}).get("file_path") or project.get("cover_image", ""),
-                    "audio_path": audio_path,
+                    "series_audio_path": series_audio_path,
                     "sequence_frames": sequence_frames,
                 },
             )
