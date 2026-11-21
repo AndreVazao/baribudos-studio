@@ -139,6 +139,8 @@ def _build_story_variants(runtime: Dict[str, Any], project: Dict[str, Any], payl
             "raw_text": raw_text,
             "protagonist": payload.get("protagonist", ""),
             "value_theme": payload.get("value_theme", ""),
+            "age_range": payload.get("age_range", ""),
+            "creative_brief": payload.get("creative_brief") or payload.get("prompt") or payload.get("premise", ""),
         })
 
     return result
@@ -276,6 +278,7 @@ def run_production_pipeline(project_id: str, payload: Dict[str, Any] | None = No
                     "age_range": payload.get("age_range", ""),
                     "protagonist": payload.get("protagonist", ""),
                     "value_theme": payload.get("value_theme", ""),
+                    "creative_brief": payload.get("creative_brief") or payload.get("prompt") or payload.get("premise", ""),
                 },
             )
             state = "story_ready" if bool(_safe_dict(result.get("summary")).get("media_blocked")) else "completed"
