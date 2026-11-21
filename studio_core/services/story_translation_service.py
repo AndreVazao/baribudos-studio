@@ -45,13 +45,13 @@ def _resolve_languages(project: Dict[str, Any], payload: Dict[str, Any]) -> List
 
 
 def _fake_translate(text: str, target_language: str, source_language: str) -> str:
+    """Identity-copy helper only; it must never pretend to translate."""
     clean = _safe_text(text)
     if not clean:
         return ""
-    if target_language == source_language:
-        return clean
-    return f"[{target_language} translation from {source_language}]\n\n{clean}"
-
+    if target_language.casefold() != source_language.casefold():
+        raise ValueError("translation_provider_not_configured")
+    return clean
 
 def generate_story_translations(project_id: str, payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
     payload = payload or {}
