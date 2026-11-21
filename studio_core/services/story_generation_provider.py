@@ -170,6 +170,8 @@ def generate_story_with_provider(
             "protagonist": _text(payload.get("protagonist")),
             "value_theme": _text(payload.get("value_theme")),
             "creative_brief": _text(payload.get("creative_brief") or payload.get("prompt")),
+            "source_text": _text(payload.get("raw_text")),
+            "source_notes": _text(payload.get("story_source_notes")),
         },
         "output_contract": {
             "format": "json",
@@ -183,6 +185,8 @@ def generate_story_with_provider(
             "language": language,
             "rules": [
                 "Return only one JSON object, without Markdown fences.",
+                "When source_text is supplied, preserve its essential meaning and transform it into the requested structured story; do not ignore it or invent a conflicting premise.",
+                "When source_text is empty, create an original story from creative_brief and the canon.",
                 "Write the complete story in the requested language; never label copied text as translated.",
                 "Use only characters and values allowed by the supplied canons.",
                 "Follow the supplied IP, pedagogical, age, narrative and character canons.",
