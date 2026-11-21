@@ -296,10 +296,23 @@ def run_production_pipeline(project_id: str, payload: Dict[str, Any] | None = No
         else:
             _append_log(logs, "A gerar story variants para modo manual.")
             story_variants = _build_story_variants(runtime, project, payload)
-            media_gate_open = bool(story_variants) and all(
-                _is_explicitly_approved(_safe_dict(story))
-                for story in story_variants.values()
+            main_language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip() or "pt-PT"
+            project_editorially_approved = (
+                str(project.get("editorial_status", "")).strip().lower() == "approved"
+                or project.get("approved") is True
             )
+            approval_by_language = {}
+            for language, story_value in story_variants.items():
+                story = _safe_dict(story_value)
+                has_version_approval = any(
+                    key in story for key in ("approved", "editorial_status", "approval_state")
+                )
+                approval_by_language[language] = (
+                    _is_explicitly_approved(story)
+                    if has_version_approval
+                    else bool(project_editorially_approved and language == main_language)
+                )
+            media_gate_open = bool(story_variants) and all(approval_by_language.values())
             if media_gate_open:
                 result = _run_manual_outputs(runtime, project, story_variants, payload, logs)
                 state = "completed"
