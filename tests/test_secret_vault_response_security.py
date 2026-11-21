@@ -32,6 +32,7 @@ class SecretVaultResponseSecurityTests(unittest.TestCase):
         self.assertNotIn("super-secret-token-value", response["rows"][0]["masked_value"])
         self.assertIn("PAYMENT_TOKEN=", response["rendered_env"])
         self.assertNotIn("super-secret-token-value", response["rendered_env"])
+        self.assertNotIn("super-secret-token-value", repr(response))
 
     def test_explicit_reveal_response_keeps_value(self) -> None:
         response = _build_vault_response(self.vault, include_values=True)
