@@ -30,7 +30,7 @@ class StoragePathContainmentTests(unittest.TestCase):
             root = Path(directory).resolve()
             outside = Path(directory).parent / "outside.txt"
             with patch.object(APP_CONFIG, "storage_root", root):
-                with self.assertRaisesRegex(ValueError, "storage_path_outside_root"):
+                with self.assertRaisesRegex(ValueError, "storage_path_must_be_relative"):
                     resolve_storage_path(str(outside))
 
     def test_rejects_symlink_escape(self) -> None:
