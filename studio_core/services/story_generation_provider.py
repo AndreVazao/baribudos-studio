@@ -78,7 +78,7 @@ def _validate_story(
     allowed_characters: set[str] | None = None,
     approved_values: set[str] | None = None,
 ) -> Dict[str, Any]:
-    required_text = ("title", "synopsis", "value_theme", "protagonist", "final_phrase", "raw_text")
+    required_text = ("title", "synopsis", "target_age", "value_theme", "protagonist", "support_character", "final_phrase", "raw_text")
     for field in required_text:
         if not _text(story.get(field)):
             raise StoryProviderError(f"story_provider_missing_field:{field}")
@@ -105,14 +105,24 @@ def _validate_story(
     scenes = story.get("scenes", [])
     if not isinstance(scenes, list) or not scenes:
         raise StoryProviderError("story_provider_scenes_required")
+    for index, scene in enumerate(scenes, start=1):
+        if not isinstance(scene, dict) or not _text(scene.get("text")):
+            raise StoryProviderError(f"story_provider_invalid_scene:{index}")
 
+    requested_characters = story.get("characters", [])
+    if not isinstance(requested_characters, list) or not requested_characters:
+        raise StoryProviderError("story_provider_characters_required")
+    character_names = [
+        _text(item.get("name")) if isinstance(item, dict) else _text(item)
+        for item in requested_characters
+    ]
+    character_names = [name for name in character_names if name]
+    if not character_names:
+        raise StoryProviderError("story_provider_characters_required")
     if allowed_characters:
-        requested_characters = story.get("characters", [])
-        if not isinstance(requested_characters, list) or not requested_characters:
-            raise StoryProviderError("story_provider_characters_required")
         unknown = [
-            _text(name) for name in requested_characters
-            if _text(name) and _text(name).casefold() not in allowed_characters
+            name for name in character_names
+            if name.casefold() not in allowed_characters
         ]
         protagonist = _text(story.get("protagonist"))
         support = _text(story.get("support_character"))
@@ -132,7 +142,9 @@ def _validate_story(
         "language": language,
         "pages": normalized_pages,
         "scenes": scenes,
+        "characters": character_names,
         "raw_text": _text(story["raw_text"]),
+        "language_validation": "requested_locale_not_independently_verified",
         "provider_status": "generated_needs_review",
     }
 
