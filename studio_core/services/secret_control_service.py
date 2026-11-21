@@ -126,19 +126,19 @@ def _serialize_rows(rows: List[Dict[str, Any]]) -> str:
 def _build_vault_response(vault: Dict[str, Any], include_values: bool = False) -> Dict[str, Any]:
     rows = []
     for row in list(vault.get("rows") or []):
-        if row.get("kind") != "entry":
-            rows.append(row)
-            continue
         row_copy = dict(row)
-        if not include_values:
-            row_copy["value"] = ""
-        row_copy["masked_value"] = _mask_value(str(row.get("value") or ""))
+        if row_copy.get("kind") == "entry":
+            if not include_values:
+                row_copy["value"] = ""
+            row_copy["masked_value"] = _mask_value(str(row.get("value") or ""))
         rows.append(row_copy)
 
+    # Serialize the exact same sanitized row set returned to the caller.
+    # Never serialize the persisted vault rows in a masked response.
     return {
         **vault,
         "rows": rows,
-        "rendered_env": _serialize_rows(list(vault.get("rows") or [])),
+        "rendered_env": _serialize_rows(rows),
     }
 
 
