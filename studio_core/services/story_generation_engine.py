@@ -4,6 +4,10 @@ from typing import Any, Dict, List
 from uuid import uuid4
 
 from studio_core.services.saga_runtime_service import load_saga_runtime
+from studio_core.services.story_generation_provider import (
+    generate_story_with_provider,
+    is_story_provider_configured,
+)
 
 
 DEFAULT_STRUCTURE = [
@@ -242,6 +246,21 @@ def generate_canon_story(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     runtime = load_saga_runtime(saga_id)
     resolved = _safe_dict(runtime.get("resolved", {}))
+
+    if is_story_provider_configured():
+        generated = generate_story_with_provider(payload=payload, runtime=runtime)
+        generated.setdefault("id", str(uuid4()))
+        generated.setdefault("saga_id", saga_id)
+        generated.setdefault("series_name", resolved.get("series_name", runtime.get("name", "")))
+        generated.setdefault("mission", resolved.get("mission", ""))
+        generated.setdefault("target_age", resolved.get("target_age", ""))
+        generated.setdefault("genre", resolved.get("genre", ""))
+        generated.setdefault("description", resolved.get("description", ""))
+        generated.setdefault("runtime_validation", runtime.get("validation", {}))
+        generated.setdefault("editorial_status", "draft")
+        generated.setdefault("approved", False)
+        generated.setdefault("generation_engine", "provider_backed")
+        return generated
 
     protagonist_data = _pick_main_character(runtime, payload.get("protagonist", ""))
     protagonist = str(protagonist_data.get("name", "Tilo")).strip() or "Tilo"
