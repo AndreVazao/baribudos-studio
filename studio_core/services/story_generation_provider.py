@@ -71,7 +71,13 @@ def _extract_story(response: Dict[str, Any]) -> Dict[str, Any]:
     return story
 
 
-def _validate_story(\n    story: Dict[str, Any],\n    *,\n    language: str,\n    allowed_characters: set[str] | None = None,\n    approved_values: set[str] | None = None,\n) -> Dict[str, Any]:
+def _validate_story(
+    story: Dict[str, Any],
+    *,
+    language: str,
+    allowed_characters: set[str] | None = None,
+    approved_values: set[str] | None = None,
+) -> Dict[str, Any]:
     required_text = ("title", "synopsis", "value_theme", "protagonist", "final_phrase", "raw_text")
     for field in required_text:
         if not _text(story.get(field)):
