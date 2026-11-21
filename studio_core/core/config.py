@@ -56,7 +56,17 @@ APP_CONFIG = AppConfig()
 
 def resolve_storage_path(*parts: str) -> Path:
     root = APP_CONFIG.storage_root.expanduser().resolve()
-    clean_parts = [str(part).strip("/\\") for part in parts if str(part).strip("/\\")]
+    clean_parts = []
+    for part in parts:
+        raw_part = str(part).strip()
+        if not raw_part:
+            continue
+        if Path(raw_part).is_absolute():
+            raise ValueError("storage_path_must_be_relative")
+        clean = raw_part.strip("/\\")
+        if clean:
+            clean_parts.append(clean)
+
     candidate = root.joinpath(*clean_parts).resolve()
     try:
         candidate.relative_to(root)
