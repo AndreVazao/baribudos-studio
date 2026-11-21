@@ -236,10 +236,24 @@ def run_project_factory_engine(
     if not main_story and story_variants:
         main_story = _safe_dict(next(iter(story_variants.values())))
 
-    approval_by_language = {
-        language: _is_explicitly_approved(_safe_dict(story))
-        for language, story in story_variants.items()
-    }
+    project_editorially_approved = (
+        str(project.get("editorial_status", "")).strip().lower() == "approved"
+        or project.get("approved") is True
+    )
+    approval_by_language = {}
+    for language, story_value in story_variants.items():
+        story = _safe_dict(story_value)
+        has_version_approval = any(
+            key in story for key in ("approved", "editorial_status", "approval_state")
+        )
+        # A project-level approval may authorize only the base-language source
+        # when the story version itself has no explicit state. It never approves
+        # generated/localized variants and cannot override an explicit draft.
+        approval_by_language[language] = (
+            _is_explicitly_approved(story)
+            if has_version_approval
+            else bool(project_editorially_approved and language == main_language)
+        )
     media_gate_open = bool(story_variants) and all(approval_by_language.values())
     blocked_languages = [
         language for language, approved in approval_by_language.items() if not approved
