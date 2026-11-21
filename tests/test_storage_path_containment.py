@@ -38,7 +38,7 @@ class StoragePathContainmentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             with patch.object(APP_CONFIG, "storage_root", root):
-                resolved = resolve_storage_path(r"editorial\\assets\\story\\cover.png")
+                resolved = resolve_storage_path(r"editorial\assets\story\cover.png")
 
         self.assertEqual(resolved, root / "editorial" / "assets" / "story" / "cover.png")
 
@@ -47,13 +47,13 @@ class StoragePathContainmentTests(unittest.TestCase):
             root = Path(directory).resolve()
             with patch.object(APP_CONFIG, "storage_root", root):
                 with self.assertRaisesRegex(ValueError, "storage_path_outside_root"):
-                    resolve_storage_path(r"editorial\\assets\\..\\..\\..\\outside.txt")
+                    resolve_storage_path(r"editorial\assets\..\..\..\outside.txt")
 
     def test_rejects_windows_drive_and_unc_absolute_paths_on_posix(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             with patch.object(APP_CONFIG, "storage_root", root):
-                for unsafe in (r"C:\\private\\secret.txt", r"\\server\\share\\secret.txt"):
+                for unsafe in (r"C:\private\secret.txt", r"\server\share\secret.txt"):
                     with self.subTest(path=unsafe):
                         with self.assertRaisesRegex(ValueError, "storage_path_must_be_relative"):
                             resolve_storage_path(unsafe)
