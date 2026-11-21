@@ -89,6 +89,11 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             **current,
             "story": story,
             "language_variants": language_variants,
+            "editorial_status": (
+                str(story.get("editorial_status") or "draft")
+                if isinstance(story, dict) and story
+                else current.get("editorial_status", "draft")
+            ),
             "cover_image": (cover_output or {}).get("file_path", current.get("cover_image", "")),
             "outputs": {
                 **(current.get("outputs", {}) or {}),
