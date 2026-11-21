@@ -71,6 +71,8 @@ def _build_story_variants(
             "raw_text": raw_text,
             "protagonist": payload.get("protagonist", ""),
             "value_theme": payload.get("value_theme", ""),
+            "age_range": payload.get("age_range", ""),
+            "creative_brief": payload.get("creative_brief") or payload.get("prompt") or payload.get("premise", ""),
         })
 
     return story_variants
