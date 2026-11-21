@@ -97,7 +97,7 @@ The Draft PR #63 changes the default vault response so that:
 - entry `value` is blanked when reveal is not explicitly requested;
 - entry `raw` is reduced to a key-only line;
 - comment, unparsed and unknown row `raw` fields are blanked in masked responses because arbitrary pasted text can contain credentials;
-- only an explicit allowlist of non-secret vault metadata is returned; unknown persisted top-level fields are omitted;
+- only an explicit allowlist of non-secret vault metadata and row fields is returned; unknown persisted top-level and row fields are omitted;
 - `rendered_env` is serialized from the same sanitized row set, not from the persisted raw rows;
 - regression tests assert that entry, comment, unparsed-row and unknown top-level secret material is absent from the default response representation.
 
