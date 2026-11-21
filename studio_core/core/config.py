@@ -55,8 +55,14 @@ APP_CONFIG = AppConfig()
 
 
 def resolve_storage_path(*parts: str) -> Path:
+    root = APP_CONFIG.storage_root.expanduser().resolve()
     clean_parts = [str(part).strip("/\\") for part in parts if str(part).strip("/\\")]
-    return APP_CONFIG.storage_root.joinpath(*clean_parts).resolve()
+    candidate = root.joinpath(*clean_parts).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("storage_path_outside_root") from exc
+    return candidate
 
 
 def resolve_project_path(*parts: str) -> Path:
