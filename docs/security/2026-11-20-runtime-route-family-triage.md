@@ -63,6 +63,47 @@ Before assigning a final policy, record:
 6. Negative HTTP tests for anonymous, expired/revoked session, disabled user, insufficient role, forged identity/role and cross-project access.
 7. Desktop/mobile compatibility and rollback evidence where a route or asset contract changes.
 
+
+## Source-handler trace — verified examples on main (20-21 Nov)
+
+This is static source evidence, not a live HTTP exploit or middleware bypass test. The route handlers below have no visible route-level dependencies in the inspected modules; the generated CI inventory also reports zero global dependencies.
+
+### `users` (5 routes; P0 identity)
+
+- `GET /users`: returns records from `data/users.json` after default-owner bootstrap.
+- `POST /users`: caller-supplied name, role, PIN and active flag are written to the user store.
+- `PATCH /users/{user_id}`: updates name, role and active flag; no authenticated principal is visible in this handler.
+- `PATCH /users/{user_id}/pin`: writes caller-supplied PIN directly.
+- `POST /users/login`: compares plaintext PIN and returns the complete matching user record.
+- Bootstrap creates owner with temporary PIN `1234` when the user store is empty.
+
+**Policy:** private/deny until server-authenticated family session; owner-only lifecycle and reset; hash credentials; response DTO must exclude credential material; bootstrap/reset must force PIN replacement. Add negative tests for anonymous, forged role, inactive user, owner/non-owner and revoked session.
+
+### `projects` (3 routes; project ownership/editorial)
+
+- `GET /projects` accepts `user_id`, `user_name`, and `user_role` as query parameters; visibility logic uses the supplied user ID/name.
+- `POST /projects` accepts `created_by` and `created_by_name` in the create payload.
+- `PATCH /projects/{project_id}` accepts user name/role query parameters and checks editorial permission from those values; helper includes hardcoded trusted names.
+
+**Policy:** all identities and roles must derive from a server-verified principal. Resource ownership must be evaluated against canonical IDs, never caller-supplied display names. Test forged owner/admin, cross-project access, inactive/revoked session, and children attempting editorial operations.
+
+### `publishing` (2 routes; publication authority)
+
+- `GET /publishing` reads and returns publication records.
+- `POST /publishing/publish` accepts user name/role and requested-by values from request/query context; it invokes package publication and writes publication/project state.
+
+**Policy:** private owner/editor action, with explicit per-project approval and publication readiness. Caller identity must not be accepted as authority. Test unauthenticated and forged role/name, unapproved projects, replay, integrity failures and publication side-effect rollback.
+
+### `website-publisher` (5 routes; machine boundary)
+
+The inspected route module delegates envelope, publish, unpublish, revalidate and status to service functions without visible authentication dependencies. This is not proof the transitive service layer is unauthenticated; inspect each service's credential validation, network target, filesystem and website side effects before final policy.
+
+**Policy:** private owner action for humans plus a separate scoped machine credential for Studio→Website. Never accept Website customer sessions as Studio authority. Require replay/idempotency and audit logs for publication operations.
+
+### Evidence boundary
+
+These findings are scoped to the source files inspected on `main` and are not a complete endpoint matrix. Keep the other P0 families unclassified until each handler and service chain has been traced. No runtime code, credentials, storage, data, schema or deployment was changed by this follow-up.
+
 ## Next implementation sequence
 
 1. Finish P0 route-to-service tracing, starting with `users`, `secret_control`, `db_control`, `deploy_control`, `updater`, `publishing`, `website_publisher` and `/storage`.
