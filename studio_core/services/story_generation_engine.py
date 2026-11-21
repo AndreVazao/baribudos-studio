@@ -331,4 +331,8 @@ def generate_canon_story(payload: Dict[str, Any]) -> Dict[str, Any]:
         "runtime_validation": runtime.get("validation", {}),
         "raw_text": raw_text,
         "pages": pages,
+        "generation_engine": "deterministic_template_fallback",
+        "generation_status": "prototype_needs_editorial_review",
+        "editorial_status": "draft",
+        "approved": False,
   }
