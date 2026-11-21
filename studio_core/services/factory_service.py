@@ -25,6 +25,8 @@ def get_factory_capabilities() -> Dict[str, Any]:
         "text_first_gate": True,
         "provider_backed_story_generation": is_story_provider_configured(),
         "generation_mode": "provider_backed" if is_story_provider_configured() else "deterministic_prototype",
+        "miniseries_mode": "animatic_only",
+        "final_character_animation": False,
     }
 
 
