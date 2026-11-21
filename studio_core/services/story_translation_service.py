@@ -66,6 +66,12 @@ def generate_story_translations(project_id: str, payload: Dict[str, Any] | None 
         raise ValueError("story_source_text_required")
 
     languages = _resolve_languages(project, payload)
+    unsupported = [language for language in languages if language.casefold() != source_language.casefold()]
+    if unsupported:
+        raise ValueError(
+            "translation_provider_not_configured_for_languages:" + ",".join(unsupported)
+        )
+
     current_variants = _safe_dict(project.get("language_variants", {}))
     next_variants = {**current_variants}
 
@@ -77,8 +83,8 @@ def generate_story_translations(project_id: str, payload: Dict[str, Any] | None 
             "title": _safe_text(project.get("title")),
             "raw_text": translated,
             "source_language": source_language,
-            "translation_status": "generated",
-            "translation_engine": "text-first-base-v1",
+            "translation_status": "source_language_copy",
+            "translation_engine": "identity-copy-no-translation",
             "updated_at": now_iso(),
         }
 
