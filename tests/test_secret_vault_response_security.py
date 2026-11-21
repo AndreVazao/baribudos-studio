@@ -46,7 +46,11 @@ class SecretVaultResponseSecurityTests(unittest.TestCase):
             "legacy_raw_text": "TOP_LEVEL_SECRET_MUST_NOT_LEAK",
             "rows": [
                 {"kind": "comment", "raw": "# API_TOKEN=COMMENT_SECRET_MUST_NOT_LEAK"},
-                {"kind": "raw", "raw": "UNPARSED_SECRET_MUST_NOT_LEAK"},
+                {
+                    "kind": "raw",
+                    "raw": "UNPARSED_SECRET_MUST_NOT_LEAK",
+                    "unexpected_secret_field": "ROW_FIELD_SECRET_MUST_NOT_LEAK",
+                },
                 {
                     "kind": "entry",
                     "key": "PAYMENT_TOKEN",
@@ -65,6 +69,8 @@ class SecretVaultResponseSecurityTests(unittest.TestCase):
         self.assertNotIn("TOP_LEVEL_SECRET_MUST_NOT_LEAK", serialized)
         self.assertNotIn("COMMENT_SECRET_MUST_NOT_LEAK", serialized)
         self.assertNotIn("UNPARSED_SECRET_MUST_NOT_LEAK", serialized)
+        self.assertNotIn("unexpected_secret_field", serialized)
+        self.assertNotIn("ROW_FIELD_SECRET_MUST_NOT_LEAK", serialized)
         self.assertNotIn("super-secret-token-value", serialized)
 
     def test_source_vault_is_not_mutated(self) -> None:
