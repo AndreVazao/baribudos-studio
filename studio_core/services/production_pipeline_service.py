@@ -112,6 +112,11 @@ def _update_project_outputs(
             **current,
             "story": story if story is not None else current.get("story", {}),
             "language_variants": language_variants if language_variants is not None else current.get("language_variants", {}),
+            "editorial_status": (
+                str(story.get("editorial_status") or "draft")
+                if isinstance(story, dict) and story is not None
+                else current.get("editorial_status", "draft")
+            ),
             "cover_image": (cover or {}).get("file_path", current.get("cover_image", "")),
             "outputs": next_outputs,
             "production": production if production is not None else current.get("production", {}),
