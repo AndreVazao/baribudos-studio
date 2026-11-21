@@ -20,6 +20,22 @@ def _get_project(project_id: str) -> dict | None:
     return None
 
 
+
+def _story_is_approved(project: dict, story: dict, language: str) -> bool:
+    if any(key in story for key in ("approved", "editorial_status", "approval_state")):
+        return (
+            story.get("approved") is True
+            or str(story.get("editorial_status", "")).strip().lower() == "approved"
+            or str(story.get("approval_state", "")).strip().lower() == "approved"
+        )
+    return (
+        language == str(project.get("language", "")).strip()
+        and (
+            project.get("approved") is True
+            or str(project.get("editorial_status", "")).strip().lower() == "approved"
+        )
+    )
+
 @router.post("/export/{project_id}")
 def export_ebook(project_id: str, payload: dict | None = None) -> dict:
     payload = payload or {}
@@ -34,6 +50,10 @@ def export_ebook(project_id: str, payload: dict | None = None) -> dict:
 
         language = str(payload.get("language", project.get("language", "pt-PT"))).strip()
         story = (project.get("language_variants", {}) or {}).get(language) or project.get("story", {}) or {}
+        if not story:
+            raise HTTPException(status_code=400, detail="Story não encontrada.")
+        if not _story_is_approved(project, story, language):
+            raise HTTPException(status_code=409, detail="Aprovação editorial explícita necessária antes de gerar o EPUB.")
 
         result = build_epub(
             story,
