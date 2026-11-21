@@ -71,7 +71,7 @@ def _extract_story(response: Dict[str, Any]) -> Dict[str, Any]:
     return story
 
 
-def _validate_story(story: Dict[str, Any], *, language: str) -> Dict[str, Any]:
+def _validate_story(\n    story: Dict[str, Any],\n    *,\n    language: str,\n    allowed_characters: set[str] | None = None,\n    approved_values: set[str] | None = None,\n) -> Dict[str, Any]:
     required_text = ("title", "synopsis", "value_theme", "protagonist", "final_phrase", "raw_text")
     for field in required_text:
         if not _text(story.get(field)):
@@ -99,6 +99,27 @@ def _validate_story(story: Dict[str, Any], *, language: str) -> Dict[str, Any]:
     scenes = story.get("scenes", [])
     if not isinstance(scenes, list) or not scenes:
         raise StoryProviderError("story_provider_scenes_required")
+
+    if allowed_characters:
+        requested_characters = story.get("characters", [])
+        if not isinstance(requested_characters, list) or not requested_characters:
+            raise StoryProviderError("story_provider_characters_required")
+        unknown = [
+            _text(name) for name in requested_characters
+            if _text(name) and _text(name).casefold() not in allowed_characters
+        ]
+        protagonist = _text(story.get("protagonist"))
+        support = _text(story.get("support_character"))
+        for name in (protagonist, support):
+            if name and name.casefold() not in allowed_characters:
+                unknown.append(name)
+        if unknown:
+            raise StoryProviderError("story_provider_unknown_canonical_character:" + ",".join(sorted(set(unknown))))
+
+    if approved_values:
+        value = _text(story.get("value_theme"))
+        if value.casefold() not in approved_values:
+            raise StoryProviderError("story_provider_value_not_in_approved_canon")
 
     return {
         **story,
@@ -191,7 +212,31 @@ def generate_story_with_provider(
     for attempt in range(retries + 1):
         try:
             response = _request_json(body, api_key, timeout)
-            story = _validate_story(_extract_story(response), language=language)
+            characters_canon = canons.get("characters", {}) if isinstance(canons.get("characters"), dict) else {}
+            family = characters_canon.get("family", []) if isinstance(characters_canon.get("family"), list) else []
+            allowed_characters = {
+                _text(item.get("name")).casefold()
+                for item in family
+                if isinstance(item, dict) and _text(item.get("name"))
+            }
+            allowed_characters.update(
+                _text(item.get("name")).casefold()
+                for item in runtime.get("main_characters", [])
+                if isinstance(item, dict) and _text(item.get("name"))
+            )
+            pedagogical = canons.get("pedagogical", {}) if isinstance(canons.get("pedagogical"), dict) else {}
+            approved_raw = pedagogical.get("approved_values", [])
+            approved_values = {
+                _text(item.get("label") if isinstance(item, dict) else item).casefold()
+                for item in approved_raw
+                if _text(item.get("label") if isinstance(item, dict) else item)
+            } if isinstance(approved_raw, list) else set()
+            story = _validate_story(
+                _extract_story(response),
+                language=language,
+                allowed_characters=allowed_characters,
+                approved_values=approved_values,
+            )
             usage = response.get("usage", {}) if isinstance(response.get("usage"), dict) else {}
             story.update({
                 "generation_provider": provider,
