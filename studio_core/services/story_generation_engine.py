@@ -247,6 +247,9 @@ def generate_canon_story(payload: Dict[str, Any]) -> Dict[str, Any]:
     runtime = load_saga_runtime(saga_id)
     resolved = _safe_dict(runtime.get("resolved", {}))
 
+    if not is_story_provider_configured() and language.casefold() != str(runtime.get("default_language", "pt-PT")).strip().casefold():
+        raise ValueError("story_provider_required_for_nondefault_language")
+
     if is_story_provider_configured():
         generated = generate_story_with_provider(payload=payload, runtime=runtime)
         generated.setdefault("id", str(uuid4()))
