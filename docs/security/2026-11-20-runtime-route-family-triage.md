@@ -113,3 +113,10 @@ These findings are scoped to the source files inspected on `main` and are not a 
 5. Validate all behavior in isolated CI and rehearse rollback before any production or household-data change.
 
 This triage document changes no runtime behavior, credentials, CORS, storage, data, schema, migration, infrastructure or deployment. It does not prove that authorization has been implemented.
+
+
+## Clarification: target policy register versus runtime enforcement — 21 Nov 2026
+
+The earlier `docs/security/2026-11-17-runtime-route-policy-register.md` contains a **proposed tag-level policy** (for example, `secret-control → owner · secrets.read/manage/export`). Its own evidence section states that 219/219 runtime routes remain UNCLASSIFIED, with zero global dependencies and `runtime_protection_verified=false`. The table is a target design, not an implemented dependency or proof of authorization. This triage therefore continues to treat all 219 runtime routes as unprotected until each handler/service chain has a verified server-side policy and negative HTTP tests.
+
+A focused source map for the six `secret-control` routes, shared mobile/Tauri/Capacitor client, plaintext JSON persistence, static `/storage` mount and seven `resolve_credential()` consumer modules is in [2026-11-21-secret-control-route-map.md](2026-11-21-secret-control-route-map.md). It records a conditional static exposure path for `storage/data/secret_vaults.json` if a vault file exists; no production file or secret value was read.
