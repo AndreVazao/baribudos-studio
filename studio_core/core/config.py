@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import platform
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Dict
 
 
@@ -55,8 +55,37 @@ APP_CONFIG = AppConfig()
 
 
 def resolve_storage_path(*parts: str) -> Path:
-    clean_parts = [str(part).strip("/\\") for part in parts if str(part).strip("/\\")]
-    return APP_CONFIG.storage_root.joinpath(*clean_parts).resolve()
+    root = APP_CONFIG.storage_root.expanduser().resolve()
+    clean_parts = []
+    for part in parts:
+        raw_part = str(part).strip()
+        if not raw_part:
+            continue
+
+        # Reject absolute paths using both host and Windows semantics. The
+        # Studio runs on Windows as well as CI/Linux, so a Windows drive or
+        # UNC path must not become an apparently relative POSIX filename.
+        windows_part = PureWindowsPath(raw_part)
+        if (
+            Path(raw_part).is_absolute()
+            or windows_part.is_absolute()
+            or windows_part.root
+            or windows_part.drive
+        ):
+            raise ValueError("storage_path_must_be_relative")
+
+        # Normalize separators before resolving so Windows-style traversal
+        # is also evaluated as path traversal on POSIX CI.
+        clean = raw_part.replace("\\\\", "/").replace("\\", "/").strip("/")
+        if clean:
+            clean_parts.append(clean)
+
+    candidate = root.joinpath(*clean_parts).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("storage_path_outside_root") from exc
+    return candidate
 
 
 def resolve_project_path(*parts: str) -> Path:
