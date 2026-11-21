@@ -69,6 +69,7 @@ def _build_story_variants(
             "title": project_title,
             "language": language,
             "raw_text": raw_text,
+            "story_source_notes": _safe_dict(project.get("story_source")).get("story_source_notes", ""),
             "protagonist": payload.get("protagonist", ""),
             "value_theme": payload.get("value_theme", ""),
             "age_range": payload.get("age_range", ""),
