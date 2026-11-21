@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import platform
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Dict
 
 
@@ -61,9 +61,22 @@ def resolve_storage_path(*parts: str) -> Path:
         raw_part = str(part).strip()
         if not raw_part:
             continue
-        if Path(raw_part).is_absolute():
+
+        # Reject absolute paths using both host and Windows semantics. The
+        # Studio runs on Windows as well as CI/Linux, so a Windows drive or
+        # UNC path must not become an apparently relative POSIX filename.
+        windows_part = PureWindowsPath(raw_part)
+        if (
+            Path(raw_part).is_absolute()
+            or windows_part.is_absolute()
+            or windows_part.root
+            or windows_part.drive
+        ):
             raise ValueError("storage_path_must_be_relative")
-        clean = raw_part.strip("/\\")
+
+        # Normalize separators before resolving so Windows-style traversal
+        # is also evaluated as path traversal on POSIX CI.
+        clean = raw_part.replace("\\\\", "/").replace("\\", "/").strip("/")
         if clean:
             clean_parts.append(clean)
 
