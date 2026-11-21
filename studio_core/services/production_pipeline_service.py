@@ -38,6 +38,14 @@ def _safe_list(value: Any) -> List[Any]:
     return value if isinstance(value, list) else []
 
 
+def _is_explicitly_approved(story: Dict[str, Any]) -> bool:
+    return (
+        story.get("approved") is True
+        or str(story.get("editorial_status", "")).strip().lower() == "approved"
+        or str(story.get("approval_state", "")).strip().lower() == "approved"
+    )
+
+
 def _get_project(project_id: str) -> Dict[str, Any] | None:
     projects = read_json(PROJECTS_FILE, [])
     for project in projects:
@@ -270,14 +278,51 @@ def run_production_pipeline(project_id: str, payload: Dict[str, Any] | None = No
                     "value_theme": payload.get("value_theme", ""),
                 },
             )
-            state = "completed"
-            _append_log(logs, "Factory automática concluída.")
+            state = "story_ready" if bool(_safe_dict(result.get("summary")).get("media_blocked")) else "completed"
+            _append_log(
+                logs,
+                "Texto gerado para revisão; produção multimédia bloqueada até aprovação editorial."
+                if state == "story_ready" else "Factory automática concluída."
+            )
         else:
             _append_log(logs, "A gerar story variants para modo manual.")
             story_variants = _build_story_variants(runtime, project, payload)
-            result = _run_manual_outputs(runtime, project, story_variants, payload, logs)
-            state = "completed"
-            _append_log(logs, "Pipeline manual concluída.")
+            media_gate_open = bool(story_variants) and all(
+                _is_explicitly_approved(_safe_dict(story))
+                for story in story_variants.values()
+            )
+            if media_gate_open:
+                result = _run_manual_outputs(runtime, project, story_variants, payload, logs)
+                state = "completed"
+                _append_log(logs, "Pipeline manual concluída.")
+            else:
+                project_title = str(project.get("title", "Projeto")).strip() or "Projeto"
+                main_language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip() or "pt-PT"
+                main_story = _safe_dict(story_variants.get(main_language, {}))
+                if not main_story and story_variants:
+                    main_story = _safe_dict(next(iter(story_variants.values())))
+                language_variants = _build_language_variants(story_variants, project_title)
+                for language, variant in language_variants.items():
+                    variant["status"] = "needs_review"
+                current_outputs = _safe_dict(project.get("outputs", {}))
+                result = {
+                    "story": main_story,
+                    "story_variants": story_variants,
+                    "language_variants": language_variants,
+                    "cover": _safe_dict(current_outputs.get("covers", {})) or None,
+                    "ebook": _safe_dict(current_outputs.get("epub", {})),
+                    "audiobook": _safe_dict(current_outputs.get("audiobook", {})),
+                    "video": _safe_dict(current_outputs.get("video", {})),
+                    "guide": current_outputs.get("guide"),
+                    "summary": {
+                        "media_gate_open": False,
+                        "media_blocked": True,
+                        "blocked_languages": list(story_variants.keys()),
+                        "editorial_status": "needs_review",
+                    },
+                }
+                state = "story_ready"
+                _append_log(logs, "Texto disponível para revisão; saídas multimédia não foram geradas por falta de aprovação explícita.")
 
         production_summary = {
             "run_id": run_id,
