@@ -130,6 +130,8 @@ def _build_vault_response(vault: Dict[str, Any], include_values: bool = False) -
         if row_copy.get("kind") == "entry":
             if not include_values:
                 row_copy["value"] = ""
+                prefix = "export " if row_copy.get("has_export", False) else ""
+                row_copy["raw"] = f"{prefix}{_normalize_text(row_copy.get('key'))}="
             row_copy["masked_value"] = _mask_value(str(row.get("value") or ""))
         rows.append(row_copy)
 
