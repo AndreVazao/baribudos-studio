@@ -127,6 +127,14 @@ def _build_vault_response(vault: Dict[str, Any], include_values: bool = False) -
     rows = []
     for row in list(vault.get("rows") or []):
         row_copy = dict(row)
+        if not include_values:
+            # The editor only needs the parsed key and masked value. Raw lines,
+            # comments and unknown row kinds are untrusted text and can contain
+            # pasted credentials even when they are not valid KEY=value rows.
+            row_copy.pop("value", None)
+            if "raw" in row_copy:
+                row_copy["raw"] = ""
+
         if row_copy.get("kind") == "entry":
             if not include_values:
                 row_copy["value"] = ""
@@ -135,10 +143,26 @@ def _build_vault_response(vault: Dict[str, Any], include_values: bool = False) -
             row_copy["masked_value"] = _mask_value(str(row.get("value") or ""))
         rows.append(row_copy)
 
+    # Expose only the documented non-secret metadata. Never copy arbitrary
+    # persisted fields into an API response because legacy/unknown keys may
+    # contain raw .env material.
+    safe_metadata = (
+        "id",
+        "name",
+        "target",
+        "environment",
+        "file_name",
+        "created_at",
+        "updated_at",
+        "source_of_truth",
+        "notes",
+    )
+    response = {key: vault[key] for key in safe_metadata if key in vault}
+
     # Serialize the exact same sanitized row set returned to the caller.
     # Never serialize the persisted vault rows in a masked response.
     return {
-        **vault,
+        **response,
         "rows": rows,
         "rendered_env": _serialize_rows(rows),
     }
