@@ -76,6 +76,26 @@ class StoryGenerationProviderTests(unittest.TestCase):
         with self.assertRaisesRegex(provider.StoryProviderError, "missing_field:final_phrase"):
             provider._validate_story(story, language="pt-PT")
 
+    def test_provider_rejects_noncanonical_characters(self) -> None:
+        story = self._story()
+        story["characters"] = ["Roko", "Personagem Inventada"]
+        with self.assertRaisesRegex(provider.StoryProviderError, "unknown_canonical_character"):
+            provider._validate_story(
+                story,
+                language="pt-PT",
+                allowed_characters={"roko", "mila", "tilo", "luma", "magnus"},
+            )
+
+    def test_provider_rejects_values_outside_approved_pedagogical_canon(self) -> None:
+        story = self._story()
+        story["value_theme"] = "Tema não aprovado"
+        with self.assertRaisesRegex(provider.StoryProviderError, "value_not_in_approved_canon"):
+            provider._validate_story(
+                story,
+                language="pt-PT",
+                approved_values={"paciência", "partilha"},
+            )
+
     def test_provider_failure_does_not_silently_fall_back(self) -> None:
         runtime = {"slug": "baribudos", "resolved": {}, "canons": {}}
         with patch.dict(os.environ, {
