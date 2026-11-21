@@ -82,5 +82,7 @@ def export_ebook(project_id: str, payload: dict | None = None) -> dict:
         )
 
         return {"ok": True, "result": result}
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
