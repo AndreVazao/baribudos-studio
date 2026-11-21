@@ -40,6 +40,33 @@ class SecretVaultResponseSecurityTests(unittest.TestCase):
         self.assertEqual(response["rows"][0]["value"], "super-secret-token-value")
         self.assertIn("PAYMENT_TOKEN=super-secret-token-value", response["rendered_env"])
 
+    def test_default_response_redacts_raw_comment_and_unknown_persisted_fields(self) -> None:
+        vault = {
+            **self.vault,
+            "legacy_raw_text": "TOP_LEVEL_SECRET_MUST_NOT_LEAK",
+            "rows": [
+                {"kind": "comment", "raw": "# API_TOKEN=COMMENT_SECRET_MUST_NOT_LEAK"},
+                {"kind": "raw", "raw": "UNPARSED_SECRET_MUST_NOT_LEAK"},
+                {
+                    "kind": "entry",
+                    "key": "PAYMENT_TOKEN",
+                    "value": "super-secret-token-value",
+                    "raw": "PAYMENT_TOKEN=super-secret-token-value",
+                },
+            ],
+        }
+
+        response = _build_vault_response(vault)
+        serialized = repr(response)
+
+        self.assertEqual(response["rows"][0]["raw"], "")
+        self.assertEqual(response["rows"][1]["raw"], "")
+        self.assertNotIn("legacy_raw_text", response)
+        self.assertNotIn("TOP_LEVEL_SECRET_MUST_NOT_LEAK", serialized)
+        self.assertNotIn("COMMENT_SECRET_MUST_NOT_LEAK", serialized)
+        self.assertNotIn("UNPARSED_SECRET_MUST_NOT_LEAK", serialized)
+        self.assertNotIn("super-secret-token-value", serialized)
+
     def test_source_vault_is_not_mutated(self) -> None:
         _build_vault_response(self.vault)
         self.assertEqual(self.vault["rows"][0]["value"], "super-secret-token-value")
