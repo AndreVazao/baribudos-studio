@@ -73,6 +73,23 @@ class SeriesAudioLedgerPrimitiveTests(unittest.TestCase):
             with self.assertRaisesRegex(ledger.SeriesAudioLedgerError, "checksum_mismatch"):
                 ledger.verify_approved_audio_artifact("exports/audio/series.wav", "0" * 64)
 
+    def test_symlinked_audio_artifact_rejected(self) -> None:
+        p1, p2 = self._patch_storage()
+        with p1, p2:
+            outside = self.root.parent / "outside-series-audio.wav"
+            outside.write_bytes(b"outside audio")
+            try:
+                link = self.root / "exports" / "audio" / "linked.wav"
+                link.parent.mkdir(parents=True)
+                link.symlink_to(outside)
+                with self.assertRaisesRegex(ledger.SeriesAudioLedgerError, "symlink_disallowed"):
+                    ledger.verify_approved_audio_artifact(
+                        "exports/audio/linked.wav",
+                        hashlib.sha256(b"outside audio").hexdigest(),
+                    )
+            finally:
+                outside.unlink(missing_ok=True)
+
     def test_path_traversal_rejected(self) -> None:
         p1, p2 = self._patch_storage()
         with p1, p2:
