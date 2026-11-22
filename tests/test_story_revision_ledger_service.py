@@ -16,7 +16,7 @@ from studio_core.services.story_revision_ledger_service import (
 def _append(root, story=None):
     return append_story_revision(
         root,
-        story=story or {"title": "A semente", "pages": [{"text": "Com calma."}]},
+        story=story if story is not None else {"title": "A semente", "pages": [{"text": "Com calma."}],
         project_id="project-001",
         saga_id="baribudos",
         language="pt-PT",
