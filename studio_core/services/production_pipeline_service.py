@@ -8,6 +8,7 @@ from studio_core.core.storage import append_json_item, read_json, update_json_it
 from studio_core.services.audiobook_service import build_audiobook
 from studio_core.services.ebook_service import build_epub
 from studio_core.services.illustration_integration_service import build_video_frame_sequence
+from studio_core.services.ip_runtime_service import load_ip_runtime
 from studio_core.services.project_factory_engine import run_project_factory_engine
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.story_generation_engine import generate_canon_story
