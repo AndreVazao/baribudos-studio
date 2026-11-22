@@ -7,7 +7,6 @@ import tempfile
 import threading
 from pathlib import Path
 from typing import Any, Dict, List
-from uuid import uuid4
 
 from studio_core.core.config import APP_CONFIG, resolve_storage_path
 
@@ -28,8 +27,29 @@ class SeriesAudioLedgerError(ValueError):
     """Ledger integrity or validation failure; callers must fail closed."""
 
 
+def _storage_root() -> Path:
+    return APP_CONFIG.storage_root.resolve()
+
+
+def _reject_symlink_components(path: Path, root: Path) -> None:
+    """Reject symlinks before resolving; resolve() alone hides their presence."""
+    try:
+        relative = path.relative_to(root)
+    except ValueError as exc:
+        raise SeriesAudioLedgerError("storage_path_outside_root") from exc
+    current = root
+    if current.is_symlink():
+        raise SeriesAudioLedgerError("storage_root_symlink_disallowed")
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise SeriesAudioLedgerError("storage_path_symlink_disallowed")
+
+
 def _ledger_path() -> Path:
-    root = APP_CONFIG.storage_root.resolve()
+    root = _storage_root()
+    lexical_target = root / _LEDGER_RELATIVE
+    _reject_symlink_components(lexical_target, root)
     target = resolve_storage_path(_LEDGER_RELATIVE)
     if not target.is_relative_to(root):
         raise SeriesAudioLedgerError("ledger_path_outside_storage_root")
@@ -120,12 +140,12 @@ def append_ledger_event(event: Dict[str, Any]) -> Dict[str, Any]:
 
 def verify_approved_audio_artifact(relative_path: str, expected_sha256: str) -> Path:
     """Verify a server-owned audio file by safe relative path and exact checksum."""
-    root = APP_CONFIG.storage_root.resolve()
+    root = _storage_root()
+    lexical_candidate = root / relative_path
+    _reject_symlink_components(lexical_candidate, root)
     candidate = resolve_storage_path(relative_path)
     if not candidate.is_relative_to(root):
         raise SeriesAudioLedgerError("series_audio_path_outside_storage_root")
-    if candidate.is_symlink():
-        raise SeriesAudioLedgerError("series_audio_symlink_disallowed")
     if not candidate.is_file():
         raise SeriesAudioLedgerError("series_audio_artifact_missing")
     actual = hashlib.sha256(candidate.read_bytes()).hexdigest()
