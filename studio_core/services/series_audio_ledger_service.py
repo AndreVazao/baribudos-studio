@@ -95,7 +95,7 @@ def append_ledger_event(event: Dict[str, Any]) -> Dict[str, Any]:
     validated = _validate_event(event)
     path = _ledger_path()
     wrapper = {"event": validated, "event_sha256": _event_hash(validated)}
-    encoded = (_canonical_json(wrapper) + "\\n").encode("utf-8")
+    encoded = (_canonical_json(wrapper) + "\n").encode("utf-8")
     with _LOCK:
         existing = read_ledger_events()
         if any(str(item.get("event_id")) == str(validated["event_id"]) for item in existing):
