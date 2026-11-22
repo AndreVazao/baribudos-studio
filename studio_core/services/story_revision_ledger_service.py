@@ -101,6 +101,7 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
         return []
     records: list[Dict[str, Any]] = []
     previous_hash = "0" * 64
+    seen_revision_ids: set[str] = set()
     try:
         with ledger_path.open("r", encoding="utf-8") as handle:
             for line_number, raw_line in enumerate(handle, start=1):
@@ -119,6 +120,20 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                         f"story_revision_invalid_record:{line_number}"
                     )
                 supplied_hash = record.pop("record_hash", None)
+                revision_id = record.get("revision_id")
+                story = record.get("story")
+                if record.get("ledger_version") != LEDGER_VERSION or record.get("event_type") != "story_revision_created":
+                    raise StoryRevisionLedgerIntegrityError(
+                        f"story_revision_unsupported_record:{line_number}"
+                    )
+                if not isinstance(revision_id, str) or not revision_id or revision_id in seen_revision_ids:
+                    raise StoryRevisionLedgerIntegrityError(
+                        f"story_revision_duplicate_or_missing_id:{line_number}"
+                    )
+                if not isinstance(story, dict) or _sha256(_canonical_json(story)) != record.get("content_sha256"):
+                    raise StoryRevisionLedgerIntegrityError(
+                        f"story_revision_content_checksum_mismatch:{line_number}"
+                    )
                 if record.get("previous_record_hash") != previous_hash:
                     raise StoryRevisionLedgerIntegrityError(
                         f"story_revision_chain_mismatch:{line_number}"
@@ -130,6 +145,7 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                     )
                 record["record_hash"] = supplied_hash
                 records.append(record)
+                seen_revision_ids.add(revision_id)
                 previous_hash = supplied_hash
     except OSError as exc:
         raise StoryRevisionLedgerError("story_revision_ledger_read_failed") from exc
@@ -139,7 +155,7 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
 def verify_story_revision_ledger(
     storage_root: str | os.PathLike[str],
 ) -> Dict[str, Any]:
-    """Verify the full append-only chain without changing persisted data."""
+    """Verify record, content and chain hashes without changing persisted data."""
     root = _safe_root(storage_root)
     records = _read_records(root)
     return {
