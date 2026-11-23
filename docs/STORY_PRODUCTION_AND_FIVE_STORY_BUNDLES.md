@@ -44,10 +44,13 @@ A issue [#55 — duração adaptativa por IP/faixa etária](https://github.com/A
 
 Os campos `approved`, `editorial_status` e `approval_state` dentro de project JSON, payloads ou dados enviados pelo cliente **não são decisões humanas autenticadas** e nunca podem autorizar produção, guia, compilação ou publicação.
 
-No código atual desta branch, `story_bundle_service._approved()` falha em segurança e devolve sempre `false` até existir um resolver de decisões server-side. Por isso:
+Nesta branch, `story_bundle_service._approved()` falha em segurança e devolve sempre `false` até existir um resolver de decisões server-side. A função legada `generate_volume_guide()` também deixa de gerar um guia a partir de uma única história ou de cinco linhas com flags do cliente; devolve um estado compatível com os clientes (`id/title/content` vazios) e `waiting_for_five_approved_stories`.
+
+Por isso:
 
 - `select_complete_story_groups()` não aceita grupos baseados em flags do projeto;
 - `build_five_story_bundle()` permanece em `waiting_for_five_approved_stories`;
+- `generate_volume_guide()` não gera um guia de uma história;
 - os builders de guia e compilação recusam membros sem decisão autorizada;
 - não existe endpoint novo, migração, alteração de dados ou mudança de clientes nesta frente.
 
