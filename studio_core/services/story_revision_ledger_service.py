@@ -124,7 +124,7 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
         return []
     records: list[Dict[str, Any]] = []
     previous_hash = "0" * 64
-    seen_revision_ids: set[str] = set()
+    seen_records: Dict[str, Dict[str, Any]] = {}
     try:
         with ledger_path.open("r", encoding="utf-8") as handle:
             for line_number, raw_line in enumerate(handle, start=1):
@@ -149,7 +149,7 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                     raise StoryRevisionLedgerIntegrityError(
                         f"story_revision_unsupported_record:{line_number}"
                     )
-                if not isinstance(revision_id, str) or not revision_id or revision_id in seen_revision_ids:
+                if not isinstance(revision_id, str) or not revision_id or revision_id in seen_records:
                     raise StoryRevisionLedgerIntegrityError(
                         f"story_revision_duplicate_or_missing_id:{line_number}"
                     )
@@ -157,6 +157,30 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                     raise StoryRevisionLedgerIntegrityError(
                         f"story_revision_content_checksum_mismatch:{line_number}"
                     )
+                for relation in ("parent_revision_id", "source_revision_id"):
+                    referenced_id = record.get(relation)
+                    if referenced_id is None:
+                        continue
+                    if not isinstance(referenced_id, str) or not referenced_id.strip():
+                        raise StoryRevisionLedgerIntegrityError(
+                            f"story_revision_lineage_invalid_reference:{relation}:{line_number}"
+                        )
+                    referenced = seen_records.get(referenced_id)
+                    if referenced is None:
+                        raise StoryRevisionLedgerIntegrityError(
+                            f"story_revision_lineage_reference_not_found:{relation}:{line_number}"
+                        )
+                    if (
+                        referenced.get("project_id") != record.get("project_id")
+                        or referenced.get("saga_id") != record.get("saga_id")
+                    ):
+                        raise StoryRevisionLedgerIntegrityError(
+                            f"story_revision_lineage_scope_mismatch:{relation}:{line_number}"
+                        )
+                    if relation == "parent_revision_id" and referenced.get("language") != record.get("language"):
+                        raise StoryRevisionLedgerIntegrityError(
+                            f"story_revision_parent_language_mismatch:{line_number}"
+                        )
                 if record.get("previous_record_hash") != previous_hash:
                     raise StoryRevisionLedgerIntegrityError(
                         f"story_revision_chain_mismatch:{line_number}"
@@ -168,7 +192,7 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                     )
                 record["record_hash"] = supplied_hash
                 records.append(record)
-                seen_revision_ids.add(revision_id)
+                seen_records[revision_id] = record
                 previous_hash = supplied_hash
     except OSError as exc:
         raise StoryRevisionLedgerError("story_revision_ledger_read_failed") from exc
@@ -228,6 +252,25 @@ def append_story_revision(
 
     with _append_lock(root):
         records = _read_records(root)
+        revisions_by_id = {item["revision_id"]: item for item in records}
+        for relation, referenced_id in (
+            ("parent_revision_id", parent_revision_id),
+            ("source_revision_id", source_revision_id),
+        ):
+            if referenced_id is None:
+                continue
+            if not isinstance(referenced_id, str) or not referenced_id.strip():
+                raise StoryRevisionLedgerError("story_revision_lineage_invalid_reference")
+            referenced = revisions_by_id.get(referenced_id)
+            if referenced is None:
+                raise StoryRevisionLedgerError("story_revision_lineage_reference_not_found")
+            if (
+                referenced.get("project_id") != project_id.strip()
+                or referenced.get("saga_id") != saga_id.strip()
+            ):
+                raise StoryRevisionLedgerError("story_revision_lineage_scope_mismatch")
+            if relation == "parent_revision_id" and referenced.get("language") != language.strip():
+                raise StoryRevisionLedgerError("story_revision_parent_language_mismatch")
         previous_hash = records[-1]["record_hash"] if records else "0" * 64
         revision_id = str(uuid4())
         body: Dict[str, Any] = {
