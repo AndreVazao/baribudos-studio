@@ -78,21 +78,44 @@ def _append_lock(root: Path, timeout_seconds: float = 5.0) -> Iterator[None]:
             descriptor = os.open(
                 lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
             )
-            os.write(descriptor, f"{os.getpid()}\n".encode("ascii"))
-            os.fsync(descriptor)
         except FileExistsError:
             if time.monotonic() >= deadline:
                 raise StoryRevisionLockError("story_revision_lock_timeout")
             time.sleep(0.05)
+            continue
+        try:
+            os.write(descriptor, f"{os.getpid()}\n".encode("ascii"))
+            os.fsync(descriptor)
+        except OSError as exc:
+            try:
+                os.close(descriptor)
+            except OSError:
+                # A close failure must not skip lock-file cleanup.
+                pass
+            finally:
+                descriptor = None
+                try:
+                    lock_path.unlink()
+                except FileNotFoundError:
+                    pass
+                except OSError as cleanup_exc:
+                    raise StoryRevisionLockError(
+                        "story_revision_lock_cleanup_failed"
+                    ) from cleanup_exc
+            raise StoryRevisionLockError(
+                "story_revision_lock_initialization_failed"
+            ) from exc
     try:
         yield
     finally:
-        if descriptor is not None:
-            os.close(descriptor)
         try:
-            lock_path.unlink()
-        except FileNotFoundError:
-            pass
+            if descriptor is not None:
+                os.close(descriptor)
+        finally:
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _read_records(root: Path) -> list[Dict[str, Any]]:
@@ -227,13 +250,21 @@ def append_story_revision(
         }
         record_hash = _sha256(_canonical_json(body))
         record = {**body, "record_hash": record_hash}
+        descriptor: int | None = None
         try:
-            with ledger_path.open("a", encoding="utf-8", newline="\n") as handle:
-                handle.write(_canonical_json(record).decode("utf-8") + "\n")
+            flags = os.O_CREAT | os.O_APPEND | os.O_WRONLY
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(ledger_path, flags, 0o600)
+            with os.fdopen(descriptor, "ab") as handle:
+                descriptor = None
+                handle.write(_canonical_json(record) + b"\n")
                 handle.flush()
                 os.fsync(handle.fileno())
         except OSError as exc:
             raise StoryRevisionLedgerError("story_revision_ledger_write_failed") from exc
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
 
     return {
         "revision_id": revision_id,
