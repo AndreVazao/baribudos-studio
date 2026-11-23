@@ -87,12 +87,21 @@ def _append_lock(root: Path, timeout_seconds: float = 5.0) -> Iterator[None]:
             os.write(descriptor, f"{os.getpid()}\n".encode("ascii"))
             os.fsync(descriptor)
         except OSError as exc:
-            os.close(descriptor)
-            descriptor = None
             try:
-                lock_path.unlink()
-            except FileNotFoundError:
+                os.close(descriptor)
+            except OSError:
+                # A close failure must not skip lock-file cleanup.
                 pass
+            finally:
+                descriptor = None
+                try:
+                    lock_path.unlink()
+                except FileNotFoundError:
+                    pass
+                except OSError as cleanup_exc:
+                    raise StoryRevisionLockError(
+                        "story_revision_lock_cleanup_failed"
+                    ) from cleanup_exc
             raise StoryRevisionLockError(
                 "story_revision_lock_initialization_failed"
             ) from exc
