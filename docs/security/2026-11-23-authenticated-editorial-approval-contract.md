@@ -180,3 +180,12 @@ A read-only source pass confirms the migration must include the shared client AP
 6. **Enforcement:** only after client contract and test matrix are green, central enforcement and protected storage are rolled out in staged, reversible steps.
 
 This is source evidence, not a dynamic network test. It does not establish actual deployment exposure, prove client native secure-storage availability, or authorize runtime changes.
+
+### Native secure-storage package inventory (read-only)
+
+- `client/mobile-app/package.json`: dependencies are Capacitor Android/CLI/Core, React, QR; no secure-storage plugin is declared.
+- `client/mobile-app/src-tauri/Cargo.toml`: Tauri, serde and serde_json; no OS keyring/secure-storage crate declared.
+- `src-tauri/src/lib.rs`: default Tauri Builder, no custom commands/plugins registered.
+- `capacitor.config.ts`: Android app config only; no secure-storage plugin setup.
+
+Therefore secure token persistence is **not currently evidenced as implemented** in the checked manifest/native sources. This remains a dependency-selection and compatibility investigation, not permission to install or alter packages.
