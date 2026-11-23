@@ -123,6 +123,35 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
         self.append()
         self.assertEqual(verify_story_revision_ledger(self.root)["record_count"], 1)
 
+    def test_lock_file_is_removed_when_descriptor_close_fails(self):
+        import os
+
+        original_close = os.close
+
+        def close_then_raise(descriptor):
+            original_close(descriptor)
+            raise OSError("simulated close failure")
+
+        with patch.object(
+            ledger_service.os,
+            "fsync",
+            side_effect=OSError("simulated fsync failure"),
+        ):
+            with patch.object(
+                ledger_service.os,
+                "close",
+                side_effect=close_then_raise,
+            ):
+                with self.assertRaisesRegex(
+                    StoryRevisionLockError, "lock_initialization_failed"
+                ):
+                    self.append()
+
+        self.assertFalse((self.root / "story-revisions.lock").exists())
+        self.assertEqual(verify_story_revision_ledger(self.root)["record_count"], 0)
+        self.append()
+        self.assertEqual(verify_story_revision_ledger(self.root)["record_count"], 1)
+
     @unittest.skipUnless(
         hasattr(__import__("os"), "O_NOFOLLOW"),
         "O_NOFOLLOW is not available on this platform",
@@ -146,7 +175,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
     )
     def test_append_uses_no_follow_when_symlink_appears_after_path_check(self):
         outside = self.root.parent / (self.root.name + "-race-target.jsonl")
-        outside.write_text("protected\\n", encoding="utf-8")
+        outside.write_text("protected\n", encoding="utf-8")
         self.addCleanup(outside.unlink, missing_ok=True)
         original_contained_path = ledger_service._contained_path
 
@@ -166,7 +195,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
             ):
                 self.append()
 
-        self.assertEqual(outside.read_text(encoding="utf-8"), "protected\\n")
+        self.assertEqual(outside.read_text(encoding="utf-8"), "protected\n")
 
     def test_ledger_symlink_is_rejected(self):
         outside = self.root.parent / (self.root.name + "-outside.jsonl")
