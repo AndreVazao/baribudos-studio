@@ -142,3 +142,17 @@ Edits after revision creation produce a new revision. A rejection is recorded, n
 - Authenticated reviewer approval does **not** exist yet.
 - The Studio route surface still requires a coordinated central-auth migration; adding isolated approval auth is unsafe.
 - Production remains blocked; this document is a proposal and does not change runtime behavior.
+
+
+## 12. Read-only source audit — authentication blockers confirmed (2026-11-23)
+
+The following current-main source files were inspected read-only; these are concrete implementation blockers, not assumptions:
+
+- `studio_core/services/auth_service.py`: user lookup compares supplied PIN directly against stored `pin` value (plaintext comparison; no password/PIN hash or session issuance is shown).
+- `studio_core/api/routes/users.py`: `ensure_default_owner()` creates a default owner with PIN `1234`; `GET /users` returns user records; create/patch/PIN routes have no visible authentication dependency; `POST /users/login` returns the matched user record rather than issuing a revocable session/token.
+- `studio_core/api/routes/editorial_production.py`: story, illustration queue, and storyboard routes have no visible authentication/authorization dependency and directly call bridge functions.
+- `studio_core/services/editorial_production_bridge_service.py`: editorial-to-story, illustration queue, and storyboard generation write project JSON directly; these routes are not approval-gated in the inspected code.
+
+**Immediate P0/P1 blocker:** do not implement reviewer approval as a route-level patch on this foundation. The central authentication/session model, safe credential handling, authorization enforcement, and route protection need coordinated design and cross-client migration. The default owner/PIN path must be removed or safely migrated, but any credential or auth changes require explicit coordinated implementation and must not be made in this documentation PR.
+
+This source audit does not establish whether every endpoint is network-exposed in any deployment; deployment exposure remains a separate investigation. It does establish that these inspected route functions have no local auth dependency.
