@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict
-from uuid import uuid4
-
 from studio_core.services.story_generation_engine import generate_canon_story
-from studio_core.services.saga_runtime_service import load_saga_runtime
 
 
 def generate_story(payload: Dict[str, Any]) -> Dict[str, Any]:
