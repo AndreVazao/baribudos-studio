@@ -78,21 +78,35 @@ def _append_lock(root: Path, timeout_seconds: float = 5.0) -> Iterator[None]:
             descriptor = os.open(
                 lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
             )
-            os.write(descriptor, f"{os.getpid()}\n".encode("ascii"))
-            os.fsync(descriptor)
         except FileExistsError:
             if time.monotonic() >= deadline:
                 raise StoryRevisionLockError("story_revision_lock_timeout")
             time.sleep(0.05)
+            continue
+        try:
+            os.write(descriptor, f"{os.getpid()}\\n".encode("ascii"))
+            os.fsync(descriptor)
+        except OSError as exc:
+            os.close(descriptor)
+            descriptor = None
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+            raise StoryRevisionLockError(
+                "story_revision_lock_initialization_failed"
+            ) from exc
     try:
         yield
     finally:
-        if descriptor is not None:
-            os.close(descriptor)
         try:
-            lock_path.unlink()
-        except FileNotFoundError:
-            pass
+            if descriptor is not None:
+                os.close(descriptor)
+        finally:
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _read_records(root: Path) -> list[Dict[str, Any]]:
