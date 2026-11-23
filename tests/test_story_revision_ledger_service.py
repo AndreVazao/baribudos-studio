@@ -29,6 +29,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
         values = {
             "project_id": "project-001",
             "saga_id": "baribudos",
+            "story_id": "story-001",
             "language": "pt-PT",
             "prompt_version": "story-v1",
             "provider": "synthetic-test",
@@ -76,6 +77,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
                 story={"title": "Draft"},
                 project_id="project-001",
                 saga_id="baribudos",
+                story_id="story-001",
                 language="pt-PT",
                 prompt_version="",
                 provider="fixture",
@@ -124,13 +126,16 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(StoryRevisionLedgerError, "parent_language_mismatch"):
             self.append(parent_revision_id=parent["revision_id"], language="en-GB")
 
+        with self.assertRaisesRegex(StoryRevisionLedgerError, "lineage_scope_mismatch"):
+            self.append(parent_revision_id=parent["revision_id"], story_id="story-002")
+
         child = self.append(parent_revision_id=parent["revision_id"])
         self.assertEqual(
             get_story_revision(self.root, child["revision_id"])["parent_revision_id"],
             parent["revision_id"],
         )
 
-    def test_source_revision_may_use_another_locale_but_must_match_project_and_saga(self):
+    def test_source_revision_may_use_another_locale_but_must_match_project_saga_and_story(self):
         source = self.append()
         translated = self.append(
             {"title": "The seed"},
@@ -146,6 +151,13 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
             self.append(
                 {"title": "Other project"},
                 project_id="other-project",
+                source_revision_id=source["revision_id"],
+            )
+
+        with self.assertRaisesRegex(StoryRevisionLedgerError, "lineage_scope_mismatch"):
+            self.append(
+                {"title": "Other story"},
+                story_id="story-002",
                 source_revision_id=source["revision_id"],
             )
 
