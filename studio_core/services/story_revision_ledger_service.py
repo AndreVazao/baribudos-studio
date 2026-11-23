@@ -241,13 +241,21 @@ def append_story_revision(
         }
         record_hash = _sha256(_canonical_json(body))
         record = {**body, "record_hash": record_hash}
+        descriptor: int | None = None
         try:
-            with ledger_path.open("a", encoding="utf-8", newline="\n") as handle:
-                handle.write(_canonical_json(record).decode("utf-8") + "\n")
+            flags = os.O_CREAT | os.O_APPEND | os.O_WRONLY
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(ledger_path, flags, 0o600)
+            with os.fdopen(descriptor, "ab") as handle:
+                descriptor = None
+                handle.write(_canonical_json(record) + b"\\n")
                 handle.flush()
                 os.fsync(handle.fileno())
         except OSError as exc:
             raise StoryRevisionLedgerError("story_revision_ledger_write_failed") from exc
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
 
     return {
         "revision_id": revision_id,
