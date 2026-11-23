@@ -175,14 +175,18 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
     )
     def test_append_uses_no_follow_when_symlink_appears_after_path_check(self):
         outside = self.root.parent / (self.root.name + "-race-target.jsonl")
-        outside.write_text("protected\n", encoding="utf-8")
+        outside.write_text("", encoding="utf-8")
         self.addCleanup(outside.unlink, missing_ok=True)
         original_contained_path = ledger_service._contained_path
+        ledger_path_checks = 0
 
         def create_symlink_after_path_check(root, filename):
+            nonlocal ledger_path_checks
             candidate = original_contained_path(root, filename)
             if filename == ledger_service.LEDGER_FILENAME:
-                candidate.symlink_to(outside)
+                ledger_path_checks += 1
+                if ledger_path_checks == 2:
+                    candidate.symlink_to(outside)
             return candidate
 
         with patch.object(
@@ -195,7 +199,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
             ):
                 self.append()
 
-        self.assertEqual(outside.read_text(encoding="utf-8"), "protected\n")
+        self.assertEqual(outside.read_text(encoding="utf-8"), "")
 
     def test_ledger_symlink_is_rejected(self):
         outside = self.root.parent / (self.root.name + "-outside.jsonl")
