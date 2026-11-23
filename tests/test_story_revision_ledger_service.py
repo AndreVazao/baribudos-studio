@@ -318,6 +318,75 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
         ):
             verify_story_revision_ledger(self.root)
 
+    def _rewrite_records_with_valid_chain(self, records):
+        previous_hash = "0" * 64
+        rewritten = []
+        for record in records:
+            record["previous_record_hash"] = previous_hash
+            body = {key: value for key, value in record.items() if key != "record_hash"}
+            record["record_hash"] = ledger_service._sha256(
+                ledger_service._canonical_json(body)
+            )
+            previous_hash = record["record_hash"]
+            rewritten.append(record)
+        (self.root / "story-revisions.jsonl").write_text(
+            "\\n".join(json.dumps(item, ensure_ascii=False) for item in rewritten) + "\\n",
+            encoding="utf-8",
+        )
+
+    def test_legacy_root_revision_without_story_id_remains_readable(self):
+        created = self.append()
+        ledger = self.root / "story-revisions.jsonl"
+        record = json.loads(ledger.read_text(encoding="utf-8"))
+        record.pop("story_id")
+        self._rewrite_records_with_valid_chain([record])
+        loaded = get_story_revision(self.root, created["revision_id"])
+        self.assertNotIn("story_id", loaded)
+        self.assertTrue(verify_story_revision_ledger(self.root)["ok"])
+
+    def test_legacy_linked_revisions_without_story_id_remain_readable(self):
+        parent = self.append()
+        child = self.append(parent_revision_id=parent["revision_id"])
+        ledger = self.root / "story-revisions.jsonl"
+        records = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+        for record in records:
+            record.pop("story_id")
+        self._rewrite_records_with_valid_chain(records)
+        self.assertTrue(verify_story_revision_ledger(self.root)["ok"])
+        self.assertEqual(
+            get_story_revision(self.root, child["revision_id"])["parent_revision_id"],
+            parent["revision_id"],
+        )
+
+    def test_new_revision_cannot_reference_legacy_revision_without_story_identity(self):
+        legacy = self.append()
+        ledger = self.root / "story-revisions.jsonl"
+        record = json.loads(ledger.read_text(encoding="utf-8"))
+        record.pop("story_id")
+        self._rewrite_records_with_valid_chain([record])
+        with self.assertRaisesRegex(
+            StoryRevisionLedgerError, "lineage_legacy_identity_unavailable"
+        ):
+            self.append(parent_revision_id=legacy["revision_id"])
+
+    def test_blank_and_non_string_story_identity_are_integrity_errors(self):
+        for invalid_identity in ("", "   ", 123, None):
+            with self.subTest(identity=invalid_identity):
+                self.append()
+                ledger = self.root / "story-revisions.jsonl"
+                record = json.loads(ledger.read_text(encoding="utf-8"))
+                record["story_id"] = invalid_identity
+                body = {key: value for key, value in record.items() if key != "record_hash"}
+                record["record_hash"] = ledger_service._sha256(
+                    ledger_service._canonical_json(body)
+                )
+                ledger.write_text(json.dumps(record, ensure_ascii=False) + "\\n", encoding="utf-8")
+                with self.assertRaisesRegex(
+                    StoryRevisionLedgerIntegrityError, "story_identity_invalid"
+                ):
+                    verify_story_revision_ledger(self.root)
+                ledger.unlink()
+
     def test_verification_rejects_duplicate_revision_ids(self):
         self.append()
         ledger = self.root / "story-revisions.jsonl"
