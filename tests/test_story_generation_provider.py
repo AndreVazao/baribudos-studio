@@ -45,7 +45,7 @@ class StoryGenerationProviderTests(unittest.TestCase):
             "slug": "baribudos",
             "name": "Baribudos",
             "default_language": "pt-PT",
-            "canons": {"pedagogical": {"approved_values": ["Paciência"]}},
+            "canons": {"characters": {"family": [{"name": "Roko"}, {"name": "Mila"}, {"name": "Tilo"}, {"name": "Luma"}, {"name": "Magnus"}]}, "pedagogical": {"approved_values": ["Paciência"]}},
             "resolved": {"target_age": "4-10"},
         }
         with patch.dict(os.environ, {
@@ -63,6 +63,9 @@ class StoryGenerationProviderTests(unittest.TestCase):
         self.assertEqual(result["provider_status"], "generated_needs_review")
         self.assertEqual(result["generation_usage"]["total_tokens"], 300)
         self.assertEqual(result["pages"][0]["pageNumber"], 1)
+        self.assertFalse(result["approved"])
+        self.assertEqual(result["editorial_status"], "draft")
+        self.assertEqual(result["generation_status"], "generated_needs_review")
 
     def test_provider_rejects_pages_with_more_than_five_nonempty_lines(self) -> None:
         story = self._story()
@@ -95,6 +98,24 @@ class StoryGenerationProviderTests(unittest.TestCase):
                 language="pt-PT",
                 approved_values={"paciência", "partilha"},
             )
+
+
+    def test_provider_rejects_empty_character_canon(self) -> None:
+        with self.assertRaisesRegex(provider.StoryProviderError, "character_canon_unavailable"):
+            provider._validate_story(self._story(), language="pt-PT", allowed_characters=set())
+
+    def test_provider_rejects_empty_approved_values_canon(self) -> None:
+        with self.assertRaisesRegex(provider.StoryProviderError, "approved_values_canon_unavailable"):
+            provider._validate_story(self._story(), language="pt-PT", approved_values=set())
+
+    def test_provider_overwrites_spoofed_approval_metadata(self) -> None:
+        story = self._story()
+        story.update({"approved": True, "approval_state": "approved", "editorial_status": "approved", "generation_status": "approved"})
+        result = provider._validate_story(story, language="pt-PT", allowed_characters={"roko", "mila", "tilo", "luma", "magnus"}, approved_values={"paciência"})
+        self.assertFalse(result["approved"])
+        self.assertEqual(result["approval_state"], "needs_review")
+        self.assertEqual(result["editorial_status"], "draft")
+        self.assertEqual(result["generation_status"], "generated_needs_review")
 
     def test_provider_failure_does_not_silently_fall_back(self) -> None:
         runtime = {"slug": "baribudos", "resolved": {}, "canons": {}}
