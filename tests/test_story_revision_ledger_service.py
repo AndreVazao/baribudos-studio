@@ -8,6 +8,8 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 
+import studio_core.services.story_revision_ledger_service as ledger_service
+
 from studio_core.services.story_revision_ledger_service import (
     StoryRevisionLedgerError,
     StoryRevisionLedgerIntegrityError,
@@ -137,6 +139,34 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
             self.append()
 
         self.assertEqual(outside.read_text(encoding="utf-8"), "")
+
+    @unittest.skipUnless(
+        hasattr(__import__("os"), "O_NOFOLLOW"),
+        "O_NOFOLLOW is not available on this platform",
+    )
+    def test_append_uses_no_follow_when_symlink_appears_after_path_check(self):
+        outside = self.root.parent / (self.root.name + "-race-target.jsonl")
+        outside.write_text("protected\\n", encoding="utf-8")
+        self.addCleanup(outside.unlink, missing_ok=True)
+        original_contained_path = ledger_service._contained_path
+
+        def create_symlink_after_path_check(root, filename):
+            candidate = original_contained_path(root, filename)
+            if filename == ledger_service.LEDGER_FILENAME:
+                candidate.symlink_to(outside)
+            return candidate
+
+        with patch.object(
+            ledger_service,
+            "_contained_path",
+            side_effect=create_symlink_after_path_check,
+        ):
+            with self.assertRaisesRegex(
+                StoryRevisionLedgerError, "ledger_write_failed"
+            ):
+                self.append()
+
+        self.assertEqual(outside.read_text(encoding="utf-8"), "protected\\n")
 
     def test_ledger_symlink_is_rejected(self):
         outside = self.root.parent / (self.root.name + "-outside.jsonl")
