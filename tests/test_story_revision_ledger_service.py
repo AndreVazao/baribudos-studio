@@ -25,19 +25,23 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
         self.root = Path(tempfile.mkdtemp(prefix="baribudos-story-ledger-"))
         self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
 
-    def append(self, story=None):
+    def append(self, story=None, **metadata):
+        values = {
+            "project_id": "project-001",
+            "saga_id": "baribudos",
+            "language": "pt-PT",
+            "prompt_version": "story-v1",
+            "provider": "synthetic-test",
+            "model": "fixture",
+        }
+        values.update(metadata)
         return append_story_revision(
             self.root,
             story=story if story is not None else {
                 "title": "A semente",
                 "pages": [{"text": "Com calma."}],
             },
-            project_id="project-001",
-            saga_id="baribudos",
-            language="pt-PT",
-            prompt_version="story-v1",
-            provider="synthetic-test",
-            model="fixture",
+            **values,
         )
 
     def test_revision_is_persisted_and_retrievable_as_exact_snapshot(self):
@@ -107,6 +111,62 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
 
         with self.assertRaisesRegex(StoryRevisionLedgerError, "not_found"):
             get_story_revision(other_root, created["revision_id"])
+
+    def test_parent_revision_must_exist_and_match_project_saga_and_language(self):
+        parent = self.append()
+
+        with self.assertRaisesRegex(StoryRevisionLedgerError, "lineage_reference_not_found"):
+            self.append(parent_revision_id="missing-revision")
+
+        with self.assertRaisesRegex(StoryRevisionLedgerError, "lineage_scope_mismatch"):
+            self.append(parent_revision_id=parent["revision_id"], project_id="other-project")
+
+        with self.assertRaisesRegex(StoryRevisionLedgerError, "parent_language_mismatch"):
+            self.append(parent_revision_id=parent["revision_id"], language="en-GB")
+
+        child = self.append(parent_revision_id=parent["revision_id"])
+        self.assertEqual(
+            get_story_revision(self.root, child["revision_id"])["parent_revision_id"],
+            parent["revision_id"],
+        )
+
+    def test_source_revision_may_use_another_locale_but_must_match_project_and_saga(self):
+        source = self.append()
+        translated = self.append(
+            {"title": "The seed"},
+            language="en-GB",
+            source_revision_id=source["revision_id"],
+        )
+        self.assertEqual(
+            get_story_revision(self.root, translated["revision_id"])["source_revision_id"],
+            source["revision_id"],
+        )
+
+        with self.assertRaisesRegex(StoryRevisionLedgerError, "lineage_scope_mismatch"):
+            self.append(
+                {"title": "Other project"},
+                project_id="other-project",
+                source_revision_id=source["revision_id"],
+            )
+
+    def test_verification_rejects_a_hash_valid_record_with_missing_lineage(self):
+        parent = self.append()
+        child = self.append(parent_revision_id=parent["revision_id"])
+        ledger = self.root / "story-revisions.jsonl"
+        lines = ledger.read_text(encoding="utf-8").splitlines()
+        record = json.loads(lines[1])
+        record["parent_revision_id"] = "missing-revision"
+        body = {key: value for key, value in record.items() if key != "record_hash"}
+        record["record_hash"] = ledger_service._sha256(
+            ledger_service._canonical_json(body)
+        )
+        lines[1] = json.dumps(record, ensure_ascii=False)
+        ledger.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            StoryRevisionLedgerIntegrityError, "lineage_reference_not_found"
+        ):
+            verify_story_revision_ledger(self.root)
 
     def test_lock_initialization_failure_cleans_up_lock_file(self):
         with patch(
