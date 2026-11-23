@@ -173,6 +173,7 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                     if (
                         referenced.get("project_id") != record.get("project_id")
                         or referenced.get("saga_id") != record.get("saga_id")
+                        or referenced.get("story_id") != record.get("story_id")
                     ):
                         raise StoryRevisionLedgerIntegrityError(
                             f"story_revision_lineage_scope_mismatch:{relation}:{line_number}"
@@ -219,6 +220,7 @@ def append_story_revision(
     story: Dict[str, Any],
     project_id: str,
     saga_id: str,
+    story_id: str,
     language: str,
     prompt_version: str,
     provider: str,
@@ -237,6 +239,7 @@ def append_story_revision(
     required = {
         "project_id": project_id,
         "saga_id": saga_id,
+        "story_id": story_id,
         "language": language,
         "prompt_version": prompt_version,
         "provider": provider,
@@ -267,6 +270,7 @@ def append_story_revision(
             if (
                 referenced.get("project_id") != project_id.strip()
                 or referenced.get("saga_id") != saga_id.strip()
+                or referenced.get("story_id") != story_id.strip()
             ):
                 raise StoryRevisionLedgerError("story_revision_lineage_scope_mismatch")
             if relation == "parent_revision_id" and referenced.get("language") != language.strip():
@@ -280,6 +284,7 @@ def append_story_revision(
             "created_at": _utc_now(),
             "project_id": project_id.strip(),
             "saga_id": saga_id.strip(),
+            "story_id": story_id.strip(),
             "language": language.strip(),
             "prompt_version": prompt_version.strip(),
             "provider": provider.strip(),
