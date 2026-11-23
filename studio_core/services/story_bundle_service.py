@@ -19,12 +19,12 @@ def _text(value: Any) -> str:
 
 
 def _approved(story: Dict[str, Any]) -> bool:
-    """Accept only explicit approval signals; truthy strings are never approvals."""
-    return (
-        story.get("approved") is True
-        or _text(story.get("editorial_status")).lower() == "approved"
-        or _text(story.get("approval_state")).lower() == "approved"
-    )
+    """Fail closed until an authenticated server-owned decision resolver exists.
+
+    Project JSON and request payload fields are mutable client data. They must
+    never authorize a guide, volume, compilation, production job or release.
+    """
+    return False
 
 
 def _identity(story: Dict[str, Any]) -> tuple[str, str, str]:
@@ -40,8 +40,8 @@ def _validate_bundle_members(bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
     stories = bundle.get("stories")
     if not isinstance(stories, list) or len(stories) != BUNDLE_SIZE:
         raise ValueError("bundle_requires_exactly_five_stories")
-    if any(not isinstance(item, dict) or not _approved(item) for item in stories):
-        raise ValueError("bundle_requires_five_explicitly_approved_stories")
+    if any(not isinstance(item, dict) for item in stories):
+        raise ValueError("bundle_story_members_must_be_objects")
 
     if bundle.get("bundle_size", BUNDLE_SIZE) != BUNDLE_SIZE:
         raise ValueError("bundle_size_must_be_five")
@@ -64,6 +64,8 @@ def _validate_bundle_members(bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
     })
     if identities != {expected}:
         raise ValueError("bundle_identity_does_not_match_story_members")
+    if any(not _approved(item) for item in stories):
+        raise ValueError("bundle_requires_five_explicitly_approved_stories")
     return stories
 
 
