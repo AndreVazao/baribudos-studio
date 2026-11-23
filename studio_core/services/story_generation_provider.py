@@ -119,7 +119,9 @@ def _validate_story(
     character_names = [name for name in character_names if name]
     if not character_names:
         raise StoryProviderError("story_provider_characters_required")
-    if allowed_characters:
+    if allowed_characters is not None and not allowed_characters:
+        raise StoryProviderError("story_provider_character_canon_unavailable")
+    if allowed_characters is not None:
         unknown = [
             name for name in character_names
             if name.casefold() not in allowed_characters
@@ -132,7 +134,9 @@ def _validate_story(
         if unknown:
             raise StoryProviderError("story_provider_unknown_canonical_character:" + ",".join(sorted(set(unknown))))
 
-    if approved_values:
+    if approved_values is not None and not approved_values:
+        raise StoryProviderError("story_provider_approved_values_canon_unavailable")
+    if approved_values is not None:
         value = _text(story.get("value_theme"))
         if value.casefold() not in approved_values:
             raise StoryProviderError("story_provider_value_not_in_approved_canon")
@@ -146,6 +150,10 @@ def _validate_story(
         "raw_text": _text(story["raw_text"]),
         "language_validation": "requested_locale_not_independently_verified",
         "provider_status": "generated_needs_review",
+        "approved": False,
+        "approval_state": "needs_review",
+        "editorial_status": "draft",
+        "generation_status": "generated_needs_review",
     }
 
 
