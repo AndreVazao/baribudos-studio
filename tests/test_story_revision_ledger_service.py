@@ -5,11 +5,13 @@ import json
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from studio_core.services.story_revision_ledger_service import (
     StoryRevisionLedgerError,
     StoryRevisionLedgerIntegrityError,
+    StoryRevisionLockError,
     append_story_revision,
     get_story_revision,
     verify_story_revision_ledger,
@@ -103,6 +105,38 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
 
         with self.assertRaisesRegex(StoryRevisionLedgerError, "not_found"):
             get_story_revision(other_root, created["revision_id"])
+
+    def test_lock_initialization_failure_cleans_up_lock_file(self):
+        with patch(
+            "studio_core.services.story_revision_ledger_service.os.fsync",
+            side_effect=OSError("simulated fsync failure"),
+        ):
+            with self.assertRaisesRegex(
+                StoryRevisionLockError, "lock_initialization_failed"
+            ):
+                self.append()
+
+        self.assertFalse((self.root / "story-revisions.lock").exists())
+        self.assertEqual(verify_story_revision_ledger(self.root)["record_count"], 0)
+        self.append()
+        self.assertEqual(verify_story_revision_ledger(self.root)["record_count"], 1)
+
+    @unittest.skipUnless(
+        hasattr(__import__("os"), "O_NOFOLLOW"),
+        "O_NOFOLLOW is not available on this platform",
+    )
+    def test_append_rejects_ledger_symlink_without_touching_target(self):
+        import os
+
+        outside = self.root.parent / (self.root.name + "-append-target.jsonl")
+        outside.write_text("", encoding="utf-8")
+        self.addCleanup(outside.unlink, missing_ok=True)
+        (self.root / "story-revisions.jsonl").symlink_to(outside)
+
+        with self.assertRaises(StoryRevisionLedgerIntegrityError):
+            self.append()
+
+        self.assertEqual(outside.read_text(encoding="utf-8"), "")
 
     def test_ledger_symlink_is_rejected(self):
         outside = self.root.parent / (self.root.name + "-outside.jsonl")
