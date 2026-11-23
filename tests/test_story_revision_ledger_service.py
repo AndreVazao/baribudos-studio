@@ -161,7 +161,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
             ledger_service._canonical_json(body)
         )
         lines[1] = json.dumps(record, ensure_ascii=False)
-        ledger.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+        ledger.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
         with self.assertRaisesRegex(
             StoryRevisionLedgerIntegrityError, "lineage_reference_not_found"
