@@ -201,6 +201,42 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
 
         self.assertEqual(outside.read_text(encoding="utf-8"), "")
 
+    @unittest.skipUnless(
+        hasattr(__import__("os"), "O_NOFOLLOW"),
+        "O_NOFOLLOW is not available on this platform",
+    )
+    def test_append_os_open_no_follow_blocks_symlink_race(self):
+        import os
+
+        outside = self.root.parent / (self.root.name + "-race-target.jsonl")
+        outside.write_text("", encoding="utf-8")
+        self.addCleanup(outside.unlink, missing_ok=True)
+        original_contained_path = (
+            __import__("studio_core.services.story_revision_ledger_service", fromlist=["_contained_path"])
+            ._contained_path
+        )
+        link_created = False
+
+        def create_symlink_after_path_check(root, filename):
+            nonlocal link_created
+            path = original_contained_path(root, filename)
+            if filename == "story-revisions.jsonl" and not link_created:
+                path.symlink_to(outside)
+                link_created = True
+            return path
+
+        with patch(
+            "studio_core.services.story_revision_ledger_service._contained_path",
+            side_effect=create_symlink_after_path_check,
+        ):
+            with self.assertRaisesRegex(
+                StoryRevisionLedgerError, "ledger_write_failed"
+            ):
+                self.append()
+
+        self.assertTrue(link_created)
+        self.assertEqual(outside.read_text(encoding="utf-8"), "")
+
     def test_ledger_symlink_is_rejected(self):
         outside = self.root.parent / (self.root.name + "-outside.jsonl")
         outside.write_text("", encoding="utf-8")
