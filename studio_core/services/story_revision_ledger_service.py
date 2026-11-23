@@ -220,7 +220,7 @@ def append_story_revision(
     story: Dict[str, Any],
     project_id: str,
     saga_id: str,
-    story_id: str,
+    story_id: str | None = None,
     language: str,
     prompt_version: str,
     provider: str,
