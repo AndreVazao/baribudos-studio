@@ -156,3 +156,27 @@ The following current-main source files were inspected read-only; these are conc
 **Immediate P0/P1 blocker:** do not implement reviewer approval as a route-level patch on this foundation. The central authentication/session model, safe credential handling, authorization enforcement, and route protection need coordinated design and cross-client migration. The default owner/PIN path must be removed or safely migrated, but any credential or auth changes require explicit coordinated implementation and must not be made in this documentation PR.
 
 This source audit does not establish whether every endpoint is network-exposed in any deployment; deployment exposure remains a separate investigation. It does establish that these inspected route functions have no local auth dependency.
+
+
+## 13. Client migration evidence — main source audit (2026-11-23)
+
+A read-only source pass confirms the migration must include the shared client API and shell, not only the login panel:
+| File | Current behavior observed | Required migration |
+|---|---|---|
+| `client/mobile-app/src/api/core.js` | Stores API base and full user object in browser `localStorage`; generic `get/post/put/patch/del` wrappers send no Authorization header; login calls `POST /users/login`; saved-user restoration is JSON parsing only. | Replace identity persistence with session token storage adapter, centralized authenticated request wrapper, bounded 401 handling, and server validation at startup. Keep API-base setting separate from identity. |
+| `client/mobile-app/src/components/LoginPanel.jsx` | Defaults name to André and PIN to `1234`; login expects `result.user`, saves the returned user object, and invokes callback. | Remove credential defaults; accept new DTO/token contract; do not persist PIN or user record as authentication proof. |
+| `client/mobile-app/src/App.jsx` | Initializes React identity from `getSavedUser()`; logout only clears client user storage; user display includes role from saved object. | Startup must validate/recover session against `/auth/me`; logout must revoke server session and clear secure storage; permissions are queried/derived from server principal, not cached role. |
+| `studio_core/api/routes/users.py` | `GET /users` returns raw persisted user records; create/patch/PIN handlers return raw user; default owner seeds known PIN; login returns raw user. No local auth dependency shown on these handlers. | Keep public login endpoint rate-limited; all account-management endpoints owner-gated; explicit safe DTOs; credential migration/reset; no PIN/hash in API responses. |
+| `studio_core/services/auth_service.py` | Direct name/PIN equality against JSON; returns raw record; no hash verification/session issue visible. | Replace with versioned password/PIN hash verification, server session issue/revoke/expiry, generic failure, audit and lockout/rate limiting. |
+| `studio_core/api/main.py` | Static audit found no global auth dependency/middleware; wildcard CORS credentials and static mounts remain in previous inventory. | Central principal middleware/dependency + route policy registry and coverage tests; public allowlist only; restrictive CORS and private storage delivery. |
+
+### Client-safe migration sequence
+
+1. **Contract-only first:** define DTO and endpoints (`POST /auth/login`, `GET /auth/me`, `POST /auth/logout`, session listing/revocation) without changing existing business endpoints or client behavior.
+2. **Secure storage compatibility check:** inspect currently installed Tauri/Capacitor packages and native secure-store support/licences; do not add dependencies until verified. Desktop OS keyring and Android/iOS Keychain/Keystore must be native-backed; no token fallback to localStorage/preferences.
+3. **Shared client adapter:** introduce one auth/session module and route all API calls through it; support explicit session-invalid state, no retry loops, no identity spoof fields.
+4. **Backend route classification:** machine integration, health, public approved assets, authenticated reads/writes, editorial approval, admin/secrets, operations/storage each receive explicit policies; fail-closed coverage test verifies every registered route is classified.
+5. **Coordinated rollout:** Desktop and Mobile clients migrate before legacy identity endpoints/fields are removed. No temporary anonymous/private-network fallback.
+6. **Enforcement:** only after client contract and test matrix are green, central enforcement and protected storage are rolled out in staged, reversible steps.
+
+This is source evidence, not a dynamic network test. It does not establish actual deployment exposure, prove client native secure-storage availability, or authorize runtime changes.
