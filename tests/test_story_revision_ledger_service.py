@@ -84,6 +84,19 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
                 model="fixture",
             )
 
+    def test_story_identity_is_required_for_every_revision(self):
+        with self.assertRaisesRegex(StoryRevisionLedgerError, "metadata_incomplete"):
+            append_story_revision(
+                self.root,
+                story={"title": "Draft"},
+                project_id="project-001",
+                saga_id="baribudos",
+                language="pt-PT",
+                prompt_version="story-v1",
+                provider="fixture",
+                model="fixture",
+            )
+
     def test_empty_story_fails_closed(self):
         with self.assertRaisesRegex(StoryRevisionLedgerError, "story_required"):
             self.append({})
