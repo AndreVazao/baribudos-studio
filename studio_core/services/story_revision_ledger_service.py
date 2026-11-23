@@ -84,7 +84,7 @@ def _append_lock(root: Path, timeout_seconds: float = 5.0) -> Iterator[None]:
             time.sleep(0.05)
             continue
         try:
-            os.write(descriptor, f"{os.getpid()}\\n".encode("ascii"))
+            os.write(descriptor, f"{os.getpid()}\n".encode("ascii"))
             os.fsync(descriptor)
         except OSError as exc:
             os.close(descriptor)
@@ -248,7 +248,7 @@ def append_story_revision(
             descriptor = os.open(ledger_path, flags, 0o600)
             with os.fdopen(descriptor, "ab") as handle:
                 descriptor = None
-                handle.write(_canonical_json(record) + b"\\n")
+                handle.write(_canonical_json(record) + b"\n")
                 handle.flush()
                 os.fsync(handle.fileno())
         except OSError as exc:
