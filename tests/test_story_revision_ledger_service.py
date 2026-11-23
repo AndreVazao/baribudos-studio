@@ -330,7 +330,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
             previous_hash = record["record_hash"]
             rewritten.append(record)
         (self.root / "story-revisions.jsonl").write_text(
-            "\\n".join(json.dumps(item, ensure_ascii=False) for item in rewritten) + "\\n",
+            "\n".join(json.dumps(item, ensure_ascii=False) for item in rewritten) + "\n",
             encoding="utf-8",
         )
 
@@ -380,7 +380,7 @@ class StoryRevisionLedgerServiceTests(unittest.TestCase):
                 record["record_hash"] = ledger_service._sha256(
                     ledger_service._canonical_json(body)
                 )
-                ledger.write_text(json.dumps(record, ensure_ascii=False) + "\\n", encoding="utf-8")
+                ledger.write_text(json.dumps(record, ensure_ascii=False) + "\n", encoding="utf-8")
                 with self.assertRaisesRegex(
                     StoryRevisionLedgerIntegrityError, "story_identity_invalid"
                 ):
