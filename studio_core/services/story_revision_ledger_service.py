@@ -157,6 +157,14 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                     raise StoryRevisionLedgerIntegrityError(
                         f"story_revision_content_checksum_mismatch:{line_number}"
                     )
+                story_id_value = record.get("story_id")
+                if "story_id" in record and (
+                    not isinstance(story_id_value, str) or not story_id_value.strip()
+                ):
+                    raise StoryRevisionLedgerIntegrityError(
+                        f"story_revision_story_identity_invalid:{line_number}"
+                    )
+                legacy_identity_missing = "story_id" not in record
                 for relation in ("parent_revision_id", "source_revision_id"):
                     referenced_id = record.get(relation)
                     if referenced_id is None:
@@ -173,8 +181,16 @@ def _read_records(root: Path) -> list[Dict[str, Any]]:
                     if (
                         referenced.get("project_id") != record.get("project_id")
                         or referenced.get("saga_id") != record.get("saga_id")
-                        or referenced.get("story_id") != record.get("story_id")
                     ):
+                        raise StoryRevisionLedgerIntegrityError(
+                            f"story_revision_lineage_scope_mismatch:{relation}:{line_number}"
+                        )
+                    referenced_legacy = "story_id" not in referenced
+                    if legacy_identity_missing != referenced_legacy:
+                        raise StoryRevisionLedgerIntegrityError(
+                            f"story_revision_lineage_legacy_identity_mismatch:{relation}:{line_number}"
+                        )
+                    if not legacy_identity_missing and referenced.get("story_id") != story_id_value:
                         raise StoryRevisionLedgerIntegrityError(
                             f"story_revision_lineage_scope_mismatch:{relation}:{line_number}"
                         )
@@ -267,6 +283,8 @@ def append_story_revision(
             referenced = revisions_by_id.get(referenced_id)
             if referenced is None:
                 raise StoryRevisionLedgerError("story_revision_lineage_reference_not_found")
+            if "story_id" not in referenced:
+                raise StoryRevisionLedgerError("story_revision_lineage_legacy_identity_unavailable")
             if (
                 referenced.get("project_id") != project_id.strip()
                 or referenced.get("saga_id") != saga_id.strip()
