@@ -1,67 +1,85 @@
-# Baribudos — produção de histórias e bundles de cinco
+# Baribudos — produção editorial e volumes de cinco histórias
 
-**Estado:** primeira implementação de agrupamento e validação cloud; não é ainda autorização para publicação comercial.
+**Estado:** builders técnicos existentes; volume, guia e compilação bloqueados até existir aprovação humana autenticada e persistente. A CI não concede aprovação nem autorização de publicação.
 
 ## Unidade editorial
 
-Cada história é uma unidade autónoma de produção. A partir de uma versão editorial aprovada, o Studio deve produzir:
+Cada história é uma unidade autónoma e mantém o canon da sua própria IP. Para cada revisão editorial aprovada, o Studio deverá preparar, de forma independente:
 
-1. E-book EPUB.
-2. Audiobook no idioma aprovado.
-3. Minissérie/episódio audiovisual correspondente.
+1. Texto canónico e versões localizadas, cada uma com revisão própria.
+2. Revisão humana, editorial e pedagógica.
+3. Continuidade visual, créditos, direitos e consentimentos.
+4. E-book EPUB.
+5. Audiobook no idioma aprovado, sem reutilizar automaticamente a sua faixa como narração da minissérie.
+6. Episódio/minissérie individual, com guião, narração e assets próprios.
+7. Validação técnica e editorial de cada artefacto.
 
-Os três outputs devem apontar para a mesma história, versão, IP/saga e locale. Um output não deve ser considerado concluído apenas porque uma função terminou: o ficheiro tem de existir, ser legível e passar validação técnica.
+A geração de um ficheiro não o torna aprovado. Um EPUB, WAV, slideshow ou animatic só pode ser declarado concluído no âmbito correspondente depois de validado; a aprovação editorial não substitui a validação de cada artefacto.
 
-## Volume editorial de cinco livros
+## Regra do volume de cinco
 
-A unidade aprovada para Baribudos é um volume composto por exatamente cinco livros aprovados e cinco episódios/minisséries individuais:
+Um volume só pode ser formado quando existirem **cinco revisões de histórias distintas**, da mesma IP, saga e locale, cada uma com:
 
-- Um livro origina um episódio individual.
-- Cada episódio tem alvo de 3 min 30 s e intervalo permitido de 3–4 minutos.
-- Os 5 segundos de abertura e os 7 segundos de fecho estão incluídos na duração do episódio.
-- A série do volume concatena os cinco episódios pela ordem editorial dos livros, preservando também os cinco ficheiros individuais.
-- A série compilada tem de durar 15–20 minutos, com alvo de 17 min 30 s.
-- O volume inclui um guia para pais associado aos mesmos cinco livros.
-- O audiobook tem duração independente e não determina a duração do episódio.
-- Uma compilação de vários volumes é uma fase posterior, manual/editorial e sujeita a aprovação própria.
+- identidade e revisão imutáveis;
+- checksum do conteúdo e do canon aplicável;
+- decisão humana explícita, autenticada no servidor e persistida, ligada à revisão/checksum exatos;
+- episódio individual validado;
+- créditos, direitos e consentimentos aplicáveis.
 
-O agrupamento é isolado por IP, saga e idioma. Histórias em rascunho, sem ID estável ou de outra IP/idioma não contam para completar o volume. A sequência dos livros é preservada; não se misturam versões nem se alteram os episódios individuais.
+O volume conserva os cinco livros e os cinco episódios individuais, pela ordem editorial, e acrescenta um guia para pais e uma compilação dos cinco episódios. A compilação não cria uma sexta história, não substitui os episódios e não é uma temporada de oito episódios. A sexta história elegível inicia o volume seguinte; nunca é anexada silenciosamente a um volume fechado.
 
-## Implementação atual
+O guia para pais exige revisão humana própria. A compilação exige validação audiovisual própria. Nenhum dos dois fica aprovado por ter sido gerado.
 
-- `studio_core/services/story_bundle_service.py` seleciona grupos completos e determinísticos de cinco histórias aprovadas.
-- `build_parent_guide` gera um guia Markdown com perguntas adequadas à conversa familiar e salvaguardas pedagógicas.
-- `build_five_story_compilation` exige cinco episódios existentes dentro da raiz de storage aprovada, valida com FFprobe a integridade técnica e duração positiva/finita, concatena pela ordem congelada, re-encoda H.264/AAC e valida o resultado. Não impõe limites universais: o volume preserva a soma real dos cinco episódios aprovados.
-- `build_five_story_bundle` não cria volume enquanto não existir um grupo completo e exige seleção explícita quando há mais do que um grupo pronto. Se qualquer episódio estiver fora da duração canónica, bloqueia o volume; não aplica padding, loops nem alongamento artificial.
-- O serviço é ainda uma capacidade invocável e testável; não está ligado automaticamente à API ou ao dashboard. A integração no fluxo de aprovação requer persistência/versionamento e autorização server-side, atualmente bloqueada pela auditoria de segurança P0.
-- A CI atual gera episódios sintéticos curtos para validar os builders individuais e comprova que o gate recusa esses ficheiros como episódios de volume. Não prova ainda uma compilação de 15–20 minutos com cinco episódios editoriais completos.
+## Duração e canon
 
-## Validação cloud
+A issue [#55 — duração adaptativa por IP/faixa etária](https://github.com/AndreVazao/baribudos-studio/issues/55) e os canons atuais prevalecem sobre referências fixas antigas:
 
-Workflow `.github/workflows/story-production-cloud-validation.yml` usa uma VM efémera Ubuntu e instala FFmpeg, FFprobe e eSpeak NG. O teste de integração executa builders reais do Studio para gerar:
+- Para Baribudos (4–10 anos), cerca de **5 minutos por minissérie individual** é uma referência editorial inicial, não um limite rígido nem uma janela de rejeição.
+- Não existe mínimo/máximo universal para episódios ou compilações.
+- A compilação preserva a soma das durações reais dos cinco episódios e das transições necessárias, sem padding, loops ou cortes forçados.
+- O audiobook tem duração independente e preserva a história integral.
+- Outras IPs definem os seus próprios públicos, canon, ritmo e recomendações; não herdam automaticamente a política Baribudos.
 
-- EPUB e valida a estrutura ZIP/OPF/TOC.
-- WAV de audiobook com TTS real, não silêncio fabricado.
-- MP4 de minissérie a partir de frames sintéticos aprovados e do WAV produzido.
-- Guia de pais e filme compilatório de cinco histórias, com verificação H.264/AAC.
+## Aprovação: fronteira de segurança atual
 
-Os ficheiros e o relatório são publicados como artifact temporário do GitHub Actions. São fixtures sintéticas, nunca dados familiares ou conteúdo de produção.
+Os campos `approved`, `editorial_status` e `approval_state` dentro de project JSON, payloads ou dados enviados pelo cliente **não são decisões humanas autenticadas** e nunca podem autorizar produção, guia, compilação ou publicação.
 
-## Limites conhecidos antes da primeira publicação real
+Nesta branch, `story_bundle_service._approved()` falha em segurança e devolve sempre `false` até existir um resolver de decisões server-side. A função legada `generate_volume_guide()` também deixa de gerar um guia a partir de uma única história ou de cinco linhas com flags do cliente; devolve um estado compatível com os clientes (`id/title/content` vazios) e `waiting_for_five_approved_stories`.
 
-- `story_generation_engine.py` usa atualmente templates determinísticos; não é geração narrativa generativa por provider de IA. O resultado tem de ser revisto e aprovado por um adulto.
-- A localização/tradução para idiomas diferentes da origem não pode ser marcada como concluída: o serviço de tradução existente é simulado.
-- O TTS eSpeak NG prova que a geração de áudio funciona tecnicamente, mas não certifica voz artística, pronúncia, emoção ou adequação editorial final.
-- A minissérie e o filme compilatório atuais são slideshow/animatic de imagens estáticas com áudio. Não são animação fluida nem incluem lip-sync.
-- Os assets usados na CI são sintéticos. A produção real exige ilustrações aprovadas, character lock, direitos/consentimentos e créditos completos.
-- Não publicar nem sincronizar para Website sem gate editorial, pacote congelado, direitos, créditos, assets persistidos e autorização explícita.
+Por isso:
 
-## Próximas fases
+- `select_complete_story_groups()` não aceita grupos baseados em flags do projeto;
+- `build_five_story_bundle()` permanece em `waiting_for_five_approved_stories`;
+- `generate_volume_guide()` não gera um guia de uma história;
+- os builders de guia e compilação recusam membros sem decisão autorizada;
+- não existe endpoint novo, migração, alteração de dados ou mudança de clientes nesta frente.
 
-1. Ligar seleção de cinco histórias ao modelo persistente de coleções/bundles, com idempotência e versionamento.
-2. Integrar a geração do guia e compilação no dashboard com estados `waiting_for_five`, `ready_for_review`, `approved`, `generated` e `failed`.
-3. Construir validação automática de EPUB, WAV e MP4 e gates editoriais/pedagógicos.
-4. Substituir a geração por templates por provider generativo configurável, com canon e revisão humana.
-5. Implementar localização real, com revisão humana por idioma.
-6. Evoluir o animatic para animação real, sem confundir os dois níveis de capacidade.
-7. Só então executar o primeiro lote editorial real e a publicação comercial.
+Este bloqueio é intencional. A próxima implementação depende de autenticação/RBAC central, ledger de revisões ligado à geração e um registo append-only de decisões humanas com ator autenticado, revisão/checksum/canon ligados, idempotência, revogação e supersessão. A aprovação editorial não equivale a autorização de publicação.
+
+## Validação cloud e limites
+
+O workflow cloud usa uma VM efémera e ferramentas multimédia para validar tecnicamente artefactos de teste. O teste de integração atual gera apenas uma história sintética e verifica EPUB, WAV e animatic/slideshow. Cinco linhas de fixture com flags de aprovação falsificadas são usadas apenas para provar que o gate as rejeita.
+
+O relatório esperado declara explicitamente:
+
+- `validation_scope=synthetic fixture validation only`;
+- `human_editorial_approvals=0`;
+- `client_approval_flags_accepted=false`;
+- nenhum guia de volume nem filme compilatório gerado;
+- nenhuma publicação ou temporada criada.
+
+Isto não é produção editorial real, não são cinco histórias canónicas distintas, não comprova vozes/consentimentos/assets finais e não aprova BB-001.
+
+## Bloqueios antes da primeira produção real
+
+1. Concluir autenticação server-side, RBAC, sessão e migração coordenada React/Tauri/Capacitor.
+2. Ligar o ledger append-only à geração, preservando revisões anteriores, lineage, prompt/modelo, locale e checksums.
+3. Implementar decisões humanas server-side, imutáveis, autenticadas e ligadas à revisão exata.
+4. Implementar seleção idempotente de cinco revisões elegíveis e persistir a identidade/ordem do volume.
+5. Completar localização real com revisão humana por idioma.
+6. Validar continuidade visual, créditos, direitos e consentimentos.
+7. Produzir e validar EPUB, audiobook e episódio individual com assets reais autorizados.
+8. Só depois gerar guia e compilação de cinco episódios e submetê-los à revisão humana própria.
+9. Publicar/sincronizar para Website apenas após gates editoriais, comerciais e de direitos, com pacote congelado e recibo.
+
+Não alterar produção, dados, schema, migrations aplicadas, credenciais, secrets, permissões, buckets, storage ou infraestrutura nesta fase. O Studio doméstico permanece privado e não é exposto à Internet.
