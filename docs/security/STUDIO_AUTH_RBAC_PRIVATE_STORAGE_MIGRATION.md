@@ -235,3 +235,38 @@ The following endpoints are prioritized for policy review. **They remain UNCLASS
 The artifact inspected above belongs to Studio CI **run number 616** (run ID `44312969350`) and both `frontend-build` and `backend-validate` succeeded. The earlier conversational reference to **CI #619** is not substantiated by the run evidence retrieved in this check; do not report #619 as passed or pending without retrieving its exact run record. This is an evidence correction, not a code or runtime change.
 
 The 233 source-level candidates are heuristic and not a route authorization map. The 219 runtime entries are the definitive route enumeration for that tested app construction. Reconcile handlers to runtime endpoints before authoring any allowlist. No route policy is implemented by this annex.
+
+
+## Implementation slices and merge gates — 24 Nov 2026
+
+This plan narrows the migration into reviewable slices. It is an execution plan only; no runtime enforcement is implied.
+
+### Slice A — authentication primitives and users API (first code PR)
+- Introduce server-side session primitives: cryptographically random opaque session token, store only a token hash, bounded expiry, revocation timestamp, and server-derived principal ID.
+- Password/PIN verification must use a password-hashing function with parameters documented and tested; no plaintext PIN field, no predictable bootstrap credential, and mandatory owner bootstrap secret rotation before normal operation.
+- Login response must be a minimal DTO (identity, display name, role label, session expiry); never return PIN/hash, raw user record, or session-store internals.
+- Owner-only user create/disable/role-change/PIN-reset operations. Role and user ID are derived from the session on protected operations; request-body identity is ignored/rejected.
+- Add negative tests for anonymous, expired, revoked, disabled principal, forged role/user ID, child attempting owner actions, and login response secret leakage.
+- Do not yet protect unrelated routes or change client transport until a compatibility migration plan and consumer inventory are checked; this slice must not be described as global protection.
+
+### Slice B — coordinated client session transport
+- Add one shared API client that obtains, stores and clears the session through platform-appropriate secure storage; explicitly assess React web, Tauri desktop and Capacitor/mobile secure-storage capability before implementation.
+- Add login/logout/session-expiry handling and a migration/rollback switch. Avoid localStorage for bearer session tokens and avoid logging credentials or tokens.
+- Verify startup, offline/error behavior, session revocation, and API error UX on each supported client before making the server contract mandatory.
+
+### Slice C — route policy manifest and fail-closed coverage
+- Generate the manifest from the current app's actual registered methods, paths, mounts and dependencies during CI; don't hard-code the stale 219-route count.
+- Every route/mount must map to an explicit policy class, owner-reviewed principal type, permission, resource scope and rationale. New or changed routes fail CI if absent from the manifest.
+- The manifest is evidence/coverage enforcement, not runtime authorization. Runtime gates must be separately tested with anonymous, wrong-role, forged-principal, revoked-session and cross-resource negative HTTP cases.
+- Build the central gate only after route/service/resource tracing and client compatibility are ready. Until then, keep the Studio private and do not expose the app to the Internet.
+
+### Slice D — owner-controlled secret/storage boundary
+- Secret-control must be owner-only, reveal/export must be explicit audited actions, and secrets must never be served from static paths.
+- Remove the broad /storage mount only after authenticated asset delivery is implemented and React/Tauri/Capacitor consumers have migrated with rollback evidence. Keep private files private by default.
+- Treat /public as a file-level allowlist, not a whole-directory trust decision.
+
+### Acceptance criteria for every slice
+- CI passes on the exact PR head, including negative security tests and client/build compatibility tests for affected platforms.
+- The PR description lists protected surfaces and the surfaces intentionally not protected yet; no broad “Studio secure” claim.
+- No production credential rotation, migration, CORS, mount, data or deployment action without explicit owner approval and a rollback plan.
+- Draft until independent review confirms the code, tests, compatibility and rollback evidence.
