@@ -64,3 +64,29 @@ For every registered method/path:
 ## Current conclusion
 
 The evidence confirms a large unclassified runtime surface and the absence of global dependency enforcement in the manifest. It does **not** establish whether individual handlers have imported/service-level checks. The coordinated security migration remains P0. No authentication code, storage mount, data, credential, production configuration or infrastructure was changed by this inventory.
+
+
+## Source recheck — 24 November 2026
+
+**Main reviewed:** `ee9acd90ff62bf8f751f60d3652918a8741b13b9`  
+**Scope:** static source and existing regression tests only; no HTTP exploit test, desktop/mobile run, storage probe, or runtime route-manifest regeneration.
+
+### Fresh source evidence
+
+- `studio_core/api/main.py` still configures CORS with wildcard origins, methods and headers while credentials are enabled. It mounts `/public` and the entire resolved storage directory at `/storage` when the directories exist.
+- `studio_core/api/routes/videos.py` exposes `POST /api/videos/export/{project_id}` without a FastAPI auth dependency or server-derived principal in the handler. It loads the project by supplied ID, selects the story/locale, builds storyboard frames, invokes video generation and writes the result into the project's output JSON.
+- This route is a sensitive write/production operation. The absence of a route-local dependency is not proof of every possible external check, but the inspected application wiring does not show a central auth boundary that protects it.
+- `studio_core/services/video_service.py` currently makes `resolve_approved_series_audio()` fail closed (returns no audio until the server-owned approval ledger exists). The renderer accepts `series_audio_path`, ignores the legacy `audio_path` field, and returns `animatic_only`, `finalizable=false`, with `real_character_animation_pipeline_not_implemented`.
+- Existing regression tests cover audiobook isolation and the fail-closed gate: `tests/test_series_adaptation_audio_isolation.py`; factory, manual pipeline and direct route tests in `tests/test_project_factory_video_sequence.py` assert an empty series-audio path and no legacy `audio_path` fallback when no approved series narration is available.
+
+### Reconciliation
+
+The 19 Nov counts (78 route modules / 233 heuristic handlers / 219 APIRoute entries / 6 other HTTP entries / 2 static mounts) remain **historical artifact counts**; they were not regenerated from this main commit in this run. The source-level CORS and static-mount findings above were rechecked.
+
+Issue [#57 — series adaptation audio isolation](https://github.com/AndreVazao/baribudos-studio/issues/57) is **partially addressed by merged PR #60**: audiobook audio is no longer used as miniseries narration and false final-miniseries completion is blocked. It remains open for a separate approved series script/audio and real character animation pipeline.
+
+### P0 decision
+
+Do not patch this route in isolation. Authentication/RBAC, private storage and CORS must be migrated together with all handlers and React/Tauri/Capacitor clients, with deny-by-default policies, route coverage, 401/403 tests, backup and rollback. Keep Studio private/domestic and do not expose it to the Internet.
+
+No runtime, client, data, schema, migration, credential, secret, permission, storage, production or infrastructure changes were made in this recheck.
