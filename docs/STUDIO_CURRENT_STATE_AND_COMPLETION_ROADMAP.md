@@ -674,3 +674,22 @@ A implementação runtime deixou de impor limites universais de 180–240 segund
 - Issue #41: ligar bundle de cinco histórias ao fluxo editorial aprovado, com persistência, idempotência, versionamento, jobs e dashboard; depende da migração de segurança P0.
 - Issue #42: provider generativo de histórias, validação de canon/idade/segurança, versões imutáveis e aprovação adulta.
 - Manter PR #40 draft até revisão. Não confundir CI verde com prontidão editorial/comercial.
+
+
+## Operational progress — 24 November 2026
+
+### Merged
+
+- **PR #69** — story revision ledger lineage integrity: required identity for new records, project/IP/story scope checks, parent locale checks, and an explicit backward-compatible policy for identity-less legacy records. Merge commit: `4c361c7be46cdae88717d078fcae35ef04151197`.
+- **PR #71** — fail-closed volume/guide gate: client-controlled `approved`, `editorial_status` and `approval_state` cannot authorize production; the legacy single-story guide is blocked compatibly. Merge commit: `049caf2dc4c9e01aa554f0be42bb527c52ec2783`.
+- **PR #73** — authenticated editorial approval contract: server principal, scope, immutable revision/content/canon hashes, append-only decision events, revocation/supersession and negative-test requirements. Documentation-only merge: `a1607908daade26eef2459691270aa4d11d5c3ef`.
+
+### Current blockers (not resolved by the above)
+
+- Central server authentication, signed/expired/revocable sessions, RBAC and coordinated React/Tauri/Capacitor migration remain P0.
+- Route inventory still requires full handler → dependency → service → resource tracing and negative HTTP tests. Wildcard CORS, private `/storage` mounting and client-supplied identity/role remain documented source risks.
+- Story revision ledger is not yet called by production generation and does not authenticate `actor_id` or record human approvals.
+- Volume/guide/compilation is intentionally blocked until an authenticated server-owned decision service exists. BB-001 remains unapproved; no real content/media/publication was produced.
+- Draft PR #63 (storage path/secret response hardening and coordinated auth design) is not the auth migration. Draft PR #65 (provider-backed generation) is not integrated; passing synthetic/mocked CI does not satisfy editorial approval, provider credentials, localization or production readiness.
+
+Keep Studio private/domestic. Do not expose it to the Internet or perform credential/data migration until the route matrix, cross-client plan, backup and rollback rehearsal are complete.
