@@ -18,7 +18,7 @@ class UserLoginSessionTests(unittest.TestCase):
 
     def test_login_migrates_legacy_pin_and_returns_safe_dto_and_session(self):
         session = {"token": "opaque-session", "expires_at": "future"}
-        with patch.object(users, "ensure_default_owner"), patch.object(
+        with patch.object(
             users, "list_json_items", return_value=[dict(self.user)]
         ), patch.object(users, "update_json_item", side_effect=lambda file, uid, fn: fn(dict(self.user))) as update, patch.object(
             users, "_session_manager"
@@ -38,7 +38,7 @@ class UserLoginSessionTests(unittest.TestCase):
     def test_login_accepts_hashed_pin_without_rewriting(self):
         hashed = hash_pin("secret")
         user = {**self.user, "pin": hashed}
-        with patch.object(users, "ensure_default_owner"), patch.object(
+        with patch.object(
             users, "list_json_items", return_value=[user]
         ), patch.object(users, "update_json_item") as update, patch.object(users, "_session_manager") as manager:
             manager.return_value.create.return_value = {"token": "opaque", "expires_at": "future"}
@@ -47,7 +47,7 @@ class UserLoginSessionTests(unittest.TestCase):
         update.assert_not_called()
 
     def test_invalid_credentials_do_not_issue_session(self):
-        with patch.object(users, "ensure_default_owner"), patch.object(
+        with patch.object(
             users, "list_json_items", return_value=[dict(self.user)]
         ), patch.object(users, "_session_manager") as manager:
             with self.assertRaises(HTTPException) as raised:
@@ -57,7 +57,7 @@ class UserLoginSessionTests(unittest.TestCase):
 
     def test_inactive_account_cannot_login(self):
         inactive = {**self.user, "is_active": False}
-        with patch.object(users, "ensure_default_owner"), patch.object(
+        with patch.object(
             users, "list_json_items", return_value=[inactive]
         ), patch.object(users, "_session_manager") as manager:
             with self.assertRaises(HTTPException) as raised:
