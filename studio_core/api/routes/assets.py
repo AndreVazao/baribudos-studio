@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 
 from studio_core.core.config import resolve_storage_path
 from studio_core.services.asset_registry_service import (
@@ -18,8 +18,9 @@ from studio_core.services.asset_registry_service import (
     update_asset,
 )
 from studio_core.services.cdn_service import resolve_cdn_url
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/assets", tags=["assets"])
+router = APIRouter(prefix="/assets", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["assets"])
 
 
 def _safe_str(value: str | None) -> str:
