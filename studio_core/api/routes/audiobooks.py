@@ -25,7 +25,7 @@ def _get_project(project_id: str) -> dict | None:
 def export_audiobook(
     project_id: str,
     payload: dict | None = None,
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
