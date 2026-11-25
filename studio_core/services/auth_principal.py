@@ -84,10 +84,14 @@ def get_current_principal(
 
     user = get_json_item("data/users.json", session_user_id)
     persisted_user_id = str(user.get("id", "")).strip() if isinstance(user, dict) else ""
+    # Fail closed: legacy/malformed account records without an explicit boolean
+    # active flag must not be treated as enabled. A migration must set this
+    # field deliberately before those accounts can authenticate.
+    active_status = user.get("is_active") if isinstance(user, dict) else None
     if (
         not isinstance(user, dict)
         or persisted_user_id != session_user_id
-        or not bool(user.get("is_active", True))
+        or active_status is not True
     ):
         try:
             _session_manager().revoke(credentials.credentials)
@@ -95,7 +99,7 @@ def get_current_principal(
             pass
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Conta inativa ou inexistente.",
+            detail="Conta inativa, sem estado ativo válido ou inexistente.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
