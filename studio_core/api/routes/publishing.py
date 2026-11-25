@@ -23,7 +23,7 @@ def _get_project(project_id: str) -> dict | None:
 
 @router.get("")
 def list_publications(
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     publications = read_json(PUBLICATIONS_FILE, [])
     if not isinstance(publications, list):
@@ -41,7 +41,7 @@ def list_publications(
 @router.post("/publish")
 def publish_project(
     payload: dict,
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     project_id = str(payload.get("project_id", "")).strip()
     language = str(payload.get("language", "pt-PT")).strip()
