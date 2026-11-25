@@ -39,6 +39,14 @@ def _safe_list(value: Any) -> List[Any]:
     return value if isinstance(value, list) else []
 
 
+def _is_explicitly_approved(story: Dict[str, Any]) -> bool:
+    return (
+        story.get("approved") is True
+        or str(story.get("editorial_status", "")).strip().lower() == "approved"
+        or str(story.get("approval_state", "")).strip().lower() == "approved"
+    )
+
+
 def _get_project(project_id: str) -> Dict[str, Any] | None:
     projects = read_json(PROJECTS_FILE, [])
     for project in projects:
@@ -105,6 +113,11 @@ def _update_project_outputs(
             **current,
             "story": story if story is not None else current.get("story", {}),
             "language_variants": language_variants if language_variants is not None else current.get("language_variants", {}),
+            "editorial_status": (
+                str(story.get("editorial_status") or "draft")
+                if isinstance(story, dict) and story is not None
+                else current.get("editorial_status", "draft")
+            ),
             "cover_image": (cover or {}).get("file_path", current.get("cover_image", "")),
             "outputs": next_outputs,
             "production": production if production is not None else current.get("production", {}),
@@ -130,8 +143,11 @@ def _build_story_variants(runtime: Dict[str, Any], project: Dict[str, Any], payl
             "title": project_title,
             "language": language,
             "raw_text": raw_text,
+            "story_source_notes": _safe_dict(project.get("story_source")).get("story_source_notes", ""),
             "protagonist": payload.get("protagonist", ""),
             "value_theme": payload.get("value_theme", ""),
+            "age_range": payload.get("age_range", ""),
+            "creative_brief": payload.get("creative_brief") or payload.get("prompt") or payload.get("premise", ""),
         })
 
     return result
@@ -269,16 +285,67 @@ def run_production_pipeline(project_id: str, payload: Dict[str, Any] | None = No
                     "age_range": payload.get("age_range", ""),
                     "protagonist": payload.get("protagonist", ""),
                     "value_theme": payload.get("value_theme", ""),
+                    "creative_brief": payload.get("creative_brief") or payload.get("prompt") or payload.get("premise", ""),
                 },
             )
-            state = "completed"
-            _append_log(logs, "Factory automática concluída.")
+            state = "story_ready" if bool(_safe_dict(result.get("summary")).get("media_blocked")) else "completed"
+            _append_log(
+                logs,
+                "Texto gerado para revisão; produção multimédia bloqueada até aprovação editorial."
+                if state == "story_ready" else "Factory automática concluída."
+            )
         else:
             _append_log(logs, "A gerar story variants para modo manual.")
             story_variants = _build_story_variants(runtime, project, payload)
-            result = _run_manual_outputs(runtime, project, story_variants, payload, logs)
-            state = "completed"
-            _append_log(logs, "Pipeline manual concluída.")
+            main_language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip() or "pt-PT"
+            project_editorially_approved = (
+                str(project.get("editorial_status", "")).strip().lower() == "approved"
+                or project.get("approved") is True
+            )
+            approval_by_language = {}
+            for language, story_value in story_variants.items():
+                story = _safe_dict(story_value)
+                has_version_approval = any(
+                    key in story for key in ("approved", "editorial_status", "approval_state")
+                )
+                approval_by_language[language] = (
+                    _is_explicitly_approved(story)
+                    if has_version_approval
+                    else bool(project_editorially_approved and language == main_language)
+                )
+            media_gate_open = bool(story_variants) and all(approval_by_language.values())
+            if media_gate_open:
+                result = _run_manual_outputs(runtime, project, story_variants, payload, logs)
+                state = "completed"
+                _append_log(logs, "Pipeline manual concluída.")
+            else:
+                project_title = str(project.get("title", "Projeto")).strip() or "Projeto"
+                main_language = str(project.get("language") or runtime.get("default_language") or "pt-PT").strip() or "pt-PT"
+                main_story = _safe_dict(story_variants.get(main_language, {}))
+                if not main_story and story_variants:
+                    main_story = _safe_dict(next(iter(story_variants.values())))
+                language_variants = _build_language_variants(story_variants, project_title)
+                for language, variant in language_variants.items():
+                    variant["status"] = "needs_review"
+                current_outputs = _safe_dict(project.get("outputs", {}))
+                result = {
+                    "story": main_story,
+                    "story_variants": story_variants,
+                    "language_variants": language_variants,
+                    "cover": _safe_dict(current_outputs.get("covers", {})) or None,
+                    "ebook": _safe_dict(current_outputs.get("epub", {})),
+                    "audiobook": _safe_dict(current_outputs.get("audiobook", {})),
+                    "video": _safe_dict(current_outputs.get("video", {})),
+                    "guide": current_outputs.get("guide"),
+                    "summary": {
+                        "media_gate_open": False,
+                        "media_blocked": True,
+                        "blocked_languages": list(story_variants.keys()),
+                        "editorial_status": "needs_review",
+                    },
+                }
+                state = "story_ready"
+                _append_log(logs, "Texto disponível para revisão; saídas multimédia não foram geradas por falta de aprovação explícita.")
 
         production_summary = {
             "run_id": run_id,

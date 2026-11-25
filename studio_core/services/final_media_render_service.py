@@ -10,6 +10,8 @@ from uuid import uuid4
 from studio_core.core.config import resolve_storage_path
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
+from studio_core.services.ebook_service import build_epub
+from studio_core.services.ip_runtime_service import load_ip_runtime
 
 PROJECTS_FILE = "data/projects.json"
 
@@ -84,79 +86,11 @@ def render_video_from_package(project_id: str) -> Dict[str, Any]:
     if not project:
         raise ValueError("Projeto não encontrado.")
 
-    video_package = _safe_dict(project.get("video_storyboard_package", {}))
-    slides = [_safe_dict(item) for item in _safe_list(video_package.get("slides", []))]
-    if not slides:
-        raise ValueError("Sem pacote de vídeo.")
-
-    export_dir = resolve_storage_path("exports", project_id, "final_video")
-    export_dir.mkdir(parents=True, exist_ok=True)
-
-    manifest_path = export_dir / "concat_manifest.txt"
-    output_path = export_dir / "final_story_video.mp4"
-
-    _write_concat_manifest(slides, manifest_path)
-
-    used_ffmpeg = False
-    if _ffmpeg_exists():
-        try:
-            subprocess.run(
-                [
-                    "ffmpeg",
-                    "-y",
-                    "-f",
-                    "concat",
-                    "-safe",
-                    "0",
-                    "-i",
-                    str(manifest_path),
-                    "-vsync",
-                    "vfr",
-                    "-pix_fmt",
-                    "yuv420p",
-                    str(output_path),
-                ],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            used_ffmpeg = True
-        except Exception:
-            used_ffmpeg = False
-
-    if not used_ffmpeg:
-        output_path.write_bytes(b"")
-
-    video_output = {
-        "id": str(uuid4()),
-        "type": "video",
-        "title": f"{_safe_text(project.get('title'))} Final Video",
-        "file_name": output_path.name,
-        "file_path": str(output_path),
-        "slides_count": len(slides),
-        "used_ffmpeg": used_ffmpeg,
-        "status": "rendered" if used_ffmpeg else "placeholder_rendered",
-        "updated_at": now_iso(),
-    }
-
-    updated = update_json_item(
-        PROJECTS_FILE,
-        project_id,
-        lambda current: {
-            **current,
-            "outputs": {
-                **_safe_dict(current.get("outputs", {})),
-                "final_video": video_output,
-            },
-            "updated_at": now_iso(),
-        },
+    raise ValueError(
+        "final_character_animation_pipeline_not_implemented: "
+        "o renderizador atual apenas montava slides/placeholder sem animação de personagens "
+        "nem banda sonora de minissérie validada; usa a saída animatic_only enquanto o motor final não existe."
     )
-
-    return {
-        "ok": True,
-        "video": video_output,
-        "project": updated,
-    }
 
 
 def export_epub_from_story(project_id: str, language: str = "") -> Dict[str, Any]:
@@ -167,35 +101,39 @@ def export_epub_from_story(project_id: str, language: str = "") -> Dict[str, Any
     target_language = _safe_text(language or project.get("language", "pt-PT")) or "pt-PT"
     story_variants = _safe_dict(project.get("language_variants", {}))
     story = _safe_dict(story_variants.get(target_language, {})) or _safe_dict(project.get("story", {}))
-    pages = [_safe_dict(item) for item in _safe_list(story.get("pages", []))]
-    if not pages:
-        raise ValueError("Sem story para exportar.")
+    if not story or not _safe_list(story.get("pages", [])):
+        raise ValueError("Sem story paginada para exportar.")
 
-    export_dir = resolve_storage_path("exports", project_id, "epub")
-    export_dir.mkdir(parents=True, exist_ok=True)
+    has_version_approval = any(
+        key in story for key in ("approved", "editorial_status", "approval_state")
+    )
+    version_approved = (
+        story.get("approved") is True
+        or _safe_text(story.get("editorial_status")).lower() == "approved"
+        or _safe_text(story.get("approval_state")).lower() == "approved"
+    )
+    project_approved = (
+        target_language == _safe_text(project.get("language"))
+        and (
+            project.get("approved") is True
+            or _safe_text(project.get("editorial_status")).lower() == "approved"
+        )
+    )
+    if not (version_approved if has_version_approval else project_approved):
+        raise ValueError("Aprovação editorial explícita necessária antes de exportar EPUB.")
 
-    output_path = export_dir / f"{_safe_text(project.get('title')).replace(' ', '_') or 'book'}_{target_language}.epub"
-
-    epub_payload = {
-        "title": _safe_text(project.get("title")),
-        "language": target_language,
-        "pages": pages,
-    }
-
-    output_path.write_text(json.dumps(epub_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    epub_output = {
-        "id": str(uuid4()),
-        "type": "ebook",
-        "format": "epub",
-        "title": _safe_text(project.get("title")),
-        "language": target_language,
-        "file_name": output_path.name,
-        "file_path": str(output_path),
-        "pages_count": len(pages),
-        "status": "exported",
-        "updated_at": now_iso(),
-    }
+    saga_id = _safe_text(project.get("saga_slug")) or "baribudos"
+    runtime = load_ip_runtime(saga_id)
+    metadata = _safe_dict(runtime.get("metadata", {}))
+    ebook_output = build_epub(
+        story,
+        project_id=project_id,
+        project_title=_safe_text(project.get("title")) or "Projeto",
+        language=target_language,
+        author=_safe_text(metadata.get("author_default")) or "Autor",
+        cover_path=_safe_text(project.get("cover_image")) or None,
+        saga_id=saga_id,
+    )
 
     updated = update_json_item(
         PROJECTS_FILE,
@@ -206,7 +144,7 @@ def export_epub_from_story(project_id: str, language: str = "") -> Dict[str, Any
                 **_safe_dict(current.get("outputs", {})),
                 "epub_editorial": {
                     **_safe_dict(_safe_dict(current.get("outputs", {})).get("epub_editorial", {})),
-                    target_language: epub_output,
+                    target_language: ebook_output,
                 },
             },
             "updated_at": now_iso(),
@@ -215,6 +153,6 @@ def export_epub_from_story(project_id: str, language: str = "") -> Dict[str, Any
 
     return {
         "ok": True,
-        "ebook": epub_output,
+        "ebook": ebook_output,
         "project": updated,
-}
+    }

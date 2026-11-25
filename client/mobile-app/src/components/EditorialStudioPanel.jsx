@@ -358,7 +358,7 @@ export default function EditorialStudioPanel({ user }) {
         </button>
 
         <button onClick={handleRenderVideo} style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#111827", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
-          Render vídeo final
+          Render final (motor de animação indisponível)
         </button>
       </div>
 

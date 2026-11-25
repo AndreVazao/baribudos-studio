@@ -148,6 +148,7 @@ class ProjectFactoryVideoSequenceTests(unittest.TestCase):
             "id": "project-route",
             "title": "Route",
             "language": "pt-PT",
+            "editorial_status": "approved",
             "language_variants": {
                 "pt-PT": {"title": "Route", "language": "pt-PT"}
             },

@@ -4,6 +4,10 @@ from typing import Any, Dict, List
 from uuid import uuid4
 
 from studio_core.services.saga_runtime_service import load_saga_runtime
+from studio_core.services.story_generation_provider import (
+    generate_story_with_provider,
+    is_story_provider_configured,
+)
 
 
 DEFAULT_STRUCTURE = [
@@ -243,6 +247,27 @@ def generate_canon_story(payload: Dict[str, Any]) -> Dict[str, Any]:
     runtime = load_saga_runtime(saga_id)
     resolved = _safe_dict(runtime.get("resolved", {}))
 
+    if not is_story_provider_configured() and language.casefold() != str(runtime.get("default_language", "pt-PT")).strip().casefold():
+        raise ValueError("story_provider_required_for_nondefault_language")
+
+    if is_story_provider_configured():
+        generated = generate_story_with_provider(payload=payload, runtime=runtime)
+        generated.setdefault("id", str(uuid4()))
+        generated.setdefault("saga_id", saga_id)
+        generated.setdefault("series_name", resolved.get("series_name", runtime.get("name", "")))
+        generated.setdefault("mission", resolved.get("mission", ""))
+        generated.setdefault("target_age", resolved.get("target_age", ""))
+        generated.setdefault("genre", resolved.get("genre", ""))
+        generated.setdefault("description", resolved.get("description", ""))
+        generated.setdefault("runtime_validation", runtime.get("validation", {}))
+        generated["editorial_status"] = "draft"
+        generated["approved"] = False
+        generated["approval_state"] = "needs_review"
+        generated["generation_status"] = "generated_needs_review"
+        generated["provider_status"] = "generated_needs_review"
+        generated["generation_engine"] = "provider_backed"
+        return generated
+
     protagonist_data = _pick_main_character(runtime, payload.get("protagonist", ""))
     protagonist = str(protagonist_data.get("name", "Tilo")).strip() or "Tilo"
 
@@ -312,4 +337,8 @@ def generate_canon_story(payload: Dict[str, Any]) -> Dict[str, Any]:
         "runtime_validation": runtime.get("validation", {}),
         "raw_text": raw_text,
         "pages": pages,
+        "generation_engine": "deterministic_template_fallback",
+        "generation_status": "prototype_needs_editorial_review",
+        "editorial_status": "draft",
+        "approved": False,
   }

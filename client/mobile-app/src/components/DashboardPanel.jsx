@@ -17,6 +17,7 @@ import {
   listSponsors,
   listUsers,
   runFactory,
+  updateProject,
   saveSettings
 } from "../api.js"
 import AudioCastPanel from "./AudioCastPanel.jsx"
@@ -97,6 +98,7 @@ export default function DashboardPanel({ user }) {
   const [newSagaName, setNewSagaName] = useState("")
   const [newSponsorName, setNewSponsorName] = useState("")
   const [newSponsorIpSlug, setNewSponsorIpSlug] = useState("")
+  const [factoryBriefs, setFactoryBriefs] = useState({})
 
   useEffect(() => { loadAll() }, [])
   const selectedProjectIp = useMemo(() => ips.find((item) => item.slug === newProjectIpSlug) || null, [ips, newProjectIpSlug])
@@ -165,9 +167,49 @@ export default function DashboardPanel({ user }) {
     if (!canEditorial(user)) return alert("Sem permissão editorial.")
     const project = projects.find((item) => item.id === projectId)
     const projectLanguage = project?.language || "pt-PT"
-    await runFactory(projectId, { userName: user?.name || "André", languages: [projectLanguage, "en"], createStory: true, createTranslations: true, createCover: true, createEpub: true, createAudiobook: true, createSeries: true, createGuide: true, publish: false, age_range: project?.commercial?.target_age || "4-10" })
-    alert("Factory concluída.")
-    await loadAll()
+    const creativeBrief = String(factoryBriefs[projectId] || "").trim()
+    try {
+      const result = await runFactory(projectId, {
+        userName: user?.name || "André",
+        languages: [projectLanguage],
+        createStory: true,
+        createTranslations: false,
+        createCover: true,
+        createEpub: true,
+        createAudiobook: true,
+        createSeries: true,
+        createGuide: true,
+        publish: false,
+        age_range: project?.commercial?.target_age || "4-10",
+        creative_brief: creativeBrief,
+      })
+      if (result?.summary?.media_blocked) {
+        alert("História criada como rascunho. Revê e aprova o texto no Studio antes de gerar EPUB, audiobook ou minissérie.")
+      } else {
+        alert("Pipeline concluída. Confirma os artefactos e o respetivo estado editorial.")
+      }
+      await loadAll()
+    } catch (error) {
+      alert(error?.message || "Não foi possível executar a geração. Verifica o briefing, o texto de origem e a configuração do motor de histórias.")
+    }
+  }
+  async function handleApproveStory(projectId) {
+    if (!canEditorial(user)) return alert("Sem permissão editorial.")
+    const project = projects.find((item) => item.id === projectId)
+    const story = project?.story || {}
+    const hasContent = Boolean(String(story.raw_text || "").trim() || (Array.isArray(story.pages) && story.pages.length))
+    if (!hasContent) return alert("Ainda não existe texto para aprovação.")
+    if (!window.confirm("Confirmas que reveste o texto e aprovas esta versão para produção de EPUB, audiobook e minissérie? Esta ação não publica o conteúdo.")) return
+    try {
+      await updateProject(projectId, {
+        editorial_status: "approved",
+        story: { editorial_status: "approved", approval_state: "approved", approved: true }
+      }, user)
+      alert("Versão editorial aprovada. Já pode avançar para a produção dos formatos solicitados.")
+      await loadAll()
+    } catch (error) {
+      alert(error?.message || "Não foi possível registar a aprovação editorial.")
+    }
   }
   async function handleExportEpub(projectId) { if (!canEditorial(user)) return alert("Sem permissão editorial."); const project = projects.find((item) => item.id === projectId); await exportEbook(projectId, { language: project?.language || "pt-PT" }); alert("EPUB exportado."); await loadAll() }
   async function handleExportAudio(projectId) { if (!canEditorial(user)) return alert("Sem permissão editorial."); const project = projects.find((item) => item.id === projectId); await exportAudiobook(projectId, { language: project?.language || "pt-PT" }); alert("Audiobook exportado."); await loadAll() }
@@ -182,7 +224,7 @@ export default function DashboardPanel({ user }) {
   return (<div style={{ display: "grid", gap: 16 }}>
     {guidedModeEnabled ? <GuidedWorkflowPanel settings={settings || {}} onToggleGuidedMode={() => handleToggleGuidedMode(false)} onChangeGuidedMode={handleChangeGuidedMode} /> : null}
     <Card title="Sistema"><div><strong>App:</strong> {diagnostic?.app_name || "-"}</div><div><strong>Python:</strong> {diagnostic?.system?.python_version || "-"}</div><div><strong>Storage:</strong> {diagnostic?.storage_root || "-"}</div><div><strong>FFmpeg:</strong> {diagnostic?.commands?.ffmpeg?.ok ? "OK" : "FALTA"}</div><div><strong>eSpeak:</strong> {diagnostic?.commands?.espeak?.ok ? "OK" : "FALTA"}</div></Card>
-    <Card title="Factory Capabilities"><div><strong>Engine:</strong> {factoryCaps?.engine || "-"}</div><div><strong>Línguas:</strong> {(factoryCaps?.supported_languages || []).join(", ")}</div></Card>
+    <Card title="Factory Capabilities"><div><strong>Engine:</strong> {factoryCaps?.engine || "-"}</div><div><strong>Geração narrativa:</strong> {factoryCaps?.provider_backed_story_generation ? "Motor IA configurado" : "Protótipo determinístico — motor IA por configurar"}</div><div><strong>Modo:</strong> {factoryCaps?.generation_mode || "-"}</div><div><strong>Minissérie:</strong> {factoryCaps?.miniseries_mode === "animatic_only" ? "Animatic disponível; animação final de personagens ainda não implementada" : "-"}</div><div><strong>Línguas:</strong> {(factoryCaps?.supported_languages || []).join(", ")}</div></Card>
     <WebsiteControlPanel user={user} projects={projects} onReload={loadAll} />
     <WebsiteMarketingControlPanel user={user} />
     <CommerceGroupsPanel user={user} />
@@ -227,7 +269,7 @@ export default function DashboardPanel({ user }) {
     <Card title="Criar Projeto"><label>IP / Saga</label><select value={newProjectIpSlug} onChange={(e) => setNewProjectIpSlug(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}><option value="">Selecionar IP</option>{ips.map((ip) => <option key={ip.id} value={ip.slug}>{ip.name}</option>)}</select><label>Língua base</label><select value={newProjectLanguage} onChange={(e) => setNewProjectLanguage(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}>{DEFAULT_LANGUAGES.map((lang) => <option key={lang} value={lang}>{lang}</option>)}</select><input value={newProjectTitle} onChange={(e) => setNewProjectTitle(e.target.value)} placeholder="Título do projeto" style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }} />
       <ProjectCreationModePanel value={newProjectConfig} onChange={setNewProjectConfig} />
       {selectedProjectIp ? <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)" }}><div><strong>IP selecionada:</strong> {selectedProjectIp.name}</div><div><strong>Slug:</strong> {selectedProjectIp.slug}</div><div><strong>Privada:</strong> {selectedProjectIp.visible_to_owner_only ? "Sim" : "Não"}</div><div><strong>Língua default da IP:</strong> {selectedProjectIp.default_language || "-"}</div><div><strong>Idiomas output da IP:</strong> {(selectedProjectIp.output_languages || []).join(", ")}</div><div><strong>Autor default:</strong> {selectedProjectIp.metadata?.author_default || "-"}</div><div><strong>Producer:</strong> {selectedProjectIp.metadata?.producer || "-"}</div></div> : null}<ActionButton onClick={handleCreateProject}>Criar projeto</ActionButton></Card>
-    <Card title="Projetos visíveis para este user">{projects.map((project) => <div key={project.id} style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, display: "grid", gap: 8, background: "rgba(255,255,255,0.55)" }}><div><strong>{project.title}</strong></div><div>Saga: {project.saga_name}</div><div>Slug IP: {project.saga_slug}</div><div>Língua: {project.language}</div><div>Dono: {project.created_by_name || "-"}</div><div>Modo: {project.project_mode || "official"}</div><div>Texto: {project.stage_modes?.story_input_mode || "manual"} · Imagens: {project.stage_modes?.illustration_mode || "manual"} · Áudio: {project.stage_modes?.audio_mode || "manual"} · Vídeo: {project.stage_modes?.video_mode || "manual"}</div><div>Universo oculto: {project.hidden_universe_name || "-"}</div><div>Ilustração base: {project.illustration_path || "-"}</div><div>Capa: {project.cover_image || "-"}</div><div>ISBN: {project.commercial?.isbn || "-"}</div><div>ASIN: {project.commercial?.asin || "-"}</div><div>Preço: {project.commercial?.price || "-"} {project.commercial?.currency || ""}</div><div>Status comercial: {project.commercial?.commercial_status || "-"}</div><div>Pronto para publicar: {project.ready_for_publish ? "Sim" : "Não"}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><ActionButton onClick={() => handleFactory(project.id)}>Factory</ActionButton><ActionButton onClick={() => handleExportEpub(project.id)}>EPUB</ActionButton><ActionButton onClick={() => handleExportAudio(project.id)}>Audiobook</ActionButton><ActionButton onClick={() => handleExportVideo(project.id)}>Vídeo</ActionButton></div></div>)}</Card>
+    <Card title="Projetos visíveis para este user">{projects.map((project) => <div key={project.id} style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, display: "grid", gap: 8, background: "rgba(255,255,255,0.55)" }}><div><strong>{project.title}</strong></div><div>Saga: {project.saga_name}</div><div>Slug IP: {project.saga_slug}</div><div>Língua: {project.language}</div><div>Dono: {project.created_by_name || "-"}</div><div>Modo: {project.project_mode || "official"}</div><div>Texto: {project.stage_modes?.story_input_mode || "manual"} · Imagens: {project.stage_modes?.illustration_mode || "manual"} · Áudio: {project.stage_modes?.audio_mode || "manual"} · Vídeo: {project.stage_modes?.video_mode || "manual"}</div><div>Universo oculto: {project.hidden_universe_name || "-"}</div><div>Ilustração base: {project.illustration_path || "-"}</div><div>Capa: {project.cover_image || "-"}</div><div>ISBN: {project.commercial?.isbn || "-"}</div><div>ASIN: {project.commercial?.asin || "-"}</div><div>Preço: {project.commercial?.price || "-"} {project.commercial?.currency || ""}</div><div>Status comercial: {project.commercial?.commercial_status || "-"}</div><div>Pronto para publicar: {project.ready_for_publish ? "Sim" : "Não"}</div><div>Estado editorial: {project.editorial_status || project.story?.editorial_status || "draft"}</div><label>Briefing da nova história (opcional se existir texto de origem bloqueado)</label><textarea value={factoryBriefs[project.id] || ""} onChange={(e) => setFactoryBriefs((current) => ({ ...current, [project.id]: e.target.value }))} rows={3} placeholder="Ex.: Uma história sobre paciência, em que Roko aprende a esperar e cuidar de uma semente." style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #d1d5db", resize: "vertical" }} /><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><ActionButton onClick={() => handleFactory(project.id)}>Gerar / rever história</ActionButton><ActionButton onClick={() => handleApproveStory(project.id)}>Aprovar versão editorial</ActionButton><ActionButton onClick={() => handleExportEpub(project.id)}>EPUB</ActionButton><ActionButton onClick={() => handleExportAudio(project.id)}>Audiobook</ActionButton><ActionButton onClick={() => handleExportVideo(project.id)}>Vídeo</ActionButton></div></div>)}</Card>
     <Card title="Jobs">{jobs.map((job) => <div key={job.id}><strong>{job.type}</strong> — {job.status}</div>)}</Card>
     <Card title="Publicações">{publications.map((item) => <div key={item.id}><strong>{item.project_id}</strong> — {item.language} — {item.channel} — {item.status}</div>)}</Card>
   </div>)

@@ -7,6 +7,7 @@ from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.project_factory_engine import run_project_factory_engine
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.story_source_service import get_story_source, get_story_source_gate
+from studio_core.services.story_generation_provider import is_story_provider_configured
 
 PROJECTS_FILE = "data/projects.json"
 
@@ -22,6 +23,10 @@ def get_factory_capabilities() -> Dict[str, Any]:
         "guide": True,
         "runtime_canon_aware": True,
         "text_first_gate": True,
+        "provider_backed_story_generation": is_story_provider_configured(),
+        "generation_mode": "provider_backed" if is_story_provider_configured() else "deterministic_prototype",
+        "miniseries_mode": "animatic_only",
+        "final_character_animation": False,
     }
 
 
@@ -43,8 +48,15 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     story_gate = get_story_source_gate(project_id).get("story_source_gate", {})
     story_source = get_story_source(project_id)
 
-    if create_story and not bool(story_gate.get("ready_for_text_first_pipeline", False)):
-        raise ValueError("text_first_gate_not_ready")
+    provider_configured = is_story_provider_configured()
+    creative_brief = str(
+        payload.get("creative_brief") or payload.get("prompt") or payload.get("premise") or ""
+    ).strip()
+    source_ready = bool(story_gate.get("ready_for_text_first_pipeline", False))
+    if create_story and not source_ready and not (provider_configured and creative_brief):
+        raise ValueError(
+            "story_generation_requires_locked_source_or_configured_provider_with_creative_brief"
+        )
 
     project_for_engine = {
         **project,
@@ -79,6 +91,11 @@ def run_factory(project_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             **current,
             "story": story,
             "language_variants": language_variants,
+            "editorial_status": (
+                str(story.get("editorial_status") or "draft")
+                if isinstance(story, dict) and story
+                else current.get("editorial_status", "draft")
+            ),
             "cover_image": (cover_output or {}).get("file_path", current.get("cover_image", "")),
             "outputs": {
                 **(current.get("outputs", {}) or {}),

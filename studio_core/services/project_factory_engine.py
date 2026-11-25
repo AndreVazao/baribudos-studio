@@ -19,6 +19,14 @@ def _safe_dict(value: Any) -> Dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _is_explicitly_approved(story: Dict[str, Any]) -> bool:
+    return (
+        story.get("approved") is True
+        or str(story.get("editorial_status", "")).strip().lower() == "approved"
+        or str(story.get("approval_state", "")).strip().lower() == "approved"
+    )
+
+
 def _resolve_languages(runtime: Dict[str, Any], project: Dict[str, Any], payload: Dict[str, Any]) -> List[str]:
     requested = payload.get("languages")
     if isinstance(requested, list) and requested:
@@ -61,8 +69,11 @@ def _build_story_variants(
             "title": project_title,
             "language": language,
             "raw_text": raw_text,
+            "story_source_notes": _safe_dict(project.get("story_source")).get("story_source_notes", ""),
             "protagonist": payload.get("protagonist", ""),
             "value_theme": payload.get("value_theme", ""),
+            "age_range": payload.get("age_range", ""),
+            "creative_brief": payload.get("creative_brief") or payload.get("prompt") or payload.get("premise", ""),
         })
 
     return story_variants
@@ -225,17 +236,56 @@ def run_project_factory_engine(
     if not main_story and story_variants:
         main_story = _safe_dict(next(iter(story_variants.values())))
 
-    cover_output = _build_cover_output(runtime=runtime, project=project, payload=payload) if create_cover else None
-    ebook_outputs = _build_ebook_outputs(runtime=runtime, project=project, story_variants=story_variants, cover_output=cover_output) if create_epub else {}
-    audiobook_outputs = _build_audiobook_outputs(project=project, story_variants=story_variants) if create_audiobook else {}
-    video_outputs = _build_video_outputs(project=project, story_variants=story_variants, cover_output=cover_output) if create_series else {}
+    project_editorially_approved = (
+        str(project.get("editorial_status", "")).strip().lower() == "approved"
+        or project.get("approved") is True
+    )
+    approval_by_language = {}
+    for language, story_value in story_variants.items():
+        story = _safe_dict(story_value)
+        has_version_approval = any(
+            key in story for key in ("approved", "editorial_status", "approval_state")
+        )
+        # A project-level approval may authorize only the base-language source
+        # when the story version itself has no explicit state. It never approves
+        # generated/localized variants and cannot override an explicit draft.
+        approval_by_language[language] = (
+            _is_explicitly_approved(story)
+            if has_version_approval
+            else bool(project_editorially_approved and language == main_language)
+        )
+    media_gate_open = bool(story_variants) and all(approval_by_language.values())
+    blocked_languages = [
+        language for language, approved in approval_by_language.items() if not approved
+    ]
+
+    # Generation and production are separate stages. Draft text can be reviewed
+    # in Studio, but media builders only receive explicitly approved immutable inputs.
+    cover_output = (
+        _build_cover_output(runtime=runtime, project=project, payload=payload)
+        if create_cover and media_gate_open else None
+    )
+    ebook_outputs = (
+        _build_ebook_outputs(runtime=runtime, project=project, story_variants=story_variants, cover_output=cover_output)
+        if create_epub and media_gate_open else {}
+    )
+    audiobook_outputs = (
+        _build_audiobook_outputs(project=project, story_variants=story_variants)
+        if create_audiobook and media_gate_open else {}
+    )
+    video_outputs = (
+        _build_video_outputs(project=project, story_variants=story_variants, cover_output=cover_output)
+        if create_series and media_gate_open else {}
+    )
 
     guide_output = generate_volume_guide({
         "project_title": project_title,
         "story": main_story,
-    }) if create_guide else None
+    }) if create_guide and media_gate_open else None
 
     language_variants = _build_language_variants(story_variants, project_title, project)
+    for language, variant in language_variants.items():
+        variant["status"] = "approved" if approval_by_language.get(language, False) else "needs_review"
 
     return {
         "story": enrich_story_pages_with_illustrations(project, main_story),
@@ -257,6 +307,10 @@ def run_project_factory_engine(
             "audiobook_languages": list(audiobook_outputs.keys()),
             "video_languages": list(video_outputs.keys()),
             "guide_created": guide_output is not None,
+            "media_gate_open": media_gate_open,
+            "media_blocked": not media_gate_open,
+            "blocked_languages": blocked_languages,
+            "editorial_status": "approved" if media_gate_open else "needs_review",
             "runtime_validation_ok": bool((runtime.get("validation") or {}).get("ok", False)),
         },
     }

@@ -45,13 +45,13 @@ def _resolve_languages(project: Dict[str, Any], payload: Dict[str, Any]) -> List
 
 
 def _fake_translate(text: str, target_language: str, source_language: str) -> str:
+    """Identity-copy helper only; it must never pretend to translate."""
     clean = _safe_text(text)
     if not clean:
         return ""
-    if target_language == source_language:
-        return clean
-    return f"[{target_language} translation from {source_language}]\n\n{clean}"
-
+    if target_language.casefold() != source_language.casefold():
+        raise ValueError("translation_provider_not_configured")
+    return clean
 
 def generate_story_translations(project_id: str, payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
     payload = payload or {}
@@ -66,6 +66,12 @@ def generate_story_translations(project_id: str, payload: Dict[str, Any] | None 
         raise ValueError("story_source_text_required")
 
     languages = _resolve_languages(project, payload)
+    unsupported = [language for language in languages if language.casefold() != source_language.casefold()]
+    if unsupported:
+        raise ValueError(
+            "translation_provider_not_configured_for_languages:" + ",".join(unsupported)
+        )
+
     current_variants = _safe_dict(project.get("language_variants", {}))
     next_variants = {**current_variants}
 
@@ -77,8 +83,8 @@ def generate_story_translations(project_id: str, payload: Dict[str, Any] | None 
             "title": _safe_text(project.get("title")),
             "raw_text": translated,
             "source_language": source_language,
-            "translation_status": "generated",
-            "translation_engine": "text-first-base-v1",
+            "translation_status": "source_language_copy",
+            "translation_engine": "identity-copy-no-translation",
             "updated_at": now_iso(),
         }
 

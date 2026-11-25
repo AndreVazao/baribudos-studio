@@ -102,14 +102,13 @@ def _copy_or_placeholder_image(
     image_path: str,
     target_path: Path,
 ) -> str:
+    source = Path(_safe_text(image_path)).expanduser()
+    if not source.is_file() or source.stat().st_size <= 0:
+        raise ValueError("video_package_requires_real_nonempty_illustration_assets")
     target_path.parent.mkdir(parents=True, exist_ok=True)
-
-    src = Path(_safe_text(image_path))
-    if src.exists() and src.is_file():
-        target_path.write_bytes(src.read_bytes())
-        return str(target_path)
-
-    target_path.write_bytes(b"")
+    target_path.write_bytes(source.read_bytes())
+    if not target_path.is_file() or target_path.stat().st_size <= 0:
+        raise RuntimeError("video_package_illustration_copy_failed")
     return str(target_path)
 
 

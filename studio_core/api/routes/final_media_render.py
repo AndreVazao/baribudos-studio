@@ -12,7 +12,8 @@ def render_video(project_id: str) -> dict:
     try:
         return render_video_from_package(project_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        status = 409 if "final_character_animation_pipeline_not_implemented" in str(exc) else 404
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -23,6 +24,7 @@ def export_epub(project_id: str, payload: dict | None = None) -> dict:
     try:
         return export_epub_from_story(project_id, str(payload.get("language", "")).strip())
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        status = 409 if "Aprovação editorial explícita" in str(exc) else 404
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
