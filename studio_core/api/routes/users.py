@@ -9,7 +9,11 @@ from studio_core.core.storage import (
     update_json_item,
 )
 from studio_core.services.auth_credentials import hash_pin, verify_pin, is_hashed_pin
-from pathlib import Path\nimport os\n\nfrom studio_core.core.config import APP_CONFIG\nfrom studio_core.services.auth_sessions import SessionManager, SessionStoreError
+from pathlib import Path
+import os
+
+from studio_core.core.config import APP_CONFIG
+from studio_core.services.auth_sessions import SessionManager, SessionStoreError
 
 router = APIRouter(prefix="/users", tags=["users"])
 USERS_FILE = "data/users.json"
