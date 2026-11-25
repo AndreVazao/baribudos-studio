@@ -174,6 +174,31 @@ def login(payload: dict) -> dict:
     raise HTTPException(status_code=401, detail="Credenciais inválidas.")
 
 
+@router.get("/me")
+def get_current_user(request: Request) -> dict:
+    """Return the active public user attached to the presented server session."""
+    header = request.headers.get("authorization", "")
+    scheme, _, token = header.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(status_code=401, detail="Autenticação necessária.")
+    try:
+        manager = _session_manager()
+        resolved = manager.resolve(token.strip())
+        if resolved is None:
+            raise HTTPException(status_code=401, detail="Sessão inválida ou expirada.")
+        user_id = resolved.get("user_id", "")
+        user = next((candidate for candidate in list_json_items(USERS_FILE)
+                     if str(candidate.get("id", "")) == user_id), None)
+        if user is None or not bool(user.get("is_active", True)):
+            manager.revoke(token.strip())
+            raise HTTPException(status_code=401, detail="Conta inativa ou inexistente.")
+        return {"ok": True, "user": public_user(user), "session_expires_at": resolved.get("expires_at")}
+    except HTTPException:
+        raise
+    except (RuntimeError, OSError, ValueError):
+        raise HTTPException(status_code=503, detail="Serviço de autenticação indisponível.") from None
+
+
 @router.post("/logout")
 def logout(request: Request) -> dict:
     header = request.headers.get("authorization", "")
