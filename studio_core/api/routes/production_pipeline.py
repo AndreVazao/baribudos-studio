@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.services.production_pipeline_service import list_production_runs, run_production_pipeline
 
-router = APIRouter(prefix="/production-pipeline", tags=["production-pipeline"])
+router = APIRouter(prefix="/production-pipeline", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["production-pipeline"])
 
+from studio_core.services.auth_principal import require_roles
 
 @router.get("")
 def get_production_runs() -> dict:
