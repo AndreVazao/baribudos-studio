@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 import hmac
 
@@ -16,6 +16,7 @@ import os
 
 from studio_core.core.config import APP_CONFIG
 from studio_core.services.auth_sessions import SessionManager, SessionStoreError
+from studio_core.services.auth_principal import require_roles
 
 router = APIRouter(prefix="/users", tags=["users"])
 USERS_FILE = "data/users.json"
@@ -56,7 +57,7 @@ class OwnerBootstrapPayload(BaseModel):
 
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_roles("owner", "admin"))])
 def list_users() -> dict:
     return {"ok": True, "users": [public_user(user) for user in list_json_items(USERS_FILE)]}
 
@@ -100,7 +101,7 @@ def bootstrap_owner(payload: OwnerBootstrapPayload) -> dict:
             pass
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_roles("owner", "admin"))])
 def create_user(payload: UserCreate) -> dict:
     name = payload.name.strip()
     pin = payload.pin.strip()
@@ -111,7 +112,7 @@ def create_user(payload: UserCreate) -> dict:
     return {"ok": True, "user": public_user(user.model_dump())}
 
 
-@router.patch("/{user_id}")
+@router.patch("/{user_id}", dependencies=[Depends(require_roles("owner", "admin"))])
 def patch_user(user_id: str, payload: UserPatch) -> dict:
     def updater(current: dict) -> dict:
         updated = {**current, "updated_at": now_iso()}
@@ -129,7 +130,7 @@ def patch_user(user_id: str, payload: UserPatch) -> dict:
     return {"ok": True, "user": public_user(user)}
 
 
-@router.patch("/{user_id}/pin")
+@router.patch("/{user_id}/pin", dependencies=[Depends(require_roles("owner", "admin"))])
 def patch_user_pin(user_id: str, payload: UserPinPatch) -> dict:
     pin = payload.pin.strip()
     if not pin:
