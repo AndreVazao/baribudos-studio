@@ -27,7 +27,7 @@ def _get_project(project_id: str) -> dict | None:
 @router.get("/{project_id}")
 def get_project_commercial(
     project_id: str,
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     project = _get_project(project_id)
     if not project:
@@ -45,7 +45,7 @@ def get_project_commercial(
 def patch_project_commercial(
     project_id: str,
     payload: dict,
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     project = _get_project(project_id)
     if not project:
