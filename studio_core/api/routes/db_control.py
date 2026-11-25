@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.services.db_control_service import (
     get_db_control_readiness,
     get_db_control_status,
 )
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/db-control", tags=["db-control"])
+router = APIRouter(prefix="/db-control", dependencies=[Depends(require_roles("owner", "admin"))], tags=["db-control"])
 
 
 @router.get("/status")

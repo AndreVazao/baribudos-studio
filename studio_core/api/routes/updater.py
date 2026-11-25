@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.services.updater_service import check_for_updates, download_update, get_local_version_info
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/updater", tags=["updater"])
+router = APIRouter(prefix="/updater", dependencies=[Depends(require_roles("owner", "admin"))], tags=["updater"])
 
 
 @router.get("/local-version")

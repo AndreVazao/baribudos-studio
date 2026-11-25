@@ -14,6 +14,7 @@ def main() -> int:
     from studio_core.api.main import app
     from studio_core.core.storage import read_json, write_json
     from studio_core.services.bootstrap_service import bootstrap_system
+    from studio_core.services.auth_principal import AuthenticatedPrincipal, get_current_principal
 
     bootstrap_system()
 
@@ -122,6 +123,11 @@ def main() -> int:
     }
 
     write_json("data/projects.json", [project_payload])
+    # Smoke tests run with an explicit server-side principal; never emulate identity
+    # through caller-controlled user_name/user_role query parameters.
+    app.dependency_overrides[get_current_principal] = lambda: AuthenticatedPrincipal(
+        user_id="smoke-owner", name="Smoke Owner", role="owner"
+    )
 
     with TestClient(app) as client:
         commercial_get = client.get(f"/api/project-commercial/{project_id}")
@@ -156,6 +162,7 @@ def main() -> int:
         website_status = client.get(f"/api/website-publisher/status/{project_id}")
         assert website_status.status_code == 200, website_status.text
 
+    app.dependency_overrides.clear()
     stored_projects = read_json("data/projects.json", [])
     report = {
         "ok": True,

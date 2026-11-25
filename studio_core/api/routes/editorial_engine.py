@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.core.storage import read_json, update_json_item
 from studio_core.services.editorial_page_engine import (
@@ -11,8 +11,9 @@ from studio_core.services.editorial_page_engine import (
     split_one_page,
 )
 from studio_core.services.saga_runtime_service import load_saga_runtime
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/editorial-engine", tags=["editorial-engine"])
+router = APIRouter(prefix="/editorial-engine", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["editorial-engine"])
 
 PROJECTS_FILE = "data/projects.json"
 

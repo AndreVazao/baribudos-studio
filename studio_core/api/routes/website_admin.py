@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from studio_core.services.website_admin_service import (
     update_website_product_pricing,
     update_website_product_visibility,
 )
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/website-admin", tags=["website-admin"])
+router = APIRouter(prefix="/website-admin", dependencies=[Depends(require_roles("owner", "admin"))], tags=["website-admin"])
 
 
 class ProductVisibilityPayload(BaseModel):

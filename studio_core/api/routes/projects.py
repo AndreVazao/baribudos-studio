@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.core.models import Project, ProjectCreate, ProjectPatch, now_iso, DEFAULT_STAGE_MODES
 from studio_core.core.storage import append_json_item, list_json_items, update_json_item
+from studio_core.services.auth_principal import AuthenticatedPrincipal, require_roles
 
-router = APIRouter(prefix="/projects", tags=["projects"])
+_editor_principal = require_roles("owner", "admin", "editor")
+router = APIRouter(prefix="/projects", dependencies=[Depends(_editor_principal)], tags=["projects"])
 
 PROJECTS_FILE = "data/projects.json"
-
-
-def _normalize_name(value: str) -> str:
-    return str(value or "").strip().lower()
 
 
 def _safe_text(value: str) -> str:
@@ -30,6 +28,9 @@ def _normalized_stage_modes(value) -> dict:
 
 
 def _can_view_project(project: dict, user_id: str = "", user_name: str = "", user_role: str = "") -> bool:
+    if str(user_role or "").strip().lower() in {"owner", "admin"}:
+        return True
+
     if not bool(project.get("visible_to_owner_only", True)):
         return True
 
@@ -39,30 +40,21 @@ def _can_view_project(project: dict, user_id: str = "", user_name: str = "", use
     if str(project.get("created_by", "")).strip() == str(user_id).strip():
         return True
 
-    if _normalize_name(project.get("created_by_name", "")) == _normalize_name(user_name):
-        return True
-
     return False
 
 
-def _can_edit_or_publish(user_role: str, user_name: str) -> bool:
-    role = str(user_role or "").strip().lower()
-    name = _normalize_name(user_name)
-    return role in {"owner", "creator", "admin"} or name in {"andré", "andre", "esposa", "wife", "mama"}
-
-
 @router.get("")
-def list_projects(user_id: str = "", user_name: str = "", user_role: str = "") -> dict:
+def list_projects(principal: AuthenticatedPrincipal = Depends(_editor_principal)) -> dict:
     projects = list_json_items(PROJECTS_FILE)
     visible = [
         project for project in projects
-        if _can_view_project(project, user_id=user_id, user_name=user_name, user_role=user_role)
+        if _can_view_project(project, user_id=principal.user_id, user_name=principal.name, user_role=principal.role)
     ]
     return {"ok": True, "projects": visible}
 
 
 @router.post("")
-def create_project(payload: ProjectCreate) -> dict:
+def create_project(payload: ProjectCreate, principal: AuthenticatedPrincipal = Depends(_editor_principal)) -> dict:
     project_mode = _safe_text(payload.project_mode) or "official"
     is_hidden_mode = project_mode in {"standalone", "hidden_continuity", "hidden_ip", "hidden_saga"}
 
@@ -87,8 +79,8 @@ def create_project(payload: ProjectCreate) -> dict:
         saga_name=payload.saga_name.strip(),
         language=payload.language.strip(),
         output_languages=payload.output_languages or [payload.language.strip()],
-        created_by=payload.created_by.strip(),
-        created_by_name=payload.created_by_name.strip(),
+        created_by=principal.user_id,
+        created_by_name=principal.name,
         visible_to_owner_only=payload.visible_to_owner_only,
         project_mode=project_mode,
         parent_project_id=_safe_text(payload.parent_project_id),
@@ -118,11 +110,14 @@ def create_project(payload: ProjectCreate) -> dict:
 
 
 @router.patch("/{project_id}")
-def patch_project(project_id: str, payload: ProjectPatch, user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
+def patch_project(project_id: str, payload: ProjectPatch, principal: AuthenticatedPrincipal = Depends(_editor_principal)) -> dict:
+    if principal.role.strip().lower() not in {"owner", "admin", "editor"}:
         raise HTTPException(status_code=403, detail="Sem permissão editorial para editar projetos.")
 
     def updater(current: dict) -> dict:
+        if principal.role.strip().lower() not in {"owner", "admin"} and str(current.get("created_by", "")).strip() != principal.user_id:
+            raise HTTPException(status_code=403, detail="Não tens permissão para alterar este projeto.")
+
         updated = {
             **current,
             "updated_at": now_iso(),

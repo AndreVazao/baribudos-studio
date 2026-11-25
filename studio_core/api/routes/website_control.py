@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.services.website_control_service import (
     get_website_catalog_status,
@@ -10,8 +10,9 @@ from studio_core.services.website_control_service import (
     get_website_publication_status,
     get_website_summary_status,
 )
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/website-control", tags=["website-control"])
+router = APIRouter(prefix="/website-control", dependencies=[Depends(require_roles("owner", "admin"))], tags=["website-control"])
 
 
 @router.get("/health")
