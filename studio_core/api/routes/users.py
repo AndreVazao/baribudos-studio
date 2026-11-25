@@ -19,6 +19,24 @@ router = APIRouter(prefix="/users", tags=["users"])
 USERS_FILE = "data/users.json"
 
 
+def _session_manager() -> SessionManager:
+    configured_root = os.getenv("BARIBUDOS_PRIVATE_ROOT", "").strip()
+    if configured_root:
+        private_root = Path(configured_root).expanduser().resolve()
+    else:
+        if APP_CONFIG.environment.lower() in {"production", "prod"}:
+            raise SessionStoreError("BARIBUDOS_PRIVATE_ROOT must be configured outside public storage")
+        private_root = (APP_CONFIG.project_root / ".private").resolve()
+    storage_root = APP_CONFIG.storage_root.expanduser().resolve()
+    try:
+        private_root.relative_to(storage_root)
+    except ValueError:
+        pass
+    else:
+        raise SessionStoreError("private session root must not be inside public storage")
+    return SessionManager(private_root / "auth-sessions.sqlite3")
+
+
 def public_user(user: dict) -> dict:
     allowed = ("id", "name", "role", "is_active", "created_at", "updated_at")
     return {key: user[key] for key in allowed if key in user}
