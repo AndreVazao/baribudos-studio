@@ -11,9 +11,9 @@ from studio_core.services.editorial_page_engine import (
     split_one_page,
 )
 from studio_core.services.saga_runtime_service import load_saga_runtime
+from studio_core.services.auth_principal import require_roles
 
 router = APIRouter(prefix="/editorial-engine", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["editorial-engine"])
-from studio_core.services.auth_principal import require_roles
 
 PROJECTS_FILE = "data/projects.json"
 
