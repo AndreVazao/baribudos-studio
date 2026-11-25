@@ -68,7 +68,7 @@ from studio_core.api.routes.story_translation import router as story_translation
 from studio_core.api.routes.system_smoke import router as system_smoke_router
 from studio_core.api.routes.system_smoke_v1 import router as system_smoke_v1_router
 from studio_core.api.routes.updater import router as updater_router
-from studio_core.api.routes.users import ensure_default_owner, router as users_router
+from studio_core.api.routes.users import router as users_router
 from studio_core.api.routes.v1_readiness import router as v1_readiness_router
 from studio_core.api.routes.videos import router as videos_router
 from studio_core.api.routes.voice_library import router as voice_library_router
@@ -91,7 +91,6 @@ from studio_core.services.persistent_memory_service import initialize_memory_cor
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     bootstrap_system()
-    ensure_default_owner()
     initialize_memory_core()
     start_all()
     yield
