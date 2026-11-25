@@ -42,14 +42,21 @@ class SessionManager:
     def _iso(value: datetime) -> str:
         return value.astimezone(timezone.utc).isoformat()
 
+    def _secure_file_permissions(self) -> None:
+        # SQLite sidecar files can contain recent writes; protect all files.
+        for candidate in (self.store_path, Path(f"{self.store_path}-wal"), Path(f"{self.store_path}-shm")):
+            try:
+                if candidate.exists():
+                    os.chmod(candidate, 0o600)
+            except OSError:
+                # Permission hardening failure must not silently be considered secure.
+                raise SessionStoreError("session store permissions could not be secured")
+
     def _connect(self) -> sqlite3.Connection:
+        connection = None
         try:
             self.store_path.parent.mkdir(parents=True, exist_ok=True)
             connection = sqlite3.connect(self.store_path, timeout=10, isolation_level=None)
-            try:
-                os.chmod(self.store_path, 0o600)
-            except OSError:
-                pass
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute("PRAGMA synchronous=FULL")
             connection.execute(
@@ -61,8 +68,11 @@ class SessionManager:
                 )"""
             )
             connection.execute("CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id)")
+            self._secure_file_permissions()
             return connection
-        except (OSError, sqlite3.Error) as exc:
+        except (OSError, sqlite3.Error, SessionStoreError) as exc:
+            if connection is not None:
+                connection.close()
             raise SessionStoreError("session store unavailable; refusing authentication") from exc
 
     def create(self, user_id: str) -> dict[str, str]:
@@ -82,7 +92,8 @@ class SessionManager:
                     (token_hash, user_id, self._iso(now), self._iso(expires)),
                 )
                 connection.commit()
-            except sqlite3.Error as exc:
+                self._secure_file_permissions()
+            except (sqlite3.Error, SessionStoreError) as exc:
                 connection.rollback()
                 raise SessionStoreError("session creation failed") from exc
             finally:
@@ -109,6 +120,7 @@ class SessionManager:
                     raise SessionStoreError("session record malformed") from exc
                 if expiry.tzinfo is None or expiry <= now:
                     connection.execute("DELETE FROM sessions WHERE token_hash=?", (self._hash_token(token),))
+                    self._secure_file_permissions()
                     return None
                 if not isinstance(user_id, str) or not user_id.strip():
                     return None
@@ -125,6 +137,7 @@ class SessionManager:
             connection = self._connect()
             try:
                 cursor = connection.execute("DELETE FROM sessions WHERE token_hash=?", (self._hash_token(token),))
+                self._secure_file_permissions()
                 return cursor.rowcount > 0
             except sqlite3.Error as exc:
                 raise SessionStoreError("session revocation failed") from exc
@@ -138,6 +151,7 @@ class SessionManager:
             connection = self._connect()
             try:
                 cursor = connection.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
+                self._secure_file_permissions()
                 return cursor.rowcount
             except sqlite3.Error as exc:
                 raise SessionStoreError("user session revocation failed") from exc
@@ -150,6 +164,7 @@ class SessionManager:
             connection = self._connect()
             try:
                 cursor = connection.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))
+                self._secure_file_permissions()
                 return cursor.rowcount
             except sqlite3.Error as exc:
                 raise SessionStoreError("expired-session cleanup failed") from exc
