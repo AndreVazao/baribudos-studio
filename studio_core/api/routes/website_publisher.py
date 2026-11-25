@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from studio_core.services.auth_principal import require_roles
 from studio_core.services.website_publisher_service import (
     build_publish_envelope,
     get_project_publish_status,
@@ -10,7 +11,7 @@ from studio_core.services.website_publisher_service import (
     unpublish_project_on_website,
 )
 
-router = APIRouter(prefix="/website-publisher", tags=["website-publisher"])
+router = APIRouter(prefix="/website-publisher", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["website-publisher"])
 
 
 @router.get("/envelope/{project_id}")
