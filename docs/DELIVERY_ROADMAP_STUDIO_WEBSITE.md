@@ -97,9 +97,9 @@ Não declarar o projeto concluído enquanto houver P0 aberto, fluxo crítico sem
 **Prioridade:** P0.
 
 - [ ] ST-101 — inventariar todas as rotas FastAPI e classificá-las como públicas, autenticadas, editoriais, administrativas ou internas.
-- [ ] ST-102 — proteger CRUD de projetos e operações de escrita; definir leitura por papel e isolamento por projeto quando aplicável.
-- [ ] ST-103 — proteger publicação, despublicação, aprovação editorial e alterações de catálogo.
-- [ ] ST-104 — proteger upload, substituição, eliminação, listagem privada e download de assets; validar ownership, MIME, tamanho e path.
+- [ ] ST-102 — proteger CRUD de projetos e operações de escrita; definir leitura por papel e isolamento por projeto quando aplicável. (IN PROGRESS — PR #87 protege list/create/update com principal server-side e ownership; falta inventário/coverage total)
+- [ ] ST-103 — proteger publicação, despublicação, aprovação editorial e alterações de catálogo. (IN PROGRESS — PR #87 protege website-publisher; restantes rotas de publishing/catalog ainda por auditar)
+- [ ] ST-104 — proteger upload, substituição, eliminação, listagem privada e download de assets; validar ownership, MIME, tamanho e path. (IN PROGRESS — PR #87 exige papel autenticado owner/admin/editor nas rotas /assets; limites/MIME/ownership por objeto ainda por fechar)
 - [ ] ST-105 — rever rotas de capas, vídeos, ebooks, audiobooks, vozes, previews e distribuição.
 - [ ] ST-106 — proteger diagnósticos e rotas operacionais que revelem estado interno; manter apenas health/readiness estritamente públicos.
 - [ ] ST-107 — aplicar autorização por objeto, não apenas por papel, onde existam projetos, assets ou encomendas pertencentes a diferentes utilizadores.
@@ -297,6 +297,7 @@ Cada PR deve conter:
 | 2026-11-25 | Studio | PR #86 — `c6eaa1178d32dde6ec5e897d60e9cbd693bc6ee6` | RBAC administrativo; três workflows verdes | VERIFY — Draft |
 | 2026-11-25 | Studio | PR #84–#86 | Dependência `httpx==0.27.2` adicionada aos workflows de testes; correção de concorrência SQLite propagada | DONE — CI confirmado |
 | 2026-11-25 | Studio | PR #86 | Inclusão deste plano mestre no branch de trabalho | IN PROGRESS — aguarda merge |
+| 2026-11-25 | Studio | PR #87 — branch `security/project-assets-publisher-rbac-2026-11-25` | Projetos: identidade/owner derivado da sessão e isolamento de edição; assets e Website Publisher protegidos por RBAC; testes negativos e positivos | IN PROGRESS — aguarda CI |
 
 ---
 
