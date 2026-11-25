@@ -1,4 +1,5 @@
 import hashlib
+import os
 import sqlite3
 import tempfile
 import threading
@@ -73,7 +74,7 @@ class SessionManagerTests(unittest.TestCase):
         self.store.touch()
         wal_path = Path(f"{self.store}-wal")
         wal_path.touch()
-        real_chmod = __import__("os").chmod
+        real_chmod = os.chmod
 
         def chmod_with_sidecar_race(path, mode):
             if Path(path) == wal_path:
