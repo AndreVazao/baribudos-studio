@@ -63,6 +63,21 @@ class ProjectAssetsPublisherRBACTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual({p["id"] for p in response.json()["projects"]}, {"own", "shared"})
 
+    def test_editor_cannot_modify_another_users_private_project(self):
+        self.set_role("editor", user_id="editor-1")
+        foreign_project = {"id": "project-foreign", "created_by": "someone-else"}
+        with patch.object(projects, "update_json_item", side_effect=lambda _file, _id, updater: updater(foreign_project)):
+            response = self.client.patch("/api/projects/project-foreign", json={"title": "Takeover"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_can_modify_own_project(self):
+        self.set_role("editor", user_id="editor-1")
+        own_project = {"id": "project-own", "created_by": "editor-1", "title": "Before"}
+        with patch.object(projects, "update_json_item", side_effect=lambda _file, _id, updater: updater(own_project)):
+            response = self.client.patch("/api/projects/project-own", json={"title": "After"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["project"]["title"], "After")
+
     def test_owner_can_list_all_projects(self):
         self.set_role("owner")
         rows = [{"id": "p1", "created_by": "other", "visible_to_owner_only": True}]
