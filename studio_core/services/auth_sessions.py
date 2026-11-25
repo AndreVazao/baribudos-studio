@@ -11,6 +11,7 @@ import os
 import secrets
 import sqlite3
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -43,21 +44,47 @@ class SessionManager:
         return value.astimezone(timezone.utc).isoformat()
 
     def _secure_file_permissions(self) -> None:
-        # SQLite sidecar files can contain recent writes; protect all files.
-        for candidate in (self.store_path, Path(f"{self.store_path}-wal"), Path(f"{self.store_path}-shm")):
+        # SQLite sidecars can be created or removed by another process between
+        # exists() and chmod(). Their disappearance is benign; failure to secure
+        # the primary database is not.
+        sidecars = (Path(f"{self.store_path}-wal"), Path(f"{self.store_path}-shm"))
+        for candidate in (self.store_path, *sidecars):
             try:
                 if candidate.exists():
                     os.chmod(candidate, 0o600)
-            except OSError:
-                # Permission hardening failure must not silently be considered secure.
-                raise SessionStoreError("session store permissions could not be secured")
+            except FileNotFoundError:
+                if candidate == self.store_path:
+                    raise SessionStoreError("session database disappeared during permission hardening")
+                continue
+            except OSError as exc:
+                raise SessionStoreError("session store permissions could not be secured") from exc
+
+    @staticmethod
+    def _enable_wal_with_retry(connection: sqlite3.Connection) -> None:
+        # Multiple worker processes may open a brand-new database at once.
+        # journal_mode changes can report SQLITE_BUSY even with SQLite's
+        # connection timeout, so retry this idempotent initialization step.
+        deadline = time.monotonic() + 8.0
+        delay = 0.01
+        while True:
+            try:
+                connection.execute("PRAGMA journal_mode=WAL")
+                return
+            except sqlite3.OperationalError as exc:
+                message = str(exc).lower()
+                if not any(marker in message for marker in ("locked", "busy")):
+                    raise
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(delay)
+                delay = min(delay * 2, 0.25)
 
     def _connect(self) -> sqlite3.Connection:
         connection = None
         try:
             self.store_path.parent.mkdir(parents=True, exist_ok=True)
             connection = sqlite3.connect(self.store_path, timeout=10, isolation_level=None)
-            connection.execute("PRAGMA journal_mode=WAL")
+            self._enable_wal_with_retry(connection)
             connection.execute("PRAGMA synchronous=FULL")
             connection.execute(
                 """CREATE TABLE IF NOT EXISTS sessions (
