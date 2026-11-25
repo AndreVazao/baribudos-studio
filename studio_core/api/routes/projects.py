@@ -6,7 +6,7 @@ from studio_core.core.models import Project, ProjectCreate, ProjectPatch, now_is
 from studio_core.core.storage import append_json_item, list_json_items, update_json_item
 from studio_core.services.auth_principal import AuthenticatedPrincipal, require_roles
 
-_editor_principal = require_roles("owner", "admin", "editor")
+_editor_principal = require_roles("owner", "admin", "editor", "creator")
 router = APIRouter(prefix="/projects", dependencies=[Depends(_editor_principal)], tags=["projects"])
 
 PROJECTS_FILE = "data/projects.json"
@@ -111,7 +111,7 @@ def create_project(payload: ProjectCreate, principal: AuthenticatedPrincipal = D
 
 @router.patch("/{project_id}")
 def patch_project(project_id: str, payload: ProjectPatch, principal: AuthenticatedPrincipal = Depends(_editor_principal)) -> dict:
-    if principal.role.strip().lower() not in {"owner", "admin", "editor"}:
+    if principal.role.strip().lower() not in {"owner", "admin", "editor", "creator"}:
         raise HTTPException(status_code=403, detail="Sem permissão editorial para editar projetos.")
 
     def updater(current: dict) -> dict:
