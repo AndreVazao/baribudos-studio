@@ -68,7 +68,7 @@ class SessionManager:
         delay = 0.01
         while True:
             try:
-                self._enable_wal_with_retry(connection)
+                connection.execute("PRAGMA journal_mode=WAL")
                 return
             except sqlite3.OperationalError as exc:
                 message = str(exc).lower()
@@ -84,7 +84,7 @@ class SessionManager:
         try:
             self.store_path.parent.mkdir(parents=True, exist_ok=True)
             connection = sqlite3.connect(self.store_path, timeout=10, isolation_level=None)
-            connection.execute("PRAGMA journal_mode=WAL")
+            self._enable_wal_with_retry(connection)
             connection.execute("PRAGMA synchronous=FULL")
             connection.execute(
                 """CREATE TABLE IF NOT EXISTS sessions (
