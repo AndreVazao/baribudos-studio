@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.core.storage import read_json, update_json_item
+from studio_core.services.auth_principal import AuthenticatedPrincipal, require_roles
 from studio_core.services.audiobook_service import build_audiobook
+from studio_core.services.project_authorization import require_project_access
 from studio_core.services.voice_library_service import get_voice_sample
 
 router = APIRouter(prefix="/audiobooks", tags=["audiobooks"])
@@ -20,11 +22,16 @@ def _get_project(project_id: str) -> dict | None:
 
 
 @router.post("/export/{project_id}")
-def export_audiobook(project_id: str, payload: dict | None = None) -> dict:
+def export_audiobook(
+    project_id: str,
+    payload: dict | None = None,
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+    require_project_access(project, principal)
 
     language = str(payload.get("language", project.get("language", "pt-PT"))).strip() or "pt-PT"
     provider = str(payload.get("provider", "")).strip()
@@ -85,4 +92,4 @@ def export_audiobook(project_id: str, payload: dict | None = None) -> dict:
         "audiobook": audiobook_output,
         "voice_sample": voice_sample,
         "audio_cast": audio_cast,
-        }
+    }
