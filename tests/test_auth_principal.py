@@ -38,6 +38,28 @@ class AuthenticatedPrincipalTests(unittest.TestCase):
         self.assertEqual(raised.exception.status_code, 401)
         manager.return_value.revoke.assert_called_once_with("valid-token")
 
+    def test_missing_active_flag_is_rejected_and_session_revoked(self):
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token")
+        with patch.object(auth_principal, "_session_manager") as manager, patch.object(
+            auth_principal, "get_json_item", return_value={"id": "u1", "name": "Legacy", "role": "owner"}
+        ):
+            manager.return_value.resolve.return_value = {"user_id": "u1"}
+            with self.assertRaises(HTTPException) as raised:
+                auth_principal.get_current_principal(credentials)
+        self.assertEqual(raised.exception.status_code, 401)
+        manager.return_value.revoke.assert_called_once_with("valid-token")
+
+    def test_non_boolean_active_flag_is_rejected_and_session_revoked(self):
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token")
+        with patch.object(auth_principal, "_session_manager") as manager, patch.object(
+            auth_principal, "get_json_item", return_value={"id": "u1", "is_active": "true", "role": "owner"}
+        ):
+            manager.return_value.resolve.return_value = {"user_id": "u1"}
+            with self.assertRaises(HTTPException) as raised:
+                auth_principal.get_current_principal(credentials)
+        self.assertEqual(raised.exception.status_code, 401)
+        manager.return_value.revoke.assert_called_once_with("valid-token")
+
     def test_principal_role_is_loaded_from_persisted_user_not_request(self):
         credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token")
         persisted = {"id": "u1", "name": "Editor", "role": "editor", "is_active": True}
@@ -54,7 +76,7 @@ class AuthenticatedPrincipalTests(unittest.TestCase):
         with patch.object(auth_principal, "_session_manager") as manager, patch.object(
             auth_principal,
             "get_json_item",
-            return_value={"id": "different-user", "name": "Unexpected", "role": "owner"},
+            return_value={"id": "different-user", "name": "Unexpected", "role": "owner", "is_active": True},
         ):
             manager.return_value.resolve.return_value = {"user_id": "u1"}
             with self.assertRaises(HTTPException) as raised:
