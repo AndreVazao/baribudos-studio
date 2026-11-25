@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from studio_core.services.secret_control_service import (
@@ -13,8 +13,9 @@ from studio_core.services.secret_control_service import (
     list_secret_vaults,
     update_secret_vault,
 )
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/secret-control", tags=["secret-control"])
+router = APIRouter(prefix="/secret-control", dependencies=[Depends(require_roles("owner", "admin"))], tags=["secret-control"])
 
 
 class SecretVaultCreatePayload(BaseModel):
