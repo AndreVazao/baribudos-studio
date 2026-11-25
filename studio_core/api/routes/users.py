@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field
+import hmac
 
 from studio_core.core.models import User, UserCreate, UserPatch, UserPinPatch, now_iso
 from studio_core.core.storage import (
@@ -19,7 +21,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 USERS_FILE = "data/users.json"
 
 
-def _session_manager() -> SessionManager:
+def _private_root() -> Path:
     configured_root = os.getenv("BARIBUDOS_PRIVATE_ROOT", "").strip()
     if configured_root:
         private_root = Path(configured_root).expanduser().resolve()
@@ -33,8 +35,13 @@ def _session_manager() -> SessionManager:
     except ValueError:
         pass
     else:
-        raise SessionStoreError("private session root must not be inside public storage")
-    return SessionManager(private_root / "auth-sessions.sqlite3")
+        raise SessionStoreError("private root must not be inside public storage")
+    private_root.mkdir(parents=True, exist_ok=True)
+    return private_root
+
+
+def _session_manager() -> SessionManager:
+    return SessionManager(_private_root() / "auth-sessions.sqlite3")
 
 
 def public_user(user: dict) -> dict:
@@ -42,23 +49,59 @@ def public_user(user: dict) -> dict:
     return {key: user[key] for key in allowed if key in user}
 
 
-def ensure_default_owner() -> None:
-    users = list_json_items(USERS_FILE)
-    if users:
-        return
-    owner = User(name="André", role="owner", pin="1234", is_active=True)
-    append_json_item(USERS_FILE, owner.model_dump())
+class OwnerBootstrapPayload(BaseModel):
+    bootstrap_token: str = Field(min_length=32, max_length=4096)
+    name: str = Field(min_length=1, max_length=120)
+    pin: str = Field(min_length=1, max_length=20)
+
 
 
 @router.get("")
 def list_users() -> dict:
-    ensure_default_owner()
     return {"ok": True, "users": [public_user(user) for user in list_json_items(USERS_FILE)]}
+
+
+@router.post("/bootstrap")
+def bootstrap_owner(payload: OwnerBootstrapPayload) -> dict:
+    """Create the first owner only when a deployment-provided one-time token is configured."""
+    configured_token = os.getenv("BARIBUDOS_BOOTSTRAP_TOKEN", "").strip()
+    if len(configured_token) < 32:
+        raise HTTPException(status_code=503, detail="Bootstrap inicial não está configurado.")
+    if not hmac.compare_digest(payload.bootstrap_token, configured_token):
+        raise HTTPException(status_code=401, detail="Token de bootstrap inválido.")
+
+    name, pin = payload.name.strip(), payload.pin.strip()
+    if not name or not pin:
+        raise HTTPException(status_code=422, detail="Nome e PIN são obrigatórios.")
+
+    lock_path = _private_root() / "owner-bootstrap.lock"
+    try:
+        lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        raise HTTPException(status_code=409, detail="Bootstrap em curso; tente novamente.") from None
+    except (OSError, RuntimeError):
+        raise HTTPException(status_code=503, detail="Bootstrap inicial indisponível.") from None
+
+    try:
+        if list_json_items(USERS_FILE):
+            raise HTTPException(status_code=409, detail="Bootstrap já concluído.")
+        owner = User(name=name, role="owner", pin=hash_pin(pin), is_active=True)
+        append_json_item(USERS_FILE, owner.model_dump())
+        try:
+            session = _session_manager().create(owner.id)
+        except (RuntimeError, OSError, ValueError):
+            raise HTTPException(status_code=503, detail="Owner criado, mas sessão indisponível; faça login.") from None
+        return {"ok": True, "user": public_user(owner.model_dump()), "session": session}
+    finally:
+        os.close(lock_fd)
+        try:
+            lock_path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 @router.post("")
 def create_user(payload: UserCreate) -> dict:
-    ensure_default_owner()
     name = payload.name.strip()
     pin = payload.pin.strip()
     if not name or not pin:
@@ -70,7 +113,6 @@ def create_user(payload: UserCreate) -> dict:
 
 @router.patch("/{user_id}")
 def patch_user(user_id: str, payload: UserPatch) -> dict:
-    ensure_default_owner()
     def updater(current: dict) -> dict:
         updated = {**current, "updated_at": now_iso()}
         if payload.name is not None:
@@ -89,7 +131,6 @@ def patch_user(user_id: str, payload: UserPatch) -> dict:
 
 @router.patch("/{user_id}/pin")
 def patch_user_pin(user_id: str, payload: UserPinPatch) -> dict:
-    ensure_default_owner()
     pin = payload.pin.strip()
     if not pin:
         raise HTTPException(status_code=422, detail="PIN obrigatório.")
@@ -104,7 +145,6 @@ def patch_user_pin(user_id: str, payload: UserPinPatch) -> dict:
 
 @router.post("/login")
 def login(payload: dict) -> dict:
-    ensure_default_owner()
     name = str(payload.get("name", "")).strip().lower()
     pin = str(payload.get("pin", "")).strip()
     if not name or not pin:
