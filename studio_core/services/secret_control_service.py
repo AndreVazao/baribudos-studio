@@ -126,19 +126,55 @@ def _serialize_rows(rows: List[Dict[str, Any]]) -> str:
 def _build_vault_response(vault: Dict[str, Any], include_values: bool = False) -> Dict[str, Any]:
     rows = []
     for row in list(vault.get("rows") or []):
-        if row.get("kind") != "entry":
-            rows.append(row)
-            continue
-        row_copy = dict(row)
-        if not include_values:
-            row_copy["value"] = ""
-        row_copy["masked_value"] = _mask_value(str(row.get("value") or ""))
+        if include_values:
+            row_copy = dict(row)
+        else:
+            # Return a small DTO, not arbitrary persisted row fields. Raw lines,
+            # comments, unknown row kinds and legacy custom keys can contain
+            # credentials even when they are not valid KEY=value rows.
+            safe_row_fields = (
+                "id",
+                "kind",
+                "key",
+                "masked_value",
+                "quote_style",
+                "has_export",
+                "position",
+            )
+            row_copy = {key: row[key] for key in safe_row_fields if key in row}
+            if "raw" in row:
+                row_copy["raw"] = ""
+
+        if row_copy.get("kind") == "entry":
+            if not include_values:
+                row_copy["value"] = ""
+                prefix = "export " if row_copy.get("has_export", False) else ""
+                row_copy["raw"] = f"{prefix}{_normalize_text(row_copy.get('key'))}="
+            row_copy["masked_value"] = _mask_value(str(row.get("value") or ""))
         rows.append(row_copy)
 
+    # Expose only the documented non-secret metadata. Never copy arbitrary
+    # persisted fields into an API response because legacy/unknown keys may
+    # contain raw .env material.
+    safe_metadata = (
+        "id",
+        "name",
+        "target",
+        "environment",
+        "file_name",
+        "created_at",
+        "updated_at",
+        "source_of_truth",
+        "notes",
+    )
+    response = {key: vault[key] for key in safe_metadata if key in vault}
+
+    # Serialize the exact same sanitized row set returned to the caller.
+    # Never serialize the persisted vault rows in a masked response.
     return {
-        **vault,
+        **response,
         "rows": rows,
-        "rendered_env": _serialize_rows(list(vault.get("rows") or [])),
+        "rendered_env": _serialize_rows(rows),
     }
 
 
