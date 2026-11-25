@@ -306,7 +306,7 @@ Cada PR deve conter:
 | 2026-11-25 | Studio | PR #88 — `f8e1a5e638b05f05d0799c344870027c9131ef67` | project-commercial e exportações EPUB/audiobook/vídeo; três workflows verdes no SHA exato | VERIFY — 3/3 verdes; Draft |
 | 2026-11-25 | Studio | PR #89 — `4a051c0af6541563566ccd4afda6b2824db6f641` | Publishing e Distribution Hub; três workflows verdes no SHA exato | VERIFY — 3/3 verdes; Draft |
 | 2026-11-25 | Studio | PR #90 — `03b06f5fac38958636f91b3d4f0ab3a8c273723e` | Compatibilidade do papel creator; três workflows verdes no SHA exato | VERIFY — 3/3 verdes; Draft |
-| 2026-11-25 | Studio | PR #91 — branch `security/audio-illustration-production-rbac-2026-11-25` | Em implementação: voice library/preview/profiles, audio cast, editorial/final media e illustration pipeline/provider; autorização por projeto baseada no ID do criador e testes negativos | IN PROGRESS — CI pendente |
+| 2026-11-25 | Studio | PR #91 — `c27cafe20d6806817ef662c218b0704fb7712540` | Voice Library/Preview/Profiles protegidos por papel server-side; Audio Cast, Editorial/Final Media e Illustration Pipeline/Provider com ownership por projeto; testes negativos e dependência reutilizável | VERIFY — Studio CI, Distribution Hub V6 Smoke e Story Production Cloud Validation verdes no SHA exato; Draft, não integrado |
 | 2026-11-25 | Website | PR #47 — `263b46d302d838d7621af4a4fdded1caba4cfbfc` | Website CI e Repository Visibility passaram no SHA exato; PayPal capture capability/owner binding implementados | VERIFY — Draft; provider concurrency, adapter cookie tests, migration baseline e guest legacy pendentes |
 
 ---
