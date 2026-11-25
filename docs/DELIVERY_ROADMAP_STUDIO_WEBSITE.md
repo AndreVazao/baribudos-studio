@@ -329,3 +329,13 @@ A declaração final exige evidência de todos os pontos:
 - [ ] Aprovação humana explícita para deploy/ativação comercial.
 
 **Princípio final:** avançar continuamente, mas só promover para DONE aquilo que foi implementado, testado e comprovado. O objetivo não é acumular commits; é entregar dois produtos seguros, coerentes e utilizáveis na realidade.
+
+
+### Atualização de execução — 25/11/2026
+
+- PR #87 integrada na `main`: `ca74a924c1a6698e6acf8bab6b5f1cc6e918b588` (base de autenticação, bootstrap, sessão atual e RBAC base).
+- PRs empilhadas #88–#91 consolidadas na PR #92, integrada na `main`: `b89b5f0e15b3b097fc4af18a9d04a62890fd0854`. A nova PR passou Studio CI, Distribution Hub V6 Smoke e Story Production Cloud Validation no SHA `671874dc9056bec6ca9940e3790381a5fffe23eb`. PRs antigas #88–#91 fechadas como substituídas pela consolidação.
+- Nova fase em curso na branch `security/studio-illustration-assets-ip-jobs-rbac-2026-11-25`: proteção por sessão e ownership de projeto nas rotas Illustration Assets e Illustration Generation; jobs globais limitados a owner/admin; atualização e import de jobs verificam projeto proprietário; uploads temporários removidos em `finally`.
+- Testes novos cobrem 401 anónimo, 403 viewer, acesso a projeto próprio, bloqueio de projeto alheio e listagem global owner-only. CI pendente para a nova PR.
+- Auditoria identificou como próximas superfícies: legacy Illustrations upload, Covers, Jobs globais, IP canons/characters/metadata/branding e Diagnostics. As rotas IP ainda confiam em identidade/role fornecidos por query/form/payload e em comparações por nome; não considerar esta área resolvida.
+- Website: PR #47 continua Draft. PR #54 adiciona política comum e testes dos cookies de captura guest, empilhada sobre #47. Não resolve baseline de migrações, concorrência distribuída PayPal, guest legacy nem revogação de sessões JWT.
