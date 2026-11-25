@@ -96,9 +96,9 @@ Não declarar o projeto concluído enquanto houver P0 aberto, fluxo crítico sem
 
 **Prioridade:** P0.
 
-- [ ] ST-101 — inventariar todas as rotas FastAPI e classificá-las como públicas, autenticadas, editoriais, administrativas ou internas.
+- [ ] ST-101 — inventariar todas as rotas FastAPI e classificá-las como públicas, autenticadas, editoriais, administrativas ou internas. (IN PROGRESS — auditoria confirmou rotas de produção ainda sem dependência server-side; ver registo de 25/11)
 - [ ] ST-102 — proteger CRUD de projetos e operações de escrita; definir leitura por papel e isolamento por projeto quando aplicável. (IN PROGRESS — PR #87 protege list/create/update com principal server-side e ownership; falta inventário/coverage total)
-- [ ] ST-103 — proteger publicação, despublicação, aprovação editorial e alterações de catálogo. (IN PROGRESS — PR #87 protege website-publisher; restantes rotas de publishing/catalog ainda por auditar)
+- [ ] ST-103 — proteger publicação, despublicação, aprovação editorial e alterações de catálogo. (IN PROGRESS — PR #87 protege website-publisher; PR #89 cobre publishing e Distribution Hub V6; catálogo e restantes reconciliações ainda por auditar)
 - [ ] ST-104 — proteger upload, substituição, eliminação, listagem privada e download de assets; validar ownership, MIME, tamanho e path. (IN PROGRESS — PR #87 exige papel autenticado owner/admin/editor nas rotas /assets; limites/MIME/ownership por objeto ainda por fechar)
 - [ ] ST-105 — rever rotas de capas, vídeos, ebooks, audiobooks, vozes, previews e distribuição.
 - [ ] ST-106 — proteger diagnósticos e rotas operacionais que revelem estado interno; manter apenas health/readiness estritamente públicos.
@@ -297,9 +297,9 @@ Cada PR deve conter:
 | 2026-11-25 | Studio | PR #86 — `c6eaa1178d32dde6ec5e897d60e9cbd693bc6ee6` | RBAC administrativo; três workflows verdes | VERIFY — Draft |
 | 2026-11-25 | Studio | PR #84–#86 | Dependência `httpx==0.27.2` adicionada aos workflows de testes; correção de concorrência SQLite propagada | DONE — CI confirmado |
 | 2026-11-25 | Studio | PR #86 | Inclusão deste plano mestre no branch de trabalho | IN PROGRESS — aguarda merge |
-| 2026-11-25 | Studio | PR #87 — branch `security/project-assets-publisher-rbac-2026-11-25` | Projetos: identidade/owner derivado da sessão e isolamento de edição; assets e Website Publisher protegidos por RBAC; testes negativos e positivos | IN PROGRESS — aguarda CI |
+| 2026-11-25 | Studio | PR #87 — branch `security/project-assets-publisher-rbac-2026-11-25` | Projetos: identidade/owner derivado da sessão e isolamento de edição; assets e Website Publisher protegidos por RBAC; três workflows verdes no SHA exato `23ac545ff775abaaf226eb11795b1e90b0aaaee5` | VERIFY — Draft, não integrado |
 | 2026-11-25 | Studio | PR #87 — `23ac545ff775abaaf226eb11795b1e90b0aaaee5` | Projetos, assets e Website Publisher protegidos; smoke test usa principal owner server-side; três workflows concluídos com sucesso no SHA exato | VERIFY — 3/3 CI verdes; Draft, não integrado |
-| 2026-11-25 | Studio | PR #88 — branch `security/commercial-and-media-export-rbac-2026-11-25` | Em curso: project-commercial e exportações EPUB/audiobook/vídeo exigem sessão server-side e ownership; testes de 401/403 e isolamento por projeto | VERIFY — CI em execução |
+| 2026-11-25 | Studio | PR #88 — branch `security/commercial-and-media-export-rbac-2026-11-25` | Em curso: project-commercial e exportações EPUB/audiobook/vídeo exigem sessão server-side e ownership; testes de 401/403 e isolamento por projeto | VERIFY — primeira execução encontrou teste direto sem principal; corrigido em `f8e1a5e638b05f05d0799c344870027c9131ef67`; CI de revalidação em curso |
 | 2026-11-25 | Studio | PR #89 — branch `security/publishing-distribution-rbac-2026-11-25` | Em curso: publishing e Distribution Hub V6 deixam de confiar em nome/papel enviado pelo cliente; ownership por projeto e autoria da publicação derivada da sessão | VERIFY — aguarda CI |
 | 2026-11-25 | Studio | Auditoria de rotas | Identificadas outras superfícies sem autenticação server-side: voice library/preview/profiles, audio cast, editorial media, final media, illustration generation/pipeline/assets e outras rotas de produção; inventário continua aberto | BLOCKED/P0 — proteção faseada necessária |
 | 2026-11-25 | Website | PR #47 — `263b46d302d838d7621af4a4fdded1caba4cfbfc` | Website CI e Repository Visibility passaram no SHA exato; PayPal capture capability/owner binding implementados | VERIFY — Draft; provider concurrency, adapter cookie tests, migration baseline e guest legacy pendentes |
