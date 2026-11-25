@@ -298,6 +298,7 @@ Cada PR deve conter:
 | 2026-11-25 | Studio | PR #84–#86 | Dependência `httpx==0.27.2` adicionada aos workflows de testes; correção de concorrência SQLite propagada | DONE — CI confirmado |
 | 2026-11-25 | Studio | PR #86 | Inclusão deste plano mestre no branch de trabalho | IN PROGRESS — aguarda merge |
 | 2026-11-25 | Studio | PR #87 — branch `security/project-assets-publisher-rbac-2026-11-25` | Projetos: identidade/owner derivado da sessão e isolamento de edição; assets e Website Publisher protegidos por RBAC; testes negativos e positivos | IN PROGRESS — aguarda CI |
+| 2026-11-25 | Studio | PR #87 | O smoke Distribution Hub revelou que o teste ainda simulava permissões via query string e chamava Website Publisher sem principal; o teste foi atualizado para injetar principal owner server-side | VERIFY — aguarda novo CI |
 | 2026-11-25 | Website | PR #47 — `263b46d302d838d7621af4a4fdded1caba4cfbfc` | Website CI e Repository Visibility passaram no SHA exato; PayPal capture capability/owner binding implementados | VERIFY — Draft; provider concurrency, adapter cookie tests, migration baseline e guest legacy pendentes |
 
 ---
