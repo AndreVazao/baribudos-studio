@@ -1,25 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
+from studio_core.services.auth_principal import AuthenticatedPrincipal, require_roles
+from studio_core.services.project_authorization import require_project_access
 
 router = APIRouter(prefix="/project-commercial", tags=["project-commercial"])
 
 PROJECTS_FILE = "data/projects.json"
-ALLOWED_ROLES = {"owner", "creator", "admin"}
-ALLOWED_NAMES = {"andre", "andré", "esposa"}
-
-
-def _normalize_name(value: str) -> str:
-    return str(value or "").strip().lower()
-
-
-def _can_edit_or_publish(user_role: str, user_name: str) -> bool:
-    role = str(user_role or "").strip().lower()
-    name = _normalize_name(user_name)
-    return role in ALLOWED_ROLES or name in ALLOWED_NAMES
 
 
 def _safe_dict(value):
@@ -35,10 +25,14 @@ def _get_project(project_id: str) -> dict | None:
 
 
 @router.get("/{project_id}")
-def get_project_commercial(project_id: str) -> dict:
+def get_project_commercial(
+    project_id: str,
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+    require_project_access(project, principal)
 
     return {
         "ok": True,
@@ -48,13 +42,15 @@ def get_project_commercial(project_id: str) -> dict:
 
 
 @router.patch("/{project_id}")
-def patch_project_commercial(project_id: str, payload: dict, user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
-        raise HTTPException(status_code=403, detail="Sem permissão comercial/editorial.")
-
+def patch_project_commercial(
+    project_id: str,
+    payload: dict,
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+    require_project_access(project, principal)
 
     commercial = payload.get("commercial") if isinstance(payload, dict) and isinstance(payload.get("commercial"), dict) else payload
     if not isinstance(commercial, dict):
