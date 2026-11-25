@@ -298,7 +298,10 @@ Cada PR deve conter:
 | 2026-11-25 | Studio | PR #84–#86 | Dependência `httpx==0.27.2` adicionada aos workflows de testes; correção de concorrência SQLite propagada | DONE — CI confirmado |
 | 2026-11-25 | Studio | PR #86 | Inclusão deste plano mestre no branch de trabalho | IN PROGRESS — aguarda merge |
 | 2026-11-25 | Studio | PR #87 — branch `security/project-assets-publisher-rbac-2026-11-25` | Projetos: identidade/owner derivado da sessão e isolamento de edição; assets e Website Publisher protegidos por RBAC; testes negativos e positivos | IN PROGRESS — aguarda CI |
-| 2026-11-25 | Studio | PR #87 | O smoke Distribution Hub revelou que o teste ainda simulava permissões via query string e chamava Website Publisher sem principal; o teste foi atualizado para injetar principal owner server-side | VERIFY — aguarda novo CI |
+| 2026-11-25 | Studio | PR #87 — `23ac545ff775abaaf226eb11795b1e90b0aaaee5` | Projetos, assets e Website Publisher protegidos; smoke test usa principal owner server-side; três workflows concluídos com sucesso no SHA exato | VERIFY — 3/3 CI verdes; Draft, não integrado |
+| 2026-11-25 | Studio | PR #88 — branch `security/commercial-and-media-export-rbac-2026-11-25` | Em curso: project-commercial e exportações EPUB/audiobook/vídeo exigem sessão server-side e ownership; testes de 401/403 e isolamento por projeto | VERIFY — CI em execução |
+| 2026-11-25 | Studio | PR #89 — branch `security/publishing-distribution-rbac-2026-11-25` | Em curso: publishing e Distribution Hub V6 deixam de confiar em nome/papel enviado pelo cliente; ownership por projeto e autoria da publicação derivada da sessão | VERIFY — aguarda CI |
+| 2026-11-25 | Studio | Auditoria de rotas | Identificadas outras superfícies sem autenticação server-side: voice library/preview/profiles, audio cast, editorial media, final media, illustration generation/pipeline/assets e outras rotas de produção; inventário continua aberto | BLOCKED/P0 — proteção faseada necessária |
 | 2026-11-25 | Website | PR #47 — `263b46d302d838d7621af4a4fdded1caba4cfbfc` | Website CI e Repository Visibility passaram no SHA exato; PayPal capture capability/owner binding implementados | VERIFY — Draft; provider concurrency, adapter cookie tests, migration baseline e guest legacy pendentes |
 
 ---
