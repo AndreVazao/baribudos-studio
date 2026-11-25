@@ -52,7 +52,7 @@ class StoragePathContainmentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             with patch.object(APP_CONFIG, "storage_root", root):
-                for unsafe in (r"C:\private\secret.txt", r"\server\share\secret.txt"):
+                for unsafe in (r"C:\private\secret.txt", r"\\server\share\secret.txt"):
                     with self.subTest(path=unsafe):
                         with self.assertRaisesRegex(ValueError, "storage_path_must_be_relative"):
                             resolve_storage_path(unsafe)
