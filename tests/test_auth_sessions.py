@@ -1,5 +1,7 @@
-import json
+import hashlib
+import sqlite3
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,26 +22,29 @@ class SessionManagerTests(unittest.TestCase):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary_directory.cleanup)
         self.directory = Path(self.temporary_directory.name)
+        self.store = self.directory / "sessions.sqlite"
 
     def test_created_token_is_opaque_and_only_hash_persisted(self):
-        manager = SessionManager(self.directory / "sessions.json")
+        manager = SessionManager(self.store)
         issued = manager.create("user-42")
         token = issued["token"]
         self.assertEqual(manager.resolve(token)["user_id"], "user-42")
-        saved = (self.directory / "sessions.json").read_text(encoding="utf-8")
-        self.assertNotIn(token, saved)
-        self.assertEqual(len(json.loads(saved)), 1)
+        with sqlite3.connect(self.store) as connection:
+            row = connection.execute("SELECT token_hash FROM sessions").fetchone()
+        self.assertEqual(row[0], hashlib.sha256(token.encode()).hexdigest())
+        self.assertNotEqual(row[0], token)
+        self.assertEqual(len(row[0]), 64)
 
     def test_expiration_invalidates_session(self):
         clock = Clock()
-        manager = SessionManager(self.directory / "sessions.json", ttl_seconds=60, clock=clock)
+        manager = SessionManager(self.store, ttl_seconds=60, clock=clock)
         issued = manager.create("u1")
         clock.value += timedelta(seconds=61)
         self.assertIsNone(manager.resolve(issued["token"]))
         self.assertEqual(manager.purge_expired(), 0)
 
     def test_revoke_and_revoke_user(self):
-        manager = SessionManager(self.directory / "sessions.json")
+        manager = SessionManager(self.store)
         one = manager.create("alice")["token"]
         two = manager.create("alice")["token"]
         other = manager.create("bob")["token"]
@@ -50,18 +55,47 @@ class SessionManagerTests(unittest.TestCase):
         self.assertEqual(manager.resolve(other)["user_id"], "bob")
 
     def test_invalid_token_and_empty_user(self):
-        manager = SessionManager(self.directory / "sessions.json")
+        manager = SessionManager(self.store)
         self.assertIsNone(manager.resolve(""))
         self.assertIsNone(manager.resolve("random-invalid-token"))
         with self.assertRaises(ValueError):
             manager.create(" ")
 
     def test_corrupt_store_fails_closed(self):
-        path = self.directory / "sessions.json"
-        path.write_text("{bad json", encoding="utf-8")
-        manager = SessionManager(path)
+        self.store.write_bytes(b"not a valid sqlite database")
+        manager = SessionManager(self.store)
         with self.assertRaises(SessionStoreError):
             manager.resolve("any-token")
+
+    def test_concurrent_instances_do_not_lose_created_sessions(self):
+        token_results = []
+        result_lock = threading.Lock()
+        errors = []
+
+        def create_session(index):
+            try:
+                issued = SessionManager(self.store).create(f"user-{index}")
+                with result_lock:
+                    token_results.append((issued["token"], f"user-{index}"))
+            except Exception as exc:  # collect thread failures for assertion
+                with result_lock:
+                    errors.append(exc)
+
+        workers = [threading.Thread(target=create_session, args=(index,)) for index in range(16)]
+        for worker in workers:
+            worker.start()
+        for worker in workers:
+            worker.join(timeout=15)
+
+        self.assertFalse(any(worker.is_alive() for worker in workers), "thread timeout")
+        self.assertEqual(errors, [])
+        self.assertEqual(len(token_results), 16)
+        verifier = SessionManager(self.store)
+        for token, expected_user in token_results:
+            self.assertEqual(verifier.resolve(token)["user_id"], expected_user)
+        with sqlite3.connect(self.store) as connection:
+            count = connection.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
+        self.assertEqual(count, 16)
 
 
 if __name__ == "__main__":
