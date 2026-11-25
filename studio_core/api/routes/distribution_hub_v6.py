@@ -33,7 +33,7 @@ def _authorize(project_id: str, principal: AuthenticatedPrincipal) -> None:
 @router.get("/{project_id}")
 def get_distribution_hub(
     project_id: str,
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     _authorize(project_id, principal)
     try:
@@ -47,7 +47,7 @@ def get_distribution_hub(
 @router.post("/{project_id}/refresh")
 def refresh_distribution_hub_endpoint(
     project_id: str,
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     _authorize(project_id, principal)
     try:
@@ -62,7 +62,7 @@ def refresh_distribution_hub_endpoint(
 def patch_distribution_hub_endpoint(
     project_id: str,
     payload: dict,
-    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
 ) -> dict:
     _authorize(project_id, principal)
     patch = payload.get("distribution_hub") if isinstance(payload.get("distribution_hub"), dict) else payload
