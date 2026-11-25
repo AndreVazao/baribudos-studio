@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.security import HTTPBearer
 
 from studio_core.core.models import User, UserCreate, UserPatch, UserPinPatch, now_iso
 from studio_core.core.storage import (
@@ -14,7 +13,6 @@ from studio_core.services.auth_principal import _session_manager
 
 router = APIRouter(prefix="/users", tags=["users"])
 USERS_FILE = "data/users.json"
-_bearer = HTTPBearer(auto_error=False)
 
 
 def public_user(user: dict) -> dict:
@@ -39,7 +37,11 @@ def list_users() -> dict:
 @router.post("")
 def create_user(payload: UserCreate) -> dict:
     ensure_default_owner()
-    user = User(name=payload.name.strip(), role=payload.role, pin=hash_pin(payload.pin.strip()), is_active=payload.is_active)
+    name = payload.name.strip()
+    pin = payload.pin.strip()
+    if not name or not pin:
+        raise HTTPException(status_code=422, detail="Nome e PIN são obrigatórios.")
+    user = User(name=name, role=payload.role, pin=hash_pin(pin), is_active=payload.is_active)
     append_json_item(USERS_FILE, user.model_dump())
     return {"ok": True, "user": public_user(user.model_dump())}
 
@@ -66,8 +68,11 @@ def patch_user(user_id: str, payload: UserPatch) -> dict:
 @router.patch("/{user_id}/pin")
 def patch_user_pin(user_id: str, payload: UserPinPatch) -> dict:
     ensure_default_owner()
+    pin = payload.pin.strip()
+    if not pin:
+        raise HTTPException(status_code=422, detail="PIN obrigatório.")
     def updater(current: dict) -> dict:
-        return {**current, "pin": hash_pin(payload.pin.strip()), "updated_at": now_iso()}
+        return {**current, "pin": hash_pin(pin), "updated_at": now_iso()}
     try:
         user = update_json_item(USERS_FILE, user_id, updater)
     except ValueError as exc:
