@@ -71,6 +71,16 @@ class AuthenticatedPrincipalTests(unittest.TestCase):
         self.assertEqual(principal.user_id, "u1")
         self.assertEqual(principal.role, "editor")
 
+    def test_role_gate_denies_viewer_and_allows_normalized_editor_role(self):
+        editor_gate = auth_principal.require_roles("editor")
+        editor = auth_principal.AuthenticatedPrincipal(user_id="u1", name="Editor", role="Editor")
+        viewer = auth_principal.AuthenticatedPrincipal(user_id="u2", name="Viewer", role="viewer")
+
+        self.assertIs(editor_gate(editor), editor)
+        with self.assertRaises(HTTPException) as raised:
+            editor_gate(viewer)
+        self.assertEqual(raised.exception.status_code, 403)
+
     def test_persisted_user_identity_mismatch_is_rejected_and_revoked(self):
         credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token")
         with patch.object(auth_principal, "_session_manager") as manager, patch.object(
