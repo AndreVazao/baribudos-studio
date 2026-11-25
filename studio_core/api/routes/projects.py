@@ -44,9 +44,6 @@ def _can_view_project(project: dict, user_id: str = "", user_name: str = "", use
     if str(project.get("created_by", "")).strip() == str(user_id).strip():
         return True
 
-    if _normalize_name(project.get("created_by_name", "")) == _normalize_name(user_name):
-        return True
-
     return False
 
 
@@ -92,8 +89,8 @@ def create_project(payload: ProjectCreate, principal: AuthenticatedPrincipal = D
         saga_name=payload.saga_name.strip(),
         language=payload.language.strip(),
         output_languages=payload.output_languages or [payload.language.strip()],
-        created_by=payload.created_by.strip(),
-        created_by_name=payload.created_by_name.strip(),
+        created_by=principal.user_id,
+        created_by_name=principal.name,
         visible_to_owner_only=payload.visible_to_owner_only,
         project_mode=project_mode,
         parent_project_id=_safe_text(payload.parent_project_id),
@@ -123,8 +120,8 @@ def create_project(payload: ProjectCreate, principal: AuthenticatedPrincipal = D
 
 
 @router.patch("/{project_id}")
-def patch_project(project_id: str, payload: ProjectPatch, user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
+def patch_project(project_id: str, payload: ProjectPatch, principal: AuthenticatedPrincipal = Depends(_editor_principal)) -> dict:
+    if principal.role.strip().lower() not in {"owner", "admin", "editor"}:
         raise HTTPException(status_code=403, detail="Sem permissão editorial para editar projetos.")
 
     def updater(current: dict) -> dict:
