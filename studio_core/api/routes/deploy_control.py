@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from studio_core.services.deploy_control_service import (
     get_vercel_website_summary,
     list_vercel_website_deployments,
 )
+from studio_core.services.auth_principal import require_roles
 
-router = APIRouter(prefix="/deploy-control", tags=["deploy-control"])
+router = APIRouter(prefix="/deploy-control", dependencies=[Depends(require_roles("owner", "admin"))], tags=["deploy-control"])
 
 
 @router.get("/vercel/summary")
