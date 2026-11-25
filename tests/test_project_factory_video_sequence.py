@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from studio_core.services import project_factory_engine as factory
 from studio_core.api.routes import videos
+from studio_core.services.auth_principal import AuthenticatedPrincipal
 from studio_core.services import production_pipeline_service as pipeline
 
 
@@ -173,7 +174,7 @@ class ProjectFactoryVideoSequenceTests(unittest.TestCase):
             "build_series_episode",
             side_effect=fake_build_series_episode,
         ), patch.object(videos, "update_json_item"):
-            result = videos.export_video("project-route", {"language": "pt-PT"})
+            result = videos.export_video("project-route", {"language": "pt-PT"}, AuthenticatedPrincipal(user_id="test-owner", name="Test Owner", role="owner"))
 
         self.assertTrue(result["ok"])
         self.assertEqual(captured["payload"]["sequence_frames"], frames)

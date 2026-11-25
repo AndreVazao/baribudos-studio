@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
+from studio_core.services.auth_principal import AuthenticatedPrincipal, require_roles
 from studio_core.services.illustration_integration_service import build_video_frame_sequence
+from studio_core.services.project_authorization import require_project_access
 from studio_core.services.video_service import build_series_episode, resolve_approved_series_audio
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -21,11 +23,16 @@ def _get_project(project_id: str) -> dict | None:
 
 
 @router.post("/export/{project_id}")
-def export_video(project_id: str, payload: dict | None = None) -> dict:
+def export_video(
+    project_id: str,
+    payload: dict | None = None,
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor", "creator")),
+) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+    require_project_access(project, principal)
 
     try:
         language = str(payload.get("language", project.get("language", "pt-PT"))).strip()
