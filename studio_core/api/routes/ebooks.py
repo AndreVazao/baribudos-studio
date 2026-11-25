@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
+from studio_core.services.auth_principal import AuthenticatedPrincipal, require_roles
 from studio_core.services.ebook_service import build_epub
 from studio_core.services.ip_runtime_service import load_ip_runtime
+from studio_core.services.project_authorization import require_project_access
 
 router = APIRouter(prefix="/ebooks", tags=["ebooks"])
 
@@ -21,11 +23,16 @@ def _get_project(project_id: str) -> dict | None:
 
 
 @router.post("/export/{project_id}")
-def export_ebook(project_id: str, payload: dict | None = None) -> dict:
+def export_ebook(
+    project_id: str,
+    payload: dict | None = None,
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+    require_project_access(project, principal)
 
     try:
         saga_id = str(project.get("saga_slug", "baribudos")).strip()
