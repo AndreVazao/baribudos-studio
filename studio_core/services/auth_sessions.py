@@ -68,7 +68,7 @@ class SessionManager:
         delay = 0.01
         while True:
             try:
-                connection.execute("PRAGMA journal_mode=WAL")
+                self._enable_wal_with_retry(connection)
                 return
             except sqlite3.OperationalError as exc:
                 message = str(exc).lower()
