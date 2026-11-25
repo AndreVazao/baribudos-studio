@@ -70,8 +70,25 @@ def get_current_principal(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = get_json_item("data/users.json", session["user_id"])
-    if not user or not bool(user.get("is_active", True)):
+    session_user_id = (
+        str(session.get("user_id", "")).strip()
+        if isinstance(session, dict)
+        else ""
+    )
+    if not session_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sessão inválida ou expirada.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = get_json_item("data/users.json", session_user_id)
+    persisted_user_id = str(user.get("id", "")).strip() if isinstance(user, dict) else ""
+    if (
+        not isinstance(user, dict)
+        or persisted_user_id != session_user_id
+        or not bool(user.get("is_active", True))
+    ):
         try:
             _session_manager().revoke(credentials.credentials)
         except (SessionStoreError, OSError):
@@ -82,10 +99,12 @@ def get_current_principal(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    name = user.get("name")
+    role = user.get("role")
     return AuthenticatedPrincipal(
-        user_id=str(user.get("id", "")),
-        name=str(user.get("name", "")),
-        role=str(user.get("role", "viewer")),
+        user_id=session_user_id,
+        name=name.strip() if isinstance(name, str) else "",
+        role=role.strip() if isinstance(role, str) and role.strip() else "viewer",
     )
 
 
