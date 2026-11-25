@@ -12,10 +12,6 @@ router = APIRouter(prefix="/projects", dependencies=[Depends(_editor_principal)]
 PROJECTS_FILE = "data/projects.json"
 
 
-def _normalize_name(value: str) -> str:
-    return str(value or "").strip().lower()
-
-
 def _safe_text(value: str) -> str:
     return str(value or "").strip()
 
@@ -45,12 +41,6 @@ def _can_view_project(project: dict, user_id: str = "", user_name: str = "", use
         return True
 
     return False
-
-
-def _can_edit_or_publish(user_role: str, user_name: str) -> bool:
-    role = str(user_role or "").strip().lower()
-    name = _normalize_name(user_name)
-    return role in {"owner", "creator", "admin"} or name in {"andré", "andre", "esposa", "wife", "mama"}
 
 
 @router.get("")
@@ -125,6 +115,9 @@ def patch_project(project_id: str, payload: ProjectPatch, principal: Authenticat
         raise HTTPException(status_code=403, detail="Sem permissão editorial para editar projetos.")
 
     def updater(current: dict) -> dict:
+        if principal.role.strip().lower() not in {"owner", "admin"} and str(current.get("created_by", "")).strip() != principal.user_id:
+            raise HTTPException(status_code=403, detail="Não tens permissão para alterar este projeto.")
+
         updated = {
             **current,
             "updated_at": now_iso(),
