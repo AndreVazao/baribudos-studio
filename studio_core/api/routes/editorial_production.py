@@ -7,10 +7,10 @@ from studio_core.services.editorial_production_bridge_service import (
     build_story_from_editorial,
     build_storyboard_from_editorial,
 )
+from studio_core.services.auth_principal import require_roles
 
 router = APIRouter(prefix="/editorial-production", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["editorial-production"])
 
-from studio_core.services.auth_principal import require_roles
 
 @router.post("/story/{project_id}")
 def editorial_to_story(project_id: str, payload: dict | None = None) -> dict:
