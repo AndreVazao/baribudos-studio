@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.services.editorial_production_bridge_service import (
     build_illustration_queue_from_editorial,
@@ -8,8 +8,9 @@ from studio_core.services.editorial_production_bridge_service import (
     build_storyboard_from_editorial,
 )
 
-router = APIRouter(prefix="/editorial-production", tags=["editorial-production"])
+router = APIRouter(prefix="/editorial-production", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["editorial-production"])
 
+from studio_core.services.auth_principal import require_roles
 
 @router.post("/story/{project_id}")
 def editorial_to_story(project_id: str, payload: dict | None = None) -> dict:
