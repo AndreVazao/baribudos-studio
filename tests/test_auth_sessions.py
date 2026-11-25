@@ -1,8 +1,10 @@
 import hashlib
+import os
 import sqlite3
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -66,6 +68,31 @@ class SessionManagerTests(unittest.TestCase):
         manager = SessionManager(self.store)
         with self.assertRaises(SessionStoreError):
             manager.resolve("any-token")
+
+    def test_disappearing_sqlite_sidecar_does_not_fail_permission_hardening(self):
+        manager = SessionManager(self.store)
+        self.store.touch()
+        wal_path = Path(f"{self.store}-wal")
+        wal_path.touch()
+        real_chmod = os.chmod
+
+        def chmod_with_sidecar_race(path, mode):
+            if Path(path) == wal_path:
+                raise FileNotFoundError("sidecar removed by concurrent SQLite connection")
+            return real_chmod(path, mode)
+
+        with mock.patch("studio_core.services.auth_sessions.os.chmod", side_effect=chmod_with_sidecar_race):
+            manager._secure_file_permissions()
+
+    def test_primary_database_permission_failure_fails_closed(self):
+        manager = SessionManager(self.store)
+        self.store.touch()
+        with mock.patch(
+            "studio_core.services.auth_sessions.os.chmod",
+            side_effect=PermissionError("permission denied"),
+        ):
+            with self.assertRaises(SessionStoreError):
+                manager._secure_file_permissions()
 
     def test_concurrent_instances_do_not_lose_created_sessions(self):
         token_results = []
