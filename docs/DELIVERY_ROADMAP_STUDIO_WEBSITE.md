@@ -373,3 +373,32 @@ A declaração final exige evidência de todos os pontos:
 - Website Bundles, Website Visual Sets, Website Contract e endpoints de reconciliação exigem papel apropriado; publicar bundles/visual sets e validar todos os contratos são operações owner/admin.
 - Testes negativos cobrem anónimo, viewer, tentativa de spoofing por query, projeto próprio vs projeto alheio e mutações comerciais/publicação.
 - CI pendente. A auditoria continua a tratar como P0 a montagem estática integral de `/storage`, migração completa dos clientes para bearer sessions e revisão final de todas as rotas e ficheiros servidos.
+
+
+### Atualização de execução — 26/11/2026 (migração do cliente para Bearer)
+
+- Nova branch `security/studio-client-bearer-session-2026-11-26`, PR #97 em preparação sobre `main`.
+- O cliente centraliza o cabeçalho `Authorization: Bearer` em GET/POST/PUT/PATCH/DELETE; respostas 401 limpam a sessão local e notificam a aplicação.
+- Login valida a presença do token opaco devolvido em `session.token`; foram removidos os valores predefinidos de utilizador e PIN.
+- O arranque deixa de restaurar o perfil a partir de localStorage e valida a sessão com `GET /users/me`; logout chama `POST /users/logout` e limpa o estado local mesmo quando a rede falha.
+- O perfil público fica apenas em memória; o token é mantido em memória durante a execução e persistido apenas nos cofres nativos: Android Keystore/iOS Keychain via Capacitor Secure Storage 7.1.6 e cofre de credenciais do sistema via Rust keyring no Tauri. O adaptador web não persiste token. O cliente revalida sempre com `GET /users/me` antes de restaurar o perfil.
+- Testes Node nativos adicionados para bearer em GET/POST, ausência de perfil em localStorage e limpeza após 401; CI executa `npm run test:auth` antes do build.
+- A resolução de media ainda constrói URLs diretas `/storage/`; a separação entre assets públicos e downloads privados autenticados permanece bloqueio P0.
+- Não existe deploy, alteração de produção, instalação de plugin nativo ou migração de dados nesta fase.
+
+
+#### Revisão adicional do transporte e identidade no cliente
+
+- A pesquisa do código encontrou chamadas `fetch()` diretas fora do helper central, incluindo uploads multipart de assets, ilustrações, voz e branding. Todas passaram a usar `apiFetch()`, que injeta Bearer sem definir Content-Type manualmente para FormData.
+- Removidos `user_id`, `user_name` e `user_role` dos módulos de API do cliente (projetos, IP e distribuição); o servidor é agora a única fonte de identidade/autorização.
+- Pesquisa estática após alteração: 19 módulos API; a única chamada direta a `fetch()` é o próprio `apiFetch()` central. Nenhum campo de identidade cliente foi encontrado nesses módulos.
+- A CI foi atualizada para correr os testes de contrato Node antes do build. O primeiro run completo na versão anterior passou; a revisão adicional aguarda validação no novo SHA.
+
+
+#### Armazenamento nativo de sessão — implementação adicionada
+
+- Capacitor: dependência `@aparajita/capacitor-secure-storage@^7.1.6`, compatível com a linha Capacitor 7 existente; usa Android Keystore e iOS Keychain, com acessibilidade iOS `whenUnlockedThisDeviceOnly`.
+- Tauri desktop: comandos nativos `secure_session_get/set/clear` usam a crate Rust `keyring` para o cofre de credenciais do sistema operativo (Windows Credential Manager no target desktop atual).
+- O token só é restaurado após ligação à API e é validado por `/users/me`; o perfil nunca é usado como prova de autenticação.
+- O cliente web não persiste tokens. O armazenamento nativo só é chamado quando a runtime é Capacitor nativa ou Tauri; falhas do cofre bloqueiam a persistência e não provocam fallback para localStorage.
+- Pendente: validação real de compilação/execução Android e Windows, incluindo instalação/sync Capacitor, cargo check/build e ensaio de logout/expiração/reinício em dispositivos. Até essa evidência, a persistência nativa está implementada mas ainda não certificada.

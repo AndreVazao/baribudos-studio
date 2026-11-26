@@ -30,6 +30,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
+      - name: Test frontend bearer session contract
+        run: npm run test:auth
+
       - name: Build frontend
         run: npm run build
 
@@ -38,6 +41,32 @@ jobs:
         with:
           name: studio-frontend-dist
           path: client/mobile-app/dist
+
+  tauri-windows-check:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: client/mobile-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend for Tauri
+        run: npm run build
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check Tauri desktop and OS credential vault
+        run: cargo check --manifest-path src-tauri/Cargo.toml
 
   backend-validate:
     runs-on: ubuntu-latest

@@ -1,22 +1,15 @@
-import { del, get, getApiBase, patch, post, qs } from "./core.js"
+import { del, get, getApiBase, patch, post } from "./core.js"
 
-export async function listProjects(user = {}) {
-  return get(`${getApiBase()}/projects${qs({
-    user_id: user?.id || "",
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
+export async function listProjects() {
+  return get(`${getApiBase()}/projects`)
 }
 
 export async function createProject(payload = {}) {
   return post(`${getApiBase()}/projects`, payload)
 }
 
-export async function updateProject(projectId, payload = {}, user = {}) {
-  return patch(`${getApiBase()}/projects/${projectId}${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`, payload)
+export async function updateProject(projectId, payload = {}) {
+  return patch(`${getApiBase()}/projects/${encodeURIComponent(projectId)}`, payload)
 }
 
 export async function updateSaga(slug, payload = {}) {
@@ -51,51 +44,36 @@ export async function getProjectCommercial(projectId) {
   return get(`${getApiBase()}/project-commercial/${projectId}`)
 }
 
-export async function updateProjectCommercial(projectId, commercial = {}, user = {}) {
-  return patch(`${getApiBase()}/project-commercial/${projectId}${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`, { commercial })
+export async function updateProjectCommercial(projectId, commercial = {}) {
+  return patch(`${getApiBase()}/project-commercial/${encodeURIComponent(projectId)}`, { commercial })
 }
 
 export async function getPublicationPackage(projectId) {
   return get(`${getApiBase()}/publication-package/${projectId}`)
 }
 
-export async function freezePublicationPackage(projectId, user = {}) {
-  return post(`${getApiBase()}/publication-package/${projectId}/freeze${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
+export async function freezePublicationPackage(projectId) {
+  return post(`${getApiBase()}/publication-package/${encodeURIComponent(projectId)}/freeze`)
 }
 
 export async function getPublishReadiness(projectId) {
   return get(`${getApiBase()}/publish-readiness/${projectId}`)
 }
 
-export async function markProjectReady(projectId, user = {}) {
-  return post(`${getApiBase()}/publish-readiness/${projectId}/mark-ready${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
+export async function markProjectReady(projectId) {
+  return post(`${getApiBase()}/publish-readiness/${encodeURIComponent(projectId)}/mark-ready`)
 }
 
-export async function unmarkProjectReady(projectId, user = {}) {
-  return post(`${getApiBase()}/publish-readiness/${projectId}/unmark-ready${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
+export async function unmarkProjectReady(projectId) {
+  return post(`${getApiBase()}/publish-readiness/${encodeURIComponent(projectId)}/unmark-ready`)
 }
 
 export async function getProjectIntegrity(projectId) {
   return get(`${getApiBase()}/project-integrity/${projectId}`)
 }
 
-export async function repairProject(projectId, user = {}) {
-  return post(`${getApiBase()}/project-integrity/${projectId}/repair${qs({
-    user_name: user?.name || "",
-    user_role: user?.role || ""
-  })}`)
+export async function repairProject(projectId) {
+  return post(`${getApiBase()}/project-integrity/${encodeURIComponent(projectId)}/repair`)
 }
 
 export async function listProductionRuns() {

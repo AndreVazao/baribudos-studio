@@ -1,4 +1,4 @@
-import { getApiBase, handle } from "./core.js"
+import { apiFetch, getApiBase, handle } from "./core.js"
 
 export async function listAssets(filters = {}) {
   const params = new URLSearchParams()
@@ -9,15 +9,15 @@ export async function listAssets(filters = {}) {
   })
 
   const query = params.toString()
-  return handle(fetch(`${getApiBase()}/assets${query ? `?${query}` : ""}`))
+  return handle(apiFetch(`${getApiBase()}/assets${query ? `?${query}` : ""}`))
 }
 
 export async function getAsset(assetId) {
-  return handle(fetch(`${getApiBase()}/assets/${assetId}`))
+  return handle(apiFetch(`${getApiBase()}/assets/${assetId}`))
 }
 
 export async function registerAsset(payload = {}) {
-  return handle(fetch(`${getApiBase()}/assets/register`, {
+  return handle(apiFetch(`${getApiBase()}/assets/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -56,26 +56,26 @@ export async function uploadAsset({
   form.append("height", String(height || ""))
   form.append("status", status)
 
-  return handle(fetch(`${getApiBase()}/assets/upload`, {
+  return handle(apiFetch(`${getApiBase()}/assets/upload`, {
     method: "POST",
     body: form
   }))
 }
 
 export async function publishAsset(assetId) {
-  return handle(fetch(`${getApiBase()}/assets/${assetId}/publish`, {
+  return handle(apiFetch(`${getApiBase()}/assets/${assetId}/publish`, {
     method: "POST"
   }))
 }
 
 export async function archiveAsset(assetId) {
-  return handle(fetch(`${getApiBase()}/assets/${assetId}/archive`, {
+  return handle(apiFetch(`${getApiBase()}/assets/${assetId}/archive`, {
     method: "POST"
   }))
 }
 
 export async function rollbackAsset(assetId) {
-  return handle(fetch(`${getApiBase()}/assets/${assetId}/rollback`, {
+  return handle(apiFetch(`${getApiBase()}/assets/${assetId}/rollback`, {
     method: "POST"
   }))
 }

@@ -1,4 +1,4 @@
-import { get, getApiBase, handle, post } from "./core.js"
+import { apiFetch, get, getApiBase, handle, post } from "./core.js"
 
 export async function buildCover(payload = {}) {
   return post(`${getApiBase()}/covers/build`, payload)
@@ -10,7 +10,7 @@ export async function uploadIllustrationForCover({ sagaId, projectId, file }) {
   form.append("project_id", projectId)
   form.append("file", file)
 
-  return handle(fetch(`${getApiBase()}/illustrations/upload`, {
+  return handle(apiFetch(`${getApiBase()}/illustrations/upload`, {
     method: "POST",
     body: form
   }))
@@ -58,7 +58,7 @@ export async function uploadIllustrationFrameAsset({ projectId, frameId, file })
   form.append("frame_id", frameId)
   form.append("file", file)
 
-  return handle(fetch(`${getApiBase()}/illustration-assets/upload`, {
+  return handle(apiFetch(`${getApiBase()}/illustration-assets/upload`, {
     method: "POST",
     body: form
   }))
@@ -71,7 +71,7 @@ export async function importGeneratedIllustrationFrame({ projectId, frameId, fil
   form.append("approve", String(approve))
   form.append("file", file)
 
-  return handle(fetch(`${getApiBase()}/illustration-generation/import`, {
+  return handle(apiFetch(`${getApiBase()}/illustration-generation/import`, {
     method: "POST",
     body: form
   }))
