@@ -113,6 +113,8 @@ class LegacyRoutesRBACTests(unittest.TestCase):
             })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(create.call_args.args[1]["created_by"], "creator-1")
+        self.assertNotIn("user_id", create.call_args.args[1])
+        self.assertNotIn("user_role", create.call_args.args[1])
 
     def test_cover_generation_requires_authentication_and_project_ownership(self):
         self.assertEqual(self.client.post("/api/covers/build", json={"project_id": "project-1"}).status_code, 401)
