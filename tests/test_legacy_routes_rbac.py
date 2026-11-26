@@ -6,14 +6,14 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from studio_core.api.routes import covers, diagnostics, illustrations, ip_canons, ip_characters, ip_metadata, ip_branding, ip_palette, jobs
+from studio_core.api.routes import covers, diagnostics, illustrations, ip_canons, ip_characters, ip_metadata, ip_branding, ip_palette, ip_creator, jobs
 from studio_core.services.auth_principal import AuthenticatedPrincipal, get_current_principal
 
 
 class LegacyRoutesRBACTests(unittest.TestCase):
     def setUp(self):
         self.app = FastAPI()
-        for module in (covers, diagnostics, illustrations, ip_canons, ip_characters, ip_metadata, ip_branding, ip_palette, jobs):
+        for module in (covers, diagnostics, illustrations, ip_canons, ip_characters, ip_metadata, ip_branding, ip_palette, ip_creator, jobs):
             self.app.include_router(module.router, prefix="/api")
         self.client = TestClient(self.app)
 
@@ -62,6 +62,24 @@ class LegacyRoutesRBACTests(unittest.TestCase):
             canon_path.return_value.exists.return_value = False
             response = self.client.get("/api/ip-canons/private-ip/visual")
         self.assertEqual(response.status_code, 404)
+
+
+    def test_ip_creator_listing_and_mutation_require_session_identity(self):
+        self.assertEqual(self.client.get("/api/ip-creator").status_code, 401)
+        self.assertEqual(self.client.get("/api/ip-creator/all").status_code, 401)
+        self.set_principal("editor", "editor-1")
+        self.assertEqual(self.client.get("/api/ip-creator/all").status_code, 403)
+        with patch("studio_core.api.routes.ip_creator.create_ip", return_value={"slug": "new-ip"}) as create:
+            response = self.client.post("/api/ip-creator", json={
+                "name": "New IP", "owner_id": "attacker-id", "owner_name": "Attacker",
+                "exclusive": True, "visible_to_owner_only": False,
+            })
+        self.assertEqual(response.status_code, 200)
+        saved = create.call_args.args[0]
+        self.assertEqual(saved["owner_id"], "editor-1")
+        self.assertEqual(saved["owner_name"], "Authenticated Test")
+        self.assertTrue(saved["visible_to_owner_only"])
+        self.assertFalse(saved["exclusive"])
 
     def test_diagnostics_are_owner_admin_only(self):
         self.assertEqual(self.client.get("/api/diagnostics").status_code, 401)
