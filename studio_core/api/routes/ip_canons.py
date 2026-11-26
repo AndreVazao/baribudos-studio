@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from studio_core.core.config import resolve_project_path
-from studio_core.services.ip_creator_service import can_edit_ip, get_ip_by_slug
+from studio_core.services.ip_creator_service import get_ip_by_slug
+from studio_core.services.auth_principal import AuthenticatedPrincipal
+from studio_core.services.ip_route_auth import require_ip_edit_access, require_ip_read_access
 
 router = APIRouter(prefix="/ip-canons", tags=["ip-canons"])
 
@@ -21,15 +23,6 @@ VALID_CANONS = {
 }
 
 
-def _user_from_payload_or_query(payload: dict | None = None, user_id: str = "", user_name: str = "", user_role: str = "") -> dict:
-    payload = payload or {}
-    return {
-        "id": str(payload.get("user_id", user_id)).strip(),
-        "name": str(payload.get("user_name", user_name)).strip(),
-        "role": str(payload.get("user_role", user_role)).strip()
-    }
-
-
 def _canon_path(slug: str, canon_type: str) -> Path:
     file_name = VALID_CANONS.get(canon_type)
     if not file_name:
@@ -38,17 +31,13 @@ def _canon_path(slug: str, canon_type: str) -> Path:
 
 
 @router.get("/{slug}/{canon_type}")
-def get_ip_canon(slug: str, canon_type: str, user_id: str = "", user_name: str = "", user_role: str = "") -> dict:
+def get_ip_canon(slug: str, canon_type: str, principal: AuthenticatedPrincipal = Depends(require_ip_read_access)) -> dict:
     item = get_ip_by_slug(slug)
     if not item:
         raise HTTPException(status_code=404, detail="IP não encontrada.")
 
-    user = _user_from_payload_or_query(user_id=user_id, user_name=user_name, user_role=user_role)
-    if not can_edit_ip(user, slug):
-        raise HTTPException(status_code=403, detail="Sem permissão para ver este canon.")
-
     try:
-        path = _canon_path(slug, canon_type)
+        path = _canon_path(str(item.get("slug", slug)), canon_type)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -69,14 +58,10 @@ def get_ip_canon(slug: str, canon_type: str, user_id: str = "", user_name: str =
 
 
 @router.patch("/{slug}/{canon_type}")
-def update_ip_canon(slug: str, canon_type: str, payload: dict) -> dict:
+def update_ip_canon(slug: str, canon_type: str, payload: dict, principal: AuthenticatedPrincipal = Depends(require_ip_edit_access)) -> dict:
     item = get_ip_by_slug(slug)
     if not item:
         raise HTTPException(status_code=404, detail="IP não encontrada.")
-
-    user = _user_from_payload_or_query(payload)
-    if not can_edit_ip(user, slug):
-        raise HTTPException(status_code=403, detail="Sem permissão para editar este canon.")
 
     data = payload.get("data")
     if not isinstance(data, dict):

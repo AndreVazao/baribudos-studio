@@ -339,3 +339,14 @@ A declaração final exige evidência de todos os pontos:
 - Testes novos cobrem 401 anónimo, 403 viewer, acesso a projeto próprio, bloqueio de projeto alheio e listagem global owner-only. CI pendente para a nova PR.
 - Auditoria identificou como próximas superfícies: legacy Illustrations upload, Covers, Jobs globais, IP canons/characters/metadata/branding e Diagnostics. As rotas IP ainda confiam em identidade/role fornecidos por query/form/payload e em comparações por nome; não considerar esta área resolvida.
 - Website: PR #47 continua Draft. PR #54 adiciona política comum e testes dos cookies de captura guest, empilhada sobre #47. Não resolve baseline de migrações, concorrência distribuída PayPal, guest legacy nem revogação de sessões JWT.
+
+
+### Atualização de execução — 26/11/2026
+
+- Studio PR #93 integrada na `main`: `acf32b2053af46f2ba248c6deb8da8c7fe187dc`. Illustration Assets e Illustration Generation passaram a validar sessão, papel e ownership de projeto; jobs globais limitados a owner/admin; importações limpam ficheiros temporários em `finally`. Os três workflows passaram no SHA exato antes do merge.
+- Nova branch `security/legacy-ip-covers-jobs-diagnostics-rbac-2026-11-26` em execução: rotas antigas de ilustrações, capas, jobs, diagnostics, branding pack, factory, age badges e IP Creator passam a exigir principal de sessão e autorização por projeto/IP.
+- Canons, personagens, metadados, branding e paletas deixam de confiar em `user_id`, `user_name` ou `user_role` enviados pelo cliente. O acesso privado a IP usa o ID autenticado, listas de editores autorizados e papéis permitidos; comparações por nome não são usadas como prova de identidade.
+- Jobs passam a exigir projeto para editor/creator e listagem global apenas para owner/admin. Criação de jobs deriva `created_by` da sessão. Diagnostics passa a owner/admin.
+- Testes negativos adicionados para impersonação por query, acesso anónimo, isolamento por projeto, diagnostics e criação de IP com owner forjado. PR ainda não aberta/CI não validada; não marcar como concluído até workflows verdes no SHA exato.
+- Website PR #54: primeira validação encontrou dois testes de contrato obsoletos após a extração da política de cookies para helper. Foram ajustados para testar o resultado efetivo do helper (HttpOnly, Secure, SameSite, path e expiração), sem enfraquecer as garantias. Novo SHA `6be0dda339066b8ff6e8c86bd737a122028b3dbc`; CI pendente.
+- Website PR #47 continua bloqueada por concorrência distribuída PayPal, recuperação de checkout órfão, baseline de migrações e reconciliação de checkouts guest antigos. Sem pagamentos Sandbox/produção ou migrações.

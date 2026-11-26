@@ -1,30 +1,19 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from studio_core.services.ip_creator_service import can_edit_ip, get_ip_by_slug, update_ip
+from studio_core.services.ip_creator_service import get_ip_by_slug, update_ip
+from studio_core.services.auth_principal import AuthenticatedPrincipal
+from studio_core.services.ip_route_auth import require_ip_edit_access, require_ip_read_access
 
 router = APIRouter(prefix="/ip-palette", tags=["ip-palette"])
 
 
-def _user_from_payload_or_query(payload: dict | None = None, user_id: str = "", user_name: str = "", user_role: str = "") -> dict:
-    payload = payload or {}
-    return {
-        "id": str(payload.get("user_id", user_id)).strip(),
-        "name": str(payload.get("user_name", user_name)).strip(),
-        "role": str(payload.get("user_role", user_role)).strip()
-    }
-
-
 @router.get("/{slug}")
-def get_palette(slug: str, user_id: str = "", user_name: str = "", user_role: str = "") -> dict:
+def get_palette(slug: str, principal: AuthenticatedPrincipal = Depends(require_ip_read_access)) -> dict:
     item = get_ip_by_slug(slug)
     if not item:
         raise HTTPException(status_code=404, detail="IP não encontrada.")
-
-    user = _user_from_payload_or_query(user_id=user_id, user_name=user_name, user_role=user_role)
-    if not can_edit_ip(user, slug) and str(item.get("owner_id", "")).strip() != str(user.get("id", "")).strip():
-        raise HTTPException(status_code=403, detail="Sem permissão para ver a paleta desta IP.")
 
     return {
         "ok": True,
@@ -34,14 +23,10 @@ def get_palette(slug: str, user_id: str = "", user_name: str = "", user_role: st
 
 
 @router.patch("/{slug}")
-def patch_palette(slug: str, payload: dict) -> dict:
+def patch_palette(slug: str, payload: dict, principal: AuthenticatedPrincipal = Depends(require_ip_edit_access)) -> dict:
     item = get_ip_by_slug(slug)
     if not item:
         raise HTTPException(status_code=404, detail="IP não encontrada.")
-
-    user = _user_from_payload_or_query(payload)
-    if not can_edit_ip(user, slug):
-        raise HTTPException(status_code=403, detail="Sem permissão para editar a paleta desta IP.")
 
     palette = payload.get("palette") or {}
     if not isinstance(palette, dict):
