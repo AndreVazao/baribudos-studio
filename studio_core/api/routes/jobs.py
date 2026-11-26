@@ -35,5 +35,9 @@ def new_job(
     if not project_id:
         raise HTTPException(status_code=400, detail="project_id é obrigatório.")
     assert_project_access(project_id, principal)
-    trusted_payload = {**payload, "project_id": project_id, "created_by": principal.user_id}
+    trusted_payload = {
+        key: value for key, value in payload.items()
+        if key not in {"user_id", "user_name", "user_role", "owner_id", "owner_name", "created_by"}
+    }
+    trusted_payload.update({"project_id": project_id, "created_by": principal.user_id})
     return create_job(payload.get("type"), trusted_payload)
