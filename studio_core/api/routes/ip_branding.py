@@ -78,7 +78,7 @@ async def upload_ip_brand_asset(
     if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
         raise HTTPException(status_code=400, detail="Formato inválido. Usa PNG/JPG/WEBP.")
 
-    folder = _branding_folder_for_ip(slug)
+    folder = _branding_folder_for_ip(str(item.get("slug", slug)))
     file_name = _safe_file_name(f"{asset_type}-{uuid4().hex}{ext}")
     target = folder / file_name
 
@@ -89,7 +89,8 @@ async def upload_ip_brand_asset(
         raise HTTPException(status_code=413, detail="Ficheiro excede o limite de 10 MB.")
     target.write_bytes(content)
 
-    relative_path = f"public/brand/ips/{slug}/{file_name}"
+    canonical_slug = str(item.get("slug", slug))
+    relative_path = f"public/brand/ips/{canonical_slug}/{file_name}"
 
     try:
         updated = update_ip(slug, {
