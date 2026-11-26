@@ -116,7 +116,8 @@ class PrivateAdminSurfacesRBACTests(unittest.TestCase):
             response = self.client.get("/api/public/ip/baribudos/assets")
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("storage_path", response.text)
-        self.assertIn("https://cdn.example/logo.png", response.text)
+        self.assertIn("/api/public/assets/asset-1/file", response.text)
+        self.assertNotIn("https://cdn.example/logo.png", response.text)
 
     def test_owner_admin_can_access_settings_without_client_supplied_role(self):
         self.set_principal("owner", "owner-1")
