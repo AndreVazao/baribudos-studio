@@ -38,21 +38,29 @@ def _can_edit(item: dict, principal: AuthenticatedPrincipal) -> bool:
     return not bool(item.get("exclusive", False)) and principal.role.lower() in editable_roles
 
 
-def require_ip_read_access(
-    slug: str,
-    principal: AuthenticatedPrincipal = Depends(require_roles(*_IP_ROLES)),
-) -> AuthenticatedPrincipal:
+def assert_ip_read_access(slug: str, principal: AuthenticatedPrincipal) -> AuthenticatedPrincipal:
     item = _resolve_ip(slug)
     if not _can_view(item, principal):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sem acesso a esta IP.")
     return principal
 
 
-def require_ip_edit_access(
-    slug: str,
-    principal: AuthenticatedPrincipal = Depends(require_roles(*_IP_ROLES)),
-) -> AuthenticatedPrincipal:
+def assert_ip_edit_access(slug: str, principal: AuthenticatedPrincipal) -> AuthenticatedPrincipal:
     item = _resolve_ip(slug)
     if not _can_edit(item, principal):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sem permissão para editar esta IP.")
     return principal
+
+
+def require_ip_read_access(
+    slug: str,
+    principal: AuthenticatedPrincipal = Depends(require_roles(*_IP_ROLES)),
+) -> AuthenticatedPrincipal:
+    return assert_ip_read_access(slug, principal)
+
+
+def require_ip_edit_access(
+    slug: str,
+    principal: AuthenticatedPrincipal = Depends(require_roles(*_IP_ROLES)),
+) -> AuthenticatedPrincipal:
+    return assert_ip_edit_access(slug, principal)
