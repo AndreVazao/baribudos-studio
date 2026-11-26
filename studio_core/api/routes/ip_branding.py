@@ -82,7 +82,11 @@ async def upload_ip_brand_asset(
     file_name = _safe_file_name(f"{asset_type}-{uuid4().hex}{ext}")
     target = folder / file_name
 
-    content = await file.read()
+    content = await file.read(10 * 1024 * 1024 + 1)
+    if not content:
+        raise HTTPException(status_code=400, detail="Ficheiro vazio.")
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Ficheiro excede o limite de 10 MB.")
     target.write_bytes(content)
 
     relative_path = f"public/brand/ips/{slug}/{file_name}"
