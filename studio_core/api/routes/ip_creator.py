@@ -94,7 +94,8 @@ def ensure_folders(
     slug: str,
     principal: AuthenticatedPrincipal = Depends(require_ip_edit_access),
 ) -> dict:
-    path = ensure_ip_folder_structure(slug)
+    item = get_ip_by_slug(slug) or {}
+    path = ensure_ip_folder_structure(str(item.get("slug", slug)))
     return {"ok": True, "path": path}
 
 
