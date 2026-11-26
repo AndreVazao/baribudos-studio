@@ -64,3 +64,10 @@ def require_ip_edit_access(
     principal: AuthenticatedPrincipal = Depends(require_roles(*_IP_ROLES)),
 ) -> AuthenticatedPrincipal:
     return assert_ip_edit_access(slug, principal)
+
+
+
+def list_ips_visible_to_principal(principal: AuthenticatedPrincipal) -> list[dict]:
+    from studio_core.services.ip_creator_service import list_ips
+
+    return [item for item in list_ips() if _can_view(item, principal)]
