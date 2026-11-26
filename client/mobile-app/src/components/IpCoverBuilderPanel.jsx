@@ -221,13 +221,7 @@ export default function IpCoverBuilderPanel({ user, onCoverBuilt }) {
         />
       ) : null}
 
-      <label>Caminho da ilustração carregada</label>
-      <input
-        value={illustrationPath}
-        onChange={(e) => setIllustrationPath(e.target.value)}
-        placeholder="Será preenchido após upload"
-        style={{ padding: 12, borderRadius: 12, border: "1px solid #d1d5db", outline: "none" }}
-      />
+      <div><strong>Ilustração carregada:</strong> {String(illustrationPath).replace(/\\/g, "/").split("/").pop() || "Ainda não carregada"}</div>
 
       <button
         onClick={handleBuild}
@@ -257,8 +251,8 @@ export default function IpCoverBuilderPanel({ user, onCoverBuilt }) {
         >
           <strong>Resultado</strong>
           <div><strong>Ficheiro:</strong> {result.file_name}</div>
-          <div><strong>Capa:</strong> {result.file_path}</div>
-          <div><strong>Badge:</strong> {result.badge_file_path}</div>
+          <div><strong>Capa:</strong> {String(result.file_path || "").replace(/\\/g, "/").split("/").pop()}</div>
+          <div><strong>Badge:</strong> {String(result.badge_file_path || "").replace(/\\/g, "/").split("/").pop()}</div>
         </div>
       ) : null}
     </Card>

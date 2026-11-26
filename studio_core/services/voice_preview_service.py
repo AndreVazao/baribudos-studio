@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import time
 import urllib.request
 import wave
 from pathlib import Path
@@ -154,11 +155,27 @@ def _synthesize_http_provider(
     return {
         "ok": True,
         "provider": provider,
-        "file_path": _safe_text(result.get("file_path")) or str(output_path),
+        "file_path": str(output_path),
     }
 
 
-def generate_voice_preview(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _write_preview_metadata(output_path: Path, owner_user_id: str) -> None:
+    metadata_path = output_path.with_suffix(".json")
+    temporary_path = metadata_path.with_suffix(".json.tmp")
+    temporary_path.write_text(
+        json.dumps(
+            {"owner_user_id": _safe_text(owner_user_id), "created_at": time.time()},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    temporary_path.replace(metadata_path)
+
+
+def generate_voice_preview(
+    payload: Dict[str, Any] | None = None,
+    owner_user_id: str = "",
+) -> Dict[str, Any]:
     payload = payload or {}
 
     provider = _safe_text(payload.get("provider", "system_tts")) or "system_tts"
@@ -174,7 +191,8 @@ def generate_voice_preview(payload: Dict[str, Any] | None = None) -> Dict[str, A
             raise ValueError("Voice sample não encontrada.")
         speaker_wav = _safe_text(voice_sample.get("file_path", ""))
 
-    output_path = _preview_dir() / f"voice_preview_{uuid4()}.wav"
+    preview_id = str(uuid4())
+    output_path = _preview_dir() / f"voice_preview_{preview_id}.wav"
 
     try:
         if provider in {"coqui_tts", "xtts"}:
@@ -187,35 +205,35 @@ def generate_voice_preview(payload: Dict[str, Any] | None = None) -> Dict[str, A
         else:
             result = _synthesize_system_tts(text, output_path, language)
 
+        _write_preview_metadata(output_path, owner_user_id)
         return {
             "ok": True,
             "preview": {
-                "id": str(uuid4()),
+                "id": preview_id,
+                "file_url": f"/api/voice-preview/{preview_id}/file",
                 "provider": provider,
                 "text": text,
                 "language": language,
                 "voice_sample_id": voice_sample_id,
-                "speaker_wav": speaker_wav,
-                "file_path": result["file_path"],
-                "file_name": Path(result["file_path"]).name,
+                "file_name": output_path.name,
             },
             "voice_sample": voice_sample,
         }
 
     except Exception:
         fallback = _synthesize_system_tts(text, output_path, language)
+        _write_preview_metadata(output_path, owner_user_id)
         return {
             "ok": True,
             "preview": {
-                "id": str(uuid4()),
+                "id": preview_id,
+                "file_url": f"/api/voice-preview/{preview_id}/file",
                 "provider": provider,
                 "fallback_provider": "system_tts",
                 "text": text,
                 "language": language,
                 "voice_sample_id": voice_sample_id,
-                "speaker_wav": speaker_wav,
-                "file_path": fallback["file_path"],
-                "file_name": Path(fallback["file_path"]).name,
+                "file_name": output_path.name,
                 "fallback_used": True,
             },
             "voice_sample": voice_sample,

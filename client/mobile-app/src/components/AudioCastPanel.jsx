@@ -7,7 +7,7 @@ import {
   previewAudioCast,
   saveAudioCast
 } from "../api.js"
-import { normalizeMediaUrl } from "../utils/media.js"
+import { fetchPrivateMediaBlob } from "../api.js"
 import VoiceUsageGuidanceCard from "./VoiceUsageGuidanceCard.jsx"
 
 function Card({ title, children }) {
@@ -102,6 +102,7 @@ export default function AudioCastPanel({ user }) {
   const [previewText, setPreviewText] = useState("Olá. Este é um teste de personagem.")
   const [previewProvider, setPreviewProvider] = useState("xtts")
   const [previewResult, setPreviewResult] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState("")
 
   useEffect(() => { loadProjectsAndVoices() }, [])
   useEffect(() => { if (selectedProjectId) loadCast(selectedProjectId) }, [selectedProjectId])
@@ -161,7 +162,23 @@ export default function AudioCastPanel({ user }) {
 
   const approvedVoiceProfiles = useMemo(() => voiceProfiles.filter((item) => item?.active && item?.consent_status === "approved"), [voiceProfiles])
   const narratorMeta = useMemo(() => findVoiceMeta(narratorVoiceRef, approvedVoiceProfiles, voiceSamples), [narratorVoiceRef, approvedVoiceProfiles, voiceSamples])
-  const previewUrl = normalizeMediaUrl(previewResult?.file_path)
+  useEffect(() => {
+    let active = true
+    let objectUrl = ""
+    if (!previewResult?.file_url) {
+      setPreviewUrl("")
+      return undefined
+    }
+    fetchPrivateMediaBlob(previewResult.file_url).then((blob) => {
+      objectUrl = URL.createObjectURL(blob)
+      if (active) setPreviewUrl(objectUrl)
+      else URL.revokeObjectURL(objectUrl)
+    }).catch(() => { if (active) setPreviewUrl("") })
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [previewResult?.file_url])
 
   return (
     <Card title="Audio Cast por Personagem">
@@ -252,7 +269,7 @@ export default function AudioCastPanel({ user }) {
       {previewResult ? (
         <div style={{ padding: 12, borderRadius: 12, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.55)", display: "grid", gap: 8 }}>
           <div><strong>Preview:</strong> {previewResult.provider}</div>
-          <div><strong>Ficheiro:</strong> {previewResult.file_path}</div>
+          <div><strong>Ficheiro:</strong> {previewResult.file_name}</div>
           {previewUrl ? <audio controls src={previewUrl} style={{ width: "100%" }} /> : null}
         </div>
       ) : null}

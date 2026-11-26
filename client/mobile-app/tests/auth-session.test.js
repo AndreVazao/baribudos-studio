@@ -87,3 +87,23 @@ test("401 clears the in-memory session and notifies the application", async () =
   assert.equal(api.getSavedUser(), null)
   assert.ok(dispatched.includes("baribudos:auth-expired"))
 })
+
+test("private media fetch sends Bearer and rejects cross-origin token forwarding", async () => {
+  api.setApiBase("https://studio.example/api")
+  api.setAuthToken("media-session-token")
+  let captured
+  globalThis.fetch = async (url, options = {}) => {
+    captured = { url, options }
+    return new Response(new Blob(["media"]), { status: 200 })
+  }
+
+  const blob = await api.fetchPrivateMediaBlob("/api/voice-preview/preview-id/file")
+  assert.equal(await blob.text(), "media")
+  assert.equal(captured.options.headers.get("Authorization"), "Bearer media-session-token")
+
+  await assert.rejects(
+    api.fetchPrivateMediaBlob("https://attacker.example/collect"),
+    /URL de media privada inválida/
+  )
+})
+

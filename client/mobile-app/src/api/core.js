@@ -96,13 +96,11 @@ export function resolveBackendFileUrl(filePath) {
   const path = String(filePath || "").trim()
   if (!path) return ""
   if (/^https?:\/\//i.test(path)) return path
-  const marker = "/storage/"
-  const normalized = path.replace(/\\/g, "/")
-  const index = normalized.indexOf(marker)
-  if (index >= 0) return `${getApiOrigin()}${normalized.slice(index)}`
+  if (/^\/api\/public\/assets\/[a-zA-Z0-9-]+\/file(?:\?.*)?$/.test(path)) {
+    return `${getApiOrigin()}${path}`
+  }
   return ""
 }
-
 export const normalizeMediaUrl = resolveBackendFileUrl
 
 function withAuthHeaders(options = {}) {
@@ -131,6 +129,50 @@ export async function handle(resPromise) {
 
 export function apiFetch(url, options = {}) {
   return fetch(url, withAuthHeaders(options))
+}
+
+export async function fetchPrivateMediaBlob(fileUrl) {
+  const origin = getApiOrigin()
+  const baseOrigin = new URL(origin).origin
+  const target = new URL(String(fileUrl || ""), baseOrigin)
+  if (target.origin !== baseOrigin || !target.pathname.startsWith("/api/")) {
+    throw new Error("URL de media privada inválida.")
+  }
+  const response = await apiFetch(target.toString())
+  if (!response.ok) {
+    let data = null
+    try {
+      data = await response.json()
+    } catch {
+      data = null
+    }
+    if (response.status === 401) {
+      clearAuthSession()
+      window.dispatchEvent(new CustomEvent("baribudos:auth-expired"))
+    }
+    throw new Error(data?.detail || data?.error || "Não foi possível obter o ficheiro.")
+  }
+  return response.blob()
+}
+
+export async function fetchProjectMediaBlob(projectId, filePath) {
+  const query = new URLSearchParams({ path: String(filePath || "") })
+  const url = `${getApiBase()}/projects/${encodeURIComponent(projectId)}/media?${query}`
+  const response = await apiFetch(url)
+  if (!response.ok) {
+    let data = null
+    try {
+      data = await response.json()
+    } catch {
+      data = null
+    }
+    if (response.status === 401) {
+      clearAuthSession()
+      window.dispatchEvent(new CustomEvent("baribudos:auth-expired"))
+    }
+    throw new Error(data?.detail || data?.error || "Não foi possível obter o ficheiro.")
+  }
+  return response.blob()
 }
 
 export function get(url) {

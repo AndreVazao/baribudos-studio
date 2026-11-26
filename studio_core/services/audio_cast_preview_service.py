@@ -5,6 +5,7 @@ from typing import Any, Dict
 from studio_core.core.storage import read_json
 from studio_core.services.voice_preview_service import generate_voice_preview
 from studio_core.services.voice_library_service import get_voice_sample
+from studio_core.services.auth_principal import AuthenticatedPrincipal
 
 PROJECTS_FILE = "data/projects.json"
 
@@ -47,7 +48,11 @@ def _resolve_character_voice_id(audio_cast: Dict[str, Any], character_name: str)
     return _safe_text(narrator.get("voice_sample_id"))
 
 
-def generate_audio_cast_preview(project_id: str, payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def generate_audio_cast_preview(
+    project_id: str,
+    payload: Dict[str, Any] | None = None,
+    principal: AuthenticatedPrincipal | None = None,
+) -> Dict[str, Any]:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
@@ -61,13 +66,18 @@ def generate_audio_cast_preview(project_id: str, payload: Dict[str, Any] | None 
 
     voice_sample_id = _resolve_character_voice_id(audio_cast, character_name)
     voice_sample = get_voice_sample(voice_sample_id) if voice_sample_id else None
+    if voice_sample_id and not voice_sample:
+        raise ValueError("Voice sample não encontrada.")
+    if voice_sample and principal and principal.role.lower() not in {"owner", "admin"}:
+        if _safe_text(voice_sample.get("owner_user_id")) != principal.user_id:
+            raise ValueError("Sem consentimento ou acesso a esta amostra de voz.")
 
     result = generate_voice_preview({
         "provider": provider,
         "text": text,
         "language": language,
         "voice_sample_id": voice_sample_id,
-    })
+    }, owner_user_id=principal.user_id if principal else "")
 
     return {
         "ok": True,

@@ -165,7 +165,7 @@ class RuntimeRouteManifestTests(unittest.TestCase):
         self.assertIn("/storage", markdown)
         self.assertNotIn(directory, markdown)
 
-    def test_real_application_inventories_storage_mount_when_root_exists(self):
+    def test_real_application_never_mounts_private_storage_root(self):
         repository_root = Path(__file__).resolve().parents[1]
 
         with tempfile.TemporaryDirectory() as temporary_root:
@@ -208,10 +208,7 @@ class RuntimeRouteManifestTests(unittest.TestCase):
                 if item["path"] == "/storage"
             ]
 
-            self.assertEqual(len(storage_mounts), 1)
-            self.assertEqual(storage_mounts[0]["route_type"], "Mount")
-            self.assertTrue(storage_mounts[0]["static_files"]["directory_exists"])
-            self.assertFalse(storage_mounts[0]["static_files"]["authorization_verified"])
+            self.assertEqual(storage_mounts, [])
             self.assertNotIn(str(storage_root), json.dumps(manifest))
             self.assertNotIn(str(storage_root), markdown_output.read_text(encoding="utf-8"))
 

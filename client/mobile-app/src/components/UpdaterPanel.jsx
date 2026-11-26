@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
-import { checkForUpdates, downloadUpdate, getLocalVersionInfo } from "../api.js"
-import { normalizeMediaUrl } from "../utils/media.js"
+import { checkForUpdates, downloadUpdate, fetchPrivateMediaBlob, getLocalVersionInfo } from "../api.js"
 
 function Card({ title, children }) {
   return (
@@ -76,6 +75,23 @@ export default function UpdaterPanel() {
     }
   }
 
+  async function handleOpenDownloadedFile() {
+    if (!downloadResult?.file_url) return
+    try {
+      const blob = await fetchPrivateMediaBlob(downloadResult.file_url)
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = objectUrl
+      anchor.download = downloadResult.file_name || "baribudos-update"
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30000)
+    } catch (error) {
+      alert(error?.message || "Não foi possível obter o instalador.")
+    }
+  }
+
   function handleOpenDownloadLink() {
     const url = String(result?.download_url || "").trim()
     if (!url) {
@@ -84,8 +100,6 @@ export default function UpdaterPanel() {
     }
     window.open(url, "_blank", "noopener,noreferrer")
   }
-
-  const downloadedUrl = normalizeMediaUrl(downloadResult?.storage_url || downloadResult?.file_path)
 
   return (
     <Card title="Updater">
@@ -188,13 +202,9 @@ export default function UpdaterPanel() {
           }}
         >
           <div><strong>Ficheiro:</strong> {downloadResult.file_name}</div>
-          <div><strong>Caminho:</strong> {downloadResult.file_path}</div>
-          <div><strong>Storage URL:</strong> {downloadResult.storage_url}</div>
-          {downloadedUrl ? (
-            <a href={downloadedUrl} target="_blank" rel="noreferrer">
-              Abrir ficheiro descarregado
-            </a>
-          ) : null}
+          <button type="button" onClick={handleOpenDownloadedFile}>
+            Descarregar ficheiro guardado
+          </button>
         </div>
       ) : null}
     </Card>

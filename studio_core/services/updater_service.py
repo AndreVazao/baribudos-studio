@@ -4,7 +4,8 @@ import json
 import os
 import platform
 import urllib.request
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from urllib.parse import quote
 from typing import Any, Dict, Tuple
 
 from studio_core.core.config import resolve_project_path, resolve_storage_path
@@ -124,7 +125,7 @@ def _resolve_download_url(remote: Dict[str, Any], channel: str = "") -> str:
 
 def _file_name_from_url(url: str) -> str:
     raw = _safe_text(url).split("?")[0].split("#")[0].strip()
-    name = Path(raw).name
+    name = PurePosixPath(raw.replace("\\", "/")).name
     return name or f"baribudos_update_{_current_platform_key()}"
 
 
@@ -193,6 +194,11 @@ def download_update(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
         raise RuntimeError("Sem URL de download para esta plataforma.")
 
     file_name = _safe_text(payload.get("file_name", "")) or _file_name_from_url(download_url)
+    file_name = PurePosixPath(file_name.replace("\\", "/")).name
+    if not file_name or file_name in {".", ".."} or len(file_name) > 180:
+        raise RuntimeError("Nome de ficheiro de atualização inválido.")
+    if Path(file_name).suffix.lower() not in {".exe", ".msi", ".zip", ".dmg", ".pkg", ".apk", ".appimage"}:
+        raise RuntimeError("Tipo de ficheiro de atualização não permitido.")
     target_path = _downloads_dir() / file_name
 
     req = urllib.request.Request(download_url, method="GET")
@@ -205,7 +211,6 @@ def download_update(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
         "downloaded": True,
         "download_url": download_url,
         "file_name": target_path.name,
-        "file_path": str(target_path),
-        "storage_url": f"/storage/updates/{target_path.name}",
+        "file_url": f"/api/updater/files/{quote(target_path.name, safe='')}",
         "check": checked,
     }

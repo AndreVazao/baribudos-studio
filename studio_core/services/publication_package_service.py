@@ -5,7 +5,6 @@ from typing import Any, Dict, List
 from studio_core.core.models import now_iso
 from studio_core.services.asset_registry_service import get_assets
 from studio_core.services.branding_resolver_service import resolve_brand_assets
-from studio_core.services.cdn_service import resolve_cdn_url
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.saga_service import list_sagas
 from studio_core.services.voice_profile_service import get_voice_profile
@@ -189,9 +188,16 @@ def _build_public_assets(project_id: str | None, ip_slug: str | None) -> Dict[st
     def _url(asset: Dict[str, Any] | None) -> str | None:
         if not asset:
             return None
-        return resolve_cdn_url(asset.get("storage_path", ""), asset.get("version"))
+        asset_id = _normalize_str(asset.get("asset_id"))
+        if not asset_id or _normalize_str(asset.get("status")).lower() != "published":
+            return None
+        return f"/api/public/assets/{asset_id}/file"
     def _urls(items: List[Dict[str, Any]]) -> List[str]:
-        return [resolve_cdn_url(item.get("storage_path", ""), item.get("version")) for item in items if item.get("storage_path")]
+        return [
+            f"/api/public/assets/{item.get('asset_id')}/file"
+            for item in items
+            if item.get("storage_path") and item.get("asset_id") and _normalize_str(item.get("status")).lower() == "published"
+        ]
 
     studio_logo = _first({"asset_type": "studio_logo", "status": "published", "is_primary": True})
     ip_primary_logo = _first({"ip_slug": ip_slug, "asset_type": "ip_logo", "status": "published", "is_primary": True})

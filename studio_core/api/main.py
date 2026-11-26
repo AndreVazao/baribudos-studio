@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +50,7 @@ from studio_core.api.routes.production_pipeline import router as production_pipe
 from studio_core.api.routes.project_commercial import router as project_commercial_router
 from studio_core.api.routes.project_integrity import router as project_integrity_router
 from studio_core.api.routes.projects import router as projects_router
+from studio_core.api.routes.project_media import router as project_media_router
 from studio_core.api.routes.public_assets import router as public_assets_router
 from studio_core.api.routes.publication_package import router as publication_package_router
 from studio_core.api.routes.publish_readiness import router as publish_readiness_router
@@ -82,7 +84,7 @@ from studio_core.api.routes.website_control import router as website_control_rou
 from studio_core.api.routes.website_publisher import router as website_publisher_router
 from studio_core.api.routes.website_visual_set_reconcile import router as website_visual_set_reconcile_router
 from studio_core.api.routes.website_visual_sets import router as website_visual_sets_router
-from studio_core.core.config import APP_CONFIG, resolve_project_path, resolve_storage_path
+from studio_core.core.config import APP_CONFIG, resolve_project_path
 from studio_core.services.ai_runtime_bootstrap import start_all
 from studio_core.services.bootstrap_service import bootstrap_system
 from studio_core.services.persistent_memory_service import initialize_memory_core
@@ -102,28 +104,49 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_default_cors_origins = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "tauri://localhost",
+    "http://tauri.localhost",
+    "https://tauri.localhost",
+    "https://localhost",
+    "capacitor://localhost",
+)
+_cors_origins = tuple(
+    origin.strip()
+    for origin in os.getenv("BARIBUDOS_CORS_ORIGINS", ",".join(_default_cors_origins)).split(",")
+    if origin.strip()
+)
+if "*" in _cors_origins:
+    raise RuntimeError("BARIBUDOS_CORS_ORIGINS não aceita wildcard.")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=list(_cors_origins),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    expose_headers=["Content-Disposition"],
+    max_age=600,
 )
 
+public_source = APP_CONFIG.project_root / "public"
 public_dir = resolve_project_path("public")
-storage_dir = resolve_storage_path()
+try:
+    public_dir.relative_to(APP_CONFIG.project_root.resolve())
+except ValueError:
+    public_dir = None
+if public_dir and public_dir.is_dir() and not public_source.is_symlink():
+    app.mount("/public", StaticFiles(directory=str(public_dir), follow_symlink=False), name="public")
 
-if public_dir.exists():
-    app.mount("/public", StaticFiles(directory=str(public_dir)), name="public")
-
-if storage_dir.exists():
-    app.mount("/storage", StaticFiles(directory=str(storage_dir)), name="storage")
 
 app.include_router(health_router, prefix="/api")
 app.include_router(diagnostics_router, prefix="/api")
 app.include_router(distribution_hub_v6_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(project_media_router, prefix="/api")
 app.include_router(project_commercial_router, prefix="/api")
 app.include_router(project_integrity_router, prefix="/api")
 app.include_router(product_credits_router, prefix="/api")

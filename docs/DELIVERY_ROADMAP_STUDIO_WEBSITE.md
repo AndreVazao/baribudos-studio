@@ -402,3 +402,67 @@ A declaração final exige evidência de todos os pontos:
 - O token só é restaurado após ligação à API e é validado por `/users/me`; o perfil nunca é usado como prova de autenticação.
 - O cliente web não persiste tokens. O armazenamento nativo só é chamado quando a runtime é Capacitor nativa ou Tauri; falhas do cofre bloqueiam a persistência e não provocam fallback para localStorage.
 - Pendente: validação real de compilação/execução Android e Windows, incluindo instalação/sync Capacitor, cargo check/build e ensaio de logout/expiração/reinício em dispositivos. Até essa evidência, a persistência nativa está implementada mas ainda não certificada.
+
+
+### Atualização de execução — 26/11/2026 (contenção da exposição de storage)
+
+- Nova branch `security/studio-private-storage-serving-2026-11-26`, PR #98 em preparação sobre `main`.
+- Removida a montagem estática da raiz privada em `/storage`. O inventário FastAPI e a CI passam agora a falhar se essa rota reaparecer.
+- Criado `GET /api/projects/{project_id}/media?path=...`: exige sessão e ownership do projeto, só aceita ficheiros explicitamente referenciados nos campos de caminho do próprio projeto, rejeita traversal e extensões não permitidas, e devolve `private, no-store` + `nosniff`.
+- Criado `GET /api/public/assets/{asset_id}/file`: só serve registos do asset registry em estado `published`; drafts/arquivados são 404. Manifestos públicos passam a usar este endpoint.
+- Respostas da API de assets deixaram de devolver caminhos `/storage`; URLs de assets não publicados ficam vazias.
+- Outputs do projeto passaram a ser descarregados/visualizados via fetch autenticado com Bearer; URLs `/storage` deixaram de ser convertidas em URLs diretas.
+- CORS deixou de aceitar wildcard com credenciais: origins explícitas configuráveis por `BARIBUDOS_CORS_ORIGINS`, sem cookies, com Authorization/Content-Type e métodos limitados.
+- Testes adicionados para acesso anónimo, ownership, paths não referenciados, traversal, extensões, assets published vs draft e CORS.
+- Pendente: migrar os previews de voz/audio, updater e restantes consumidores de media para endpoints específicos autorizados; validação CI no SHA final. Nenhum ficheiro de produção foi alterado nem movido.
+
+
+#### Media privado — previews de voz e updater
+
+- Voice Preview passa a emitir um identificador UUID opaco e `file_url` em vez de expor `file_path`; o endpoint `GET /api/voice-preview/{preview_id}/file` exige sessão e papel owner/admin/editor/creator e só resolve o ficheiro com nome derivado do UUID.
+- Audio Cast e Voice Cloning carregam o preview como blob autenticado, sem URL direta para storage.
+- Updater deixa de devolver `file_path`/ `storage_url`; valida o basename e a extensão do instalador, devolve `file_url` e serve-o em `GET /api/updater/files/{file_name}`, limitado a owner/admin e a extensões de instalador permitidas.
+- O cliente faz fetch same-origin com Bearer e rejeita destinos externos para impedir fuga do token.
+- Testes acrescentados para preview autenticado, updater admin-only, traversal, media same-origin e rejeição de encaminhamento de Bearer para outro domínio.
+- Continuam por auditar todos os restantes campos/consumidores de media e validar a compatibilidade de assets publicados em todos os ecrãs; CI final ainda pendente.
+
+
+#### Assets privados e aprovação de publicação
+
+- Assets com projecto/IP têm agora `GET /api/assets/{asset_id}/file`, Bearer obrigatório e autorização por ownership do projeto ou acesso de leitura à IP; assets globais ficam owner/admin-only.
+- DTOs de assets incluem `file_url` autenticada e mantêm `url` pública apenas para assets já publicados.
+- Upload e registo forçam estado `draft`, ignorando qualquer tentativa do cliente de definir `published`.
+- Publicação, arquivo e rollback foram limitados a owner/admin. Só o endpoint de publicação explícita pode promover um asset para `published`.
+- Testes cobrem tentativa de self-publish por editor e isolamento do ficheiro privado por projeto.
+
+
+#### Isolamento de amostras de voz
+
+- Upload de amostra associa `owner_user_id` à sessão autenticada.
+- Listagem de editor/creator fica limitada às próprias amostras; owner/admin mantém visão administrativa.
+- Consulta individual e geração de preview verificam a titularidade da amostra; amostras legadas sem owner ficam restritas a owner/admin até reconciliação/consentimento.
+- Audio Cast preview aplica a mesma verificação; respostas públicas de voz deixam de incluir caminhos físicos.
+- Testes cobrem isolamento entre utilizadores e bloqueio de preview de amostra alheia.
+
+
+#### Fecho de superfícies estáticas e DTOs
+
+- O mount `/public` também deixa de seguir symlinks para fora da raiz do projeto; apenas diretório físico dentro de `APP_CONFIG.project_root` pode ser montado.
+- CORS rejeita explicitamente `*` em `BARIBUDOS_CORS_ORIGINS`, além de usar `allow_credentials=False`.
+- DTOs privados de assets removem `storage_path`, `file_path`, `absolute_path` e `source_path`; o manifest sanitiza os mesmos campos recursivamente.
+- Upload de assets não aceita estado de publicação vindo do cliente; a promoção pública continua reservada a owner/admin.
+
+
+#### Ownership transversal da API de assets
+
+- Listagem e consulta de assets filtram/verificam acesso ao projeto e à IP; assets globais são reservados a owner/admin.
+- Upload e registo exigem autorização de edição do projeto e, quando indicado, também da IP. Não basta ter acesso a um projeto para escrever assets numa IP diferente.
+- Downloads privados repetem a verificação de ownership, independentemente da autorização usada na listagem.
+- Testes atualizados para exigir simultaneamente acesso ao projeto e à IP quando o asset está associado a ambos.
+
+
+#### Isolamento do ficheiro de preview de voz
+
+- Cada preview cria sidecar privado com owner_user_id e timestamp; o endpoint de download exige o mesmo utilizador (ou owner/admin) e aplica TTL de 15 minutos.
+- O payload deixou de devolver `speaker_wav` ou caminhos físicos da amostra usada.
+- Audio Cast propaga o principal autenticado para o serviço de preview; a titularidade é verificada antes de sintetizar e antes de descarregar.

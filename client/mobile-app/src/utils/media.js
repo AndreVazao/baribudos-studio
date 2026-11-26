@@ -7,31 +7,15 @@ export function normalizeMediaUrl(input) {
   }
 
   const normalized = value.replace(/\\/g, "/")
-  const storageIndex = normalized.toLowerCase().lastIndexOf("/storage/")
-  if (storageIndex >= 0) {
-    return normalized.slice(storageIndex)
+  const lower = normalized.toLowerCase()
+  if (lower.includes("/storage/") || lower.startsWith("storage/")) {
+    return ""
   }
 
-  if (normalized.toLowerCase().startsWith("storage/")) {
-    return `/${normalized}`
-  }
-
-  if (normalized.toLowerCase().startsWith("/storage/")) {
-    return normalized
-  }
-
-  const publicIndex = normalized.toLowerCase().lastIndexOf("/public/")
-  if (publicIndex >= 0) {
-    return normalized.slice(publicIndex)
-  }
-
-  if (normalized.toLowerCase().startsWith("public/")) {
-    return `/${normalized}`
-  }
-
-  if (normalized.toLowerCase().startsWith("/public/")) {
-    return normalized
-  }
+  const publicIndex = lower.lastIndexOf("/public/")
+  if (publicIndex >= 0) return normalized.slice(publicIndex)
+  if (lower.startsWith("public/")) return `/${normalized}`
+  if (lower.startsWith("/public/")) return normalized
 
   return normalized
-    }
+}

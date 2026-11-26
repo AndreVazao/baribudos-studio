@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from studio_core.services.asset_registry_service import get_assets, get_primary_asset
-from studio_core.services.cdn_service import resolve_cdn_url
 
 
 def _safe_str(value: Any) -> str:
@@ -17,14 +16,17 @@ def _safe_list(value: Any) -> List[Any]:
 def _asset_url(asset: Dict[str, Any] | None) -> str | None:
     if not asset:
         return None
-    return resolve_cdn_url(asset.get("storage_path", ""), asset.get("version"))
+    if str(asset.get("status", "")).lower() != "published":
+        return None
+    asset_id = str(asset.get("asset_id", "")).strip()
+    return f"/api/public/assets/{asset_id}/file" if asset_id else None
 
 
 def _asset_urls(items: List[Dict[str, Any]]) -> List[str]:
     return [
-        resolve_cdn_url(item.get("storage_path", ""), item.get("version"))
+        f"/api/public/assets/{item.get('asset_id')}/file"
         for item in items
-        if item.get("storage_path")
+        if item.get("storage_path") and item.get("asset_id") and str(item.get("status", "")).lower() == "published"
     ]
 
 

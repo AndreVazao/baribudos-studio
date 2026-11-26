@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+import mimetypes
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
+
+from studio_core.core.config import resolve_storage_path
 
 from studio_core.services.asset_registry_service import (
     build_context_asset_manifest,
     build_ip_asset_manifest,
     build_project_asset_manifest,
+    get_asset_by_id,
     get_assets,
 )
 
@@ -24,8 +31,19 @@ def _sanitize_public_manifest(value):
         return [_sanitize_public_manifest(item) for item in value]
     if isinstance(value, dict):
         if "asset_id" in value:
-            return {key: item for key, item in value.items() if key in _PUBLIC_ASSET_FIELDS}
-        return {key: _sanitize_public_manifest(item) for key, item in value.items()}
+            public = {key: item for key, item in value.items() if key in _PUBLIC_ASSET_FIELDS}
+            asset_id = str(value.get("asset_id", "")).strip()
+            public["url"] = (
+                f"/api/public/assets/{asset_id}/file"
+                if asset_id and str(value.get("status", "")).lower() == "published"
+                else ""
+            )
+            return public
+        return {
+            key: _sanitize_public_manifest(item)
+            for key, item in value.items()
+            if key not in {"storage_path", "file_path", "absolute_path", "source_path"}
+        }
     return value
 
 
@@ -87,3 +105,41 @@ def raw_assets(
         "filters": filters,
         "assets": _sanitize_public_manifest(assets),
     }
+
+
+_PUBLIC_FILE_EXTENSIONS = {
+    ".avif", ".gif", ".jpeg", ".jpg", ".mp3", ".mp4", ".ogg",
+    ".pdf", ".png", ".wav", ".webm", ".webp",
+}
+
+
+@router.get("/assets/{asset_id}/file")
+def public_asset_file(asset_id: str) -> FileResponse:
+    asset = get_asset_by_id(asset_id)
+    if not isinstance(asset, dict) or str(asset.get("status", "")).lower() != "published":
+        raise HTTPException(status_code=404, detail="Asset público não encontrado.")
+
+    relative_path = str(asset.get("storage_path", "")).strip()
+    if not relative_path:
+        raise HTTPException(status_code=404, detail="Asset público não encontrado.")
+    try:
+        file_path = resolve_storage_path(relative_path)
+    except (OSError, ValueError):
+        raise HTTPException(status_code=404, detail="Asset público não encontrado.") from None
+
+    if file_path.suffix.lower() not in _PUBLIC_FILE_EXTENSIONS or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Asset público não encontrado.")
+
+    media_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    inline = media_type.startswith(("image/", "audio/", "video/"))
+    safe_name = "".join(char for char in file_path.name if char.isalnum() or char in "._-") or "media"
+    disposition = "inline" if inline else "attachment"
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "public, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": f'{disposition}; filename="{safe_name}"',
+        },
+    )
