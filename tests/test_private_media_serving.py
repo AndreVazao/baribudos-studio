@@ -97,6 +97,7 @@ class PrivateMediaServingTests(unittest.TestCase):
             "name": "Narrator",
             "file_name": "sample.wav",
             "file_path": "/srv/studio/storage/voice_library/voice-1/sample.wav",
+            "owner_user_id": "editor-1",
         }
         with patch.object(voice_library, "list_voice_samples", return_value=[sample]):
             response = self.client.get("/api/voice-library")
