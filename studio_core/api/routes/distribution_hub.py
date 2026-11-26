@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.auth_principal import AuthenticatedPrincipal
+from studio_core.services.project_route_auth import require_project_path_access
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, write_json
@@ -14,16 +16,6 @@ DISTRIBUTION_FILE = "data/distribution_channel_states.json"
 
 ALLOWED_STATUSES = {"draft", "planned", "queued", "ready", "published", "failed"}
 ALLOWED_CHANNELS = {"website", "amazon_kdp", "youtube", "audio"}
-
-
-def _normalize_name(value: str) -> str:
-    return str(value or "").strip().lower()
-
-
-def _can_edit_or_publish(user_role: str, user_name: str) -> bool:
-    role = str(user_role or "").strip().lower()
-    name = _normalize_name(user_name)
-    return role in {"owner", "creator", "admin"} or name in {"andré", "andre", "esposa", "wife", "mama"}
 
 
 def _read_projects() -> list[dict]:
@@ -113,7 +105,7 @@ def _replace_state(project_id: str, channel_id: str, updater) -> dict:
 
 
 @router.get("/projects/{project_id}/channels")
-def list_distribution_channels(project_id: str) -> dict:
+def list_distribution_channels(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
@@ -134,7 +126,7 @@ def list_distribution_channels(project_id: str) -> dict:
 
 
 @router.get("/projects/{project_id}/channels/{channel_id}")
-def get_distribution_channel(project_id: str, channel_id: str) -> dict:
+def get_distribution_channel(project_id: str, channel_id: str, _principal=Depends(require_project_path_access)) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
@@ -148,8 +140,8 @@ def get_distribution_channel(project_id: str, channel_id: str) -> dict:
 
 
 @router.patch("/projects/{project_id}/channels/{channel_id}")
-def patch_distribution_channel(project_id: str, channel_id: str, payload: Dict[str, Any], user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
+def patch_distribution_channel(project_id: str, channel_id: str, payload: Dict[str, Any], principal: AuthenticatedPrincipal = Depends(require_project_path_access)) -> dict:
+    if principal.role.lower() not in {"owner", "admin", "creator"}:
         raise HTTPException(status_code=403, detail="Sem permissão para operar canais de distribuição.")
 
     project = _get_project(project_id)
@@ -185,8 +177,8 @@ def patch_distribution_channel(project_id: str, channel_id: str, payload: Dict[s
 
 
 @router.post("/projects/{project_id}/channels/{channel_id}/attempts")
-def record_distribution_attempt(project_id: str, channel_id: str, payload: Dict[str, Any], user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
+def record_distribution_attempt(project_id: str, channel_id: str, payload: Dict[str, Any], principal: AuthenticatedPrincipal = Depends(require_project_path_access)) -> dict:
+    if principal.role.lower() not in {"owner", "admin", "creator"}:
         raise HTTPException(status_code=403, detail="Sem permissão para registar tentativa.")
 
     project = _get_project(project_id)
@@ -216,8 +208,8 @@ def record_distribution_attempt(project_id: str, channel_id: str, payload: Dict[
 
 
 @router.post("/projects/{project_id}/channels/{channel_id}/publish-success")
-def mark_distribution_publish_success(project_id: str, channel_id: str, payload: Dict[str, Any], user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
+def mark_distribution_publish_success(project_id: str, channel_id: str, payload: Dict[str, Any], principal: AuthenticatedPrincipal = Depends(require_project_path_access)) -> dict:
+    if principal.role.lower() not in {"owner", "admin", "creator"}:
         raise HTTPException(status_code=403, detail="Sem permissão para marcar sucesso.")
 
     project = _get_project(project_id)
@@ -248,8 +240,8 @@ def mark_distribution_publish_success(project_id: str, channel_id: str, payload:
 
 
 @router.post("/projects/{project_id}/channels/{channel_id}/publish-failed")
-def mark_distribution_publish_failed(project_id: str, channel_id: str, payload: Dict[str, Any], user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
+def mark_distribution_publish_failed(project_id: str, channel_id: str, payload: Dict[str, Any], principal: AuthenticatedPrincipal = Depends(require_project_path_access)) -> dict:
+    if principal.role.lower() not in {"owner", "admin", "creator"}:
         raise HTTPException(status_code=403, detail="Sem permissão para marcar falha.")
 
     project = _get_project(project_id)

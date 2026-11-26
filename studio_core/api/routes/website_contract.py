@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.auth_principal import require_roles
+from studio_core.services.project_route_auth import require_project_path_access
 
 from studio_core.services.project_service import list_projects
 from studio_core.services.website_contract_validator import (
@@ -18,7 +20,7 @@ def _load_all_projects() -> list[dict]:
 
 
 @router.get("/validate/{project_id}")
-def validate_website_contract(project_id: str) -> dict:
+def validate_website_contract(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     projects = _load_all_projects()
     project = next((item for item in projects if str(item.get("id")) == str(project_id)), None)
 
@@ -29,7 +31,7 @@ def validate_website_contract(project_id: str) -> dict:
 
 
 @router.get("/validate-all")
-def validate_all_website_contracts() -> dict:
+def validate_all_website_contracts(_principal=Depends(require_roles("owner", "admin"))) -> dict:
     projects = _load_all_projects()
 
     results = []

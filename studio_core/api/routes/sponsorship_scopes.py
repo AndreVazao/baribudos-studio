@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.auth_principal import require_roles
+from studio_core.services.project_route_auth import require_project_path_access
 
 from studio_core.services.sponsorship_scope_service import (
     create_sponsorship_scope,
@@ -13,12 +15,12 @@ router = APIRouter(prefix="/sponsorship-scopes", tags=["sponsorship-scopes"])
 
 
 @router.get("")
-def get_scopes() -> dict:
+def get_scopes(_principal=Depends(require_roles("owner", "admin", "editor", "creator"))) -> dict:
     return {"ok": True, "items": list_sponsorship_scopes()}
 
 
 @router.post("")
-def post_scope(payload: dict | None = None) -> dict:
+def post_scope(payload: dict | None = None, _principal=Depends(require_roles("owner", "admin"))) -> dict:
     try:
         return {"ok": True, "item": create_sponsorship_scope(payload or {})}
     except ValueError as exc:
@@ -26,7 +28,7 @@ def post_scope(payload: dict | None = None) -> dict:
 
 
 @router.patch("/{scope_id}")
-def patch_scope(scope_id: str, payload: dict | None = None) -> dict:
+def patch_scope(scope_id: str, payload: dict | None = None, _principal=Depends(require_roles("owner", "admin"))) -> dict:
     try:
         return {"ok": True, "item": patch_sponsorship_scope(scope_id, payload or {})}
     except ValueError as exc:
@@ -35,7 +37,7 @@ def patch_scope(scope_id: str, payload: dict | None = None) -> dict:
 
 
 @router.get("/resolve/{project_id}")
-def resolve_scope(project_id: str) -> dict:
+def resolve_scope(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     try:
         return resolve_sponsorship_for_project(project_id)
     except ValueError as exc:

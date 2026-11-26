@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.auth_principal import require_roles
 
 from studio_core.services.website_visual_set_reconcile_service import get_visual_set_reconcile_report
 
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/website-visual-sets-reconcile", tags=["website-visua
 
 
 @router.get("")
-def website_visual_set_reconcile() -> Dict[str, Any]:
+def website_visual_set_reconcile(_principal=Depends(require_roles("owner", "admin"))) -> Dict[str, Any]:
     try:
         return get_visual_set_reconcile_report()
     except ValueError as exc:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.project_route_auth import require_project_path_access
 
 from studio_core.services.v1_readiness_service import get_v1_readiness
 
@@ -8,7 +9,7 @@ router = APIRouter(prefix="/v1-readiness", tags=["v1-readiness"])
 
 
 @router.get("/{project_id}")
-def readiness(project_id: str) -> dict:
+def readiness(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     try:
         return get_v1_readiness(project_id)
     except ValueError as exc:

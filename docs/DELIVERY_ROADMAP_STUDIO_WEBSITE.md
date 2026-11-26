@@ -362,3 +362,14 @@ A declaração final exige evidência de todos os pontos:
 - Public asset manifests continuam públicos apenas para assets publicados e deixam de devolver `storage_path` interno.
 - Testes negativos adicionados para anónimo, viewer, role spoofing, pairing, health e exposição de caminhos privados. CI ainda não validada.
 - A auditoria total continua em curso; não declarar Studio fechado até analisar os manifests automáticos de autorização, as rotas restantes e os fluxos E2E.
+
+
+### Atualização de execução — 26/11/2026 (rotas de produção e comercial)
+
+- Nova branch `security/studio-project-production-routes-rbac-2026-11-26`, empilhada sobre a fase de superfícies administrativas.
+- Story Layout, Story Source, Story Translation, Editorial Engine, Editorial Production, Product Credits, Project Integrity, Publication Package, Publish Readiness, V1 Readiness e distribuição legada passam a validar sessão e ownership do projeto.
+- Foram removidas verificações de autorização baseadas em `user_name`/`user_role` enviados por query. A distribuição legada usa o principal autenticado; mutações de publicação ficam limitadas a owner/admin/creator.
+- Commerce Groups e Sponsors ficam sob administração; Sponsorship Scopes separa leitura autenticada, mutação owner/admin e resolução com ownership de projeto.
+- Website Bundles, Website Visual Sets, Website Contract e endpoints de reconciliação exigem papel apropriado; publicar bundles/visual sets e validar todos os contratos são operações owner/admin.
+- Testes negativos cobrem anónimo, viewer, tentativa de spoofing por query, projeto próprio vs projeto alheio e mutações comerciais/publicação.
+- CI pendente. A auditoria continua a tratar como P0 a montagem estática integral de `/storage`, migração completa dos clientes para bearer sessions e revisão final de todas as rotas e ficheiros servidos.
