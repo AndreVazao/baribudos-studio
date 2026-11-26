@@ -68,7 +68,7 @@ def assets_by_context(
         context=context,
         ip_slug=ip_slug,
     )
-    return manifest
+    return _sanitize_public_manifest(manifest)
 
 
 # ==========================================================
@@ -77,7 +77,7 @@ def assets_by_context(
 @router.get("/project/{project_id}/assets")
 def project_assets(project_id: str) -> dict:
     manifest = build_project_asset_manifest(project_id)
-    return manifest
+    return _sanitize_public_manifest(manifest)
 
 
 # ==========================================================
