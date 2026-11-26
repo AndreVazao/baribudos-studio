@@ -11,6 +11,23 @@ from studio_core.services.asset_registry_service import (
 
 router = APIRouter(prefix="/public", tags=["public-assets"])
 
+_PUBLIC_ASSET_FIELDS = {
+    "asset_id", "project_id", "ip_slug", "series_name", "publication_id", "variant_id",
+    "asset_type", "context", "language", "version", "is_primary", "priority",
+    "width", "height", "mime_type", "file_size", "url", "status", "created_at",
+    "updated_at", "published_at",
+}
+
+
+def _sanitize_public_manifest(value):
+    if isinstance(value, list):
+        return [_sanitize_public_manifest(item) for item in value]
+    if isinstance(value, dict):
+        if "asset_id" in value:
+            return {key: item for key, item in value.items() if key in _PUBLIC_ASSET_FIELDS}
+        return {key: _sanitize_public_manifest(item) for key, item in value.items()}
+    return value
+
 
 # ==========================================================
 # IP ASSET MANIFEST (EDITORIAL)
@@ -18,7 +35,7 @@ router = APIRouter(prefix="/public", tags=["public-assets"])
 @router.get("/ip/{ip_slug}/assets")
 def ip_assets(ip_slug: str) -> dict:
     manifest = build_ip_asset_manifest(ip_slug)
-    return manifest
+    return _sanitize_public_manifest(manifest)
 
 
 # ==========================================================
@@ -68,5 +85,5 @@ def raw_assets(
     return {
         "ok": True,
         "filters": filters,
-        "assets": assets,
+        "assets": _sanitize_public_manifest(assets),
     }

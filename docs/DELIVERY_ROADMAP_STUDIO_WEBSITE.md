@@ -350,3 +350,15 @@ A declaração final exige evidência de todos os pontos:
 - Testes negativos adicionados para impersonação por query, acesso anónimo, isolamento por projeto, diagnostics e criação de IP com owner forjado. PR ainda não aberta/CI não validada; não marcar como concluído até workflows verdes no SHA exato.
 - Website PR #54: primeira validação encontrou dois testes de contrato obsoletos após a extração da política de cookies para helper. Foram ajustados para testar o resultado efetivo do helper (HttpOnly, Secure, SameSite, path e expiração), sem enfraquecer as garantias. Novo SHA `6be0dda339066b8ff6e8c86bd737a122028b3dbc`; CI pendente.
 - Website PR #47 continua bloqueada por concorrência distribuída PayPal, recuperação de checkout órfão, baseline de migrações e reconciliação de checkouts guest antigos. Sem pagamentos Sandbox/produção ou migrações.
+
+
+### Atualização de execução — 26/11/2026 (fase seguinte)
+
+- Nova branch empilhada sobre a PR #94: `security/studio-private-admin-surfaces-2026-11-26`.
+- Protegidos endpoints de settings, memória persistente AndreOS, diagnostics/smoke, instalação e gestão dos motores locais de IA/áudio, gestão de sagas, saga loader/runtime, visual sets e pairing administrativo.
+- Endpoint público de health reduzido a liveness mínima; removidos host, porta, ambiente e caminhos locais.
+- `saga-loader/{id}/can-edit/{user_role}` mantém compatibilidade do URL, mas ignora o papel enviado pelo cliente e calcula a autorização a partir da sessão e da política de IP.
+- Pairing: listar/criar/revogar exige owner/admin; resolução mantém-se como capability pública com código aleatório e expiração de 72 horas para permitir o emparelhamento de dispositivos.
+- Public asset manifests continuam públicos apenas para assets publicados e deixam de devolver `storage_path` interno.
+- Testes negativos adicionados para anónimo, viewer, role spoofing, pairing, health e exposição de caminhos privados. CI ainda não validada.
+- A auditoria total continua em curso; não declarar Studio fechado até analisar os manifests automáticos de autorização, as rotas restantes e os fluxos E2E.

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from studio_core.services.auth_principal import require_roles
 from studio_core.services.system_smoke_v1_service import run_v1_smoke
 
-router = APIRouter(prefix="/system-smoke-v1", tags=["system-smoke-v1"])
+router = APIRouter(prefix="/system-smoke-v1", dependencies=[Depends(require_roles("owner", "admin"))], tags=["system-smoke-v1"])
 
 
 @router.get("")
