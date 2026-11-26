@@ -17,7 +17,7 @@ class JobServiceOwnershipTests(unittest.TestCase):
             })
         self.assertEqual(job["project_id"], "project-1")
         self.assertEqual(job["created_by"], "user-1")
-        self.assertEqual(job["payload"]["user_id"], "attacker")
+        self.assertNotIn("user_id", job["payload"])
         self.assertEqual(write.call_args.args[1][0]["project_id"], "project-1")
         self.assertEqual(write.call_args.args[1][0]["created_by"], "user-1")
 
