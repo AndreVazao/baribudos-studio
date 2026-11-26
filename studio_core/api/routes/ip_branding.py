@@ -3,24 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from studio_core.core.config import resolve_project_path
-from studio_core.services.ip_creator_service import can_edit_ip, get_ip_by_slug, update_ip
+from studio_core.services.ip_creator_service import get_ip_by_slug, update_ip
+from studio_core.services.auth_principal import AuthenticatedPrincipal
+from studio_core.services.ip_route_auth import require_ip_edit_access, require_ip_read_access
 
 router = APIRouter(prefix="/ip-branding", tags=["ip-branding"])
-
-
-def _user_from_form(
-    user_id: str = "",
-    user_name: str = "",
-    user_role: str = ""
-) -> dict:
-    return {
-        "id": str(user_id).strip(),
-        "name": str(user_name).strip(),
-        "role": str(user_role).strip()
-    }
 
 
 def _safe_file_name(value: str) -> str:
@@ -34,14 +24,10 @@ def _branding_folder_for_ip(slug: str) -> Path:
 
 
 @router.get("/{slug}")
-def get_ip_branding(slug: str, user_id: str = "", user_name: str = "", user_role: str = "") -> dict:
+def get_ip_branding(slug: str, principal: AuthenticatedPrincipal = Depends(require_ip_read_access)) -> dict:
     item = get_ip_by_slug(slug)
     if not item:
         raise HTTPException(status_code=404, detail="IP não encontrada.")
-
-    user = _user_from_form(user_id, user_name, user_role)
-    if not can_edit_ip(user, slug):
-        raise HTTPException(status_code=403, detail="Sem permissão para ver branding desta IP.")
 
     return {
         "ok": True,
@@ -51,19 +37,11 @@ def get_ip_branding(slug: str, user_id: str = "", user_name: str = "", user_role
 
 
 @router.patch("/{slug}")
-def update_ip_branding(slug: str, payload: dict) -> dict:
+def update_ip_branding(slug: str, payload: dict, principal: AuthenticatedPrincipal = Depends(require_ip_edit_access)) -> dict:
     item = get_ip_by_slug(slug)
     if not item:
         raise HTTPException(status_code=404, detail="IP não encontrada.")
 
-    user = {
-        "id": str(payload.get("user_id", "")).strip(),
-        "name": str(payload.get("user_name", "")).strip(),
-        "role": str(payload.get("user_role", "")).strip()
-    }
-
-    if not can_edit_ip(user, slug):
-        raise HTTPException(status_code=403, detail="Sem permissão para editar branding desta IP.")
 
     brand_assets = payload.get("brand_assets") or {}
     if not isinstance(brand_assets, dict):
@@ -85,18 +63,12 @@ def update_ip_branding(slug: str, payload: dict) -> dict:
 async def upload_ip_brand_asset(
     slug: str,
     asset_type: str = Form(...),
-    user_id: str = Form(""),
-    user_name: str = Form(""),
-    user_role: str = Form(""),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    principal: AuthenticatedPrincipal = Depends(require_ip_edit_access),
 ) -> dict:
     item = get_ip_by_slug(slug)
     if not item:
         raise HTTPException(status_code=404, detail="IP não encontrada.")
-
-    user = _user_from_form(user_id, user_name, user_role)
-    if not can_edit_ip(user, slug):
-        raise HTTPException(status_code=403, detail="Sem permissão para upload nesta IP.")
 
     valid_asset_types = {"studio_logo", "series_logo", "seal_logo"}
     if asset_type not in valid_asset_types:
