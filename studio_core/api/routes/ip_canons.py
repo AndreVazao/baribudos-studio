@@ -37,7 +37,7 @@ def get_ip_canon(slug: str, canon_type: str, principal: AuthenticatedPrincipal =
         raise HTTPException(status_code=404, detail="IP não encontrada.")
 
     try:
-        path = _canon_path(slug, canon_type)
+        path = _canon_path(str(item.get("slug", slug)), canon_type)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
