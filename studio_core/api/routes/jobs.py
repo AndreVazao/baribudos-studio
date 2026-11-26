@@ -20,7 +20,10 @@ def jobs(
             raise HTTPException(status_code=403, detail="A listagem global de jobs exige owner/admin.")
         return list_jobs()
     assert_project_access(project_id, principal)
-    return [job for job in list_jobs() if str(job.get("project_id", "")).strip() == project_id]
+    return [
+        job for job in list_jobs()
+        if str(job.get("project_id") or (job.get("payload") or {}).get("project_id", "")).strip() == project_id
+    ]
 
 
 @router.post("")
