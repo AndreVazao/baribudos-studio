@@ -55,6 +55,9 @@ def preview_voice(
     try:
         result = generate_voice_preview(safe_payload, owner_user_id=principal.user_id)
         result["voice_sample"] = _voice_dto(result.get("voice_sample"))
+        preview = result.get("preview")
+        if isinstance(preview, dict):
+            result["preview"] = {key: value for key, value in preview.items() if key not in {"speaker_wav", "file_path", "source_path"}}
         return result
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
