@@ -21,10 +21,13 @@ def create_cover(
     if not project_id:
         raise HTTPException(status_code=400, detail="project_id é obrigatório.")
     assert_project_access(project_id, principal)
+    saga_id = str(payload.get("saga_id", "baribudos")).strip()
+    if not saga_id or any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for ch in saga_id):
+        raise HTTPException(status_code=400, detail="saga_id inválido.")
 
     try:
         result = build_cover(
-            saga_id=str(payload.get("saga_id", "baribudos")).strip(),
+            saga_id=saga_id,
             project_id=project_id,
             title=str(payload.get("title", "Nova História")).strip(),
             age_range=str(payload.get("age_range", "4-10")).strip(),
