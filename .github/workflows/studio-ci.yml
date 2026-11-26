@@ -30,6 +30,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
+      - name: Test frontend bearer session contract
+        run: npm run test:auth
+
       - name: Build frontend
         run: npm run build
 

@@ -11,7 +11,8 @@
     "android:open": "npx cap open android",
     "android:build": "npm run build && npm run android:sync",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "test:auth": "node --test tests/auth-session.test.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.1",
@@ -19,7 +20,9 @@
     "@capacitor/core": "^7.0.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@aparajita/capacitor-secure-storage": "^7.1.6",
+    "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

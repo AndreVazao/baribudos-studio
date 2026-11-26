@@ -2,10 +2,12 @@ import { useEffect, useState } from "react"
 import {
   autoConnect,
   checkForUpdates,
-  clearSavedUser,
   getConnectionBadge,
   getConnectionState,
-  getSavedUser,
+  getCurrentUser,
+  hasAuthToken,
+  logoutSession,
+  restoreAuthToken,
   setSavedUser
 } from "./api.js"
 import AppShell from "./components/AppShell.jsx"
@@ -49,12 +51,15 @@ function ConnectionBadge() {
 export default function App() {
   const [connected, setConnected] = useState(false)
   const [checkingConnection, setCheckingConnection] = useState(true)
-  const [user, setUser] = useState(getSavedUser())
+  const [user, setUser] = useState(null)
   const [updateInfo, setUpdateInfo] = useState(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
 
   useEffect(() => {
     boot()
+    const handleExpired = () => setUser(null)
+    window.addEventListener("baribudos:auth-expired", handleExpired)
+    return () => window.removeEventListener("baribudos:auth-expired", handleExpired)
   }, [])
 
   useEffect(() => {
@@ -68,7 +73,22 @@ export default function App() {
     try {
       await autoConnect()
       const state = getConnectionState()
-      setConnected(Boolean(state?.connected))
+      const isConnected = Boolean(state?.connected)
+      setConnected(isConnected)
+      if (isConnected) {
+        try {
+          await restoreAuthToken()
+          if (!hasAuthToken()) {
+            setUser(null)
+          } else {
+            const currentUser = await getCurrentUser()
+            setSavedUser(currentUser)
+            setUser(currentUser)
+          }
+        } catch {
+          setUser(null)
+        }
+      }
     } catch {
       setConnected(false)
     }
@@ -88,9 +108,20 @@ export default function App() {
     }
   }
 
-  function handleConnected() {
+  async function handleConnected() {
     const state = getConnectionState()
-    setConnected(Boolean(state?.connected))
+    const isConnected = Boolean(state?.connected)
+    setConnected(isConnected)
+    if (!isConnected) return
+    try {
+      await restoreAuthToken()
+      if (!hasAuthToken()) return
+      const currentUser = await getCurrentUser()
+      setSavedUser(currentUser)
+      setUser(currentUser)
+    } catch {
+      setUser(null)
+    }
   }
 
   function handleLogin(nextUser) {
@@ -98,9 +129,14 @@ export default function App() {
     setSavedUser(nextUser)
   }
 
-  function handleLogout() {
-    clearSavedUser()
-    setUser(null)
+  async function handleLogout() {
+    try {
+      await logoutSession()
+    } catch (error) {
+      alert(error?.message || "Sessão removida localmente; a revogação no servidor não foi confirmada.")
+    } finally {
+      setUser(null)
+    }
   }
 
   function handleOpenDownload() {

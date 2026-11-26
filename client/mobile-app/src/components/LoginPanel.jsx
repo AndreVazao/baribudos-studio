@@ -1,9 +1,9 @@
 import { useState } from "react"
-import { login, setSavedUser } from "../api.js"
+import { login, persistAuthToken, setSavedUser } from "../api.js"
 
 export default function LoginPanel({ onLoggedIn }) {
-  const [name, setName] = useState("André")
-  const [pin, setPin] = useState("1234")
+  const [name, setName] = useState("")
+  const [pin, setPin] = useState("")
   const [busy, setBusy] = useState(false)
 
   async function handleLogin() {
@@ -11,7 +11,9 @@ export default function LoginPanel({ onLoggedIn }) {
       setBusy(true)
       const result = await login(name, pin)
       const user = result?.user || null
-      if (!user) throw new Error("Login inválido.")
+      const token = result?.session?.token
+      if (!user || typeof token !== "string" || !token) throw new Error("Resposta de autenticação inválida.")
+      await persistAuthToken(token)
       setSavedUser(user)
       onLoggedIn?.(user)
     } catch (error) {
@@ -41,7 +43,7 @@ export default function LoginPanel({ onLoggedIn }) {
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Nome"
+        placeholder="Nome de utilizador"
         style={{
           padding: 12,
           borderRadius: 12,

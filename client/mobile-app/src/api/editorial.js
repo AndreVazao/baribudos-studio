@@ -1,4 +1,4 @@
-import { get, getApiBase, post } from "./core.js"
+import { apiFetch, get, getApiBase, handle, post } from "./core.js"
 
 export async function buildEditorialEngine(projectId, payload = {}) {
   return post(`${getApiBase()}/editorial-engine/build/${projectId}`, payload)
@@ -56,7 +56,7 @@ export async function uploadVoiceSample({ name, language = "", notes = "", file 
   form.append("file", file)
 
   const { handle } = await import("./core.js")
-  return handle(fetch(`${getApiBase()}/voice-library/upload`, {
+  return handle(apiFetch(`${getApiBase()}/voice-library/upload`, {
     method: "POST",
     body: form
   }))
