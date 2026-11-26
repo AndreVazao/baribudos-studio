@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.auth_principal import AuthenticatedPrincipal
+from studio_core.services.project_route_auth import require_project_path_access
 
 from studio_core.core.models import now_iso
 from studio_core.core.storage import read_json, update_json_item
@@ -9,16 +11,6 @@ from studio_core.services.project_integrity_service import audit_project_integri
 router = APIRouter(prefix="/project-integrity", tags=["project-integrity"])
 
 PROJECTS_FILE = "data/projects.json"
-
-
-def _normalize_name(value: str) -> str:
-    return str(value or "").strip().lower()
-
-
-def _can_edit(user_role: str, user_name: str) -> bool:
-    role = str(user_role or "").strip().lower()
-    name = _normalize_name(user_name)
-    return role in {"owner", "creator", "admin"} or name in {"andré", "andre", "esposa", "wife", "mama"}
 
 
 def _get_project(project_id: str) -> dict | None:
@@ -30,7 +22,7 @@ def _get_project(project_id: str) -> dict | None:
 
 
 @router.get("/{project_id}")
-def get_project_integrity(project_id: str) -> dict:
+def get_project_integrity(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
@@ -40,10 +32,9 @@ def get_project_integrity(project_id: str) -> dict:
 
 
 @router.post("/{project_id}/repair")
-def repair_project(project_id: str, user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit(user_role, user_name):
+def repair_project(project_id: str, principal: AuthenticatedPrincipal = Depends(require_project_path_access)) -> dict:
+    if principal.role.lower() not in {"owner", "admin", "creator"}:
         raise HTTPException(status_code=403, detail="Sem permissão para reparar projeto.")
-
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")

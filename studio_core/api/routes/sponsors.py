@@ -1,13 +1,12 @@
-from fastapi import APIRouter
+from __future__ import annotations
+from fastapi import APIRouter, Depends
+from studio_core.services.auth_principal import require_roles
 from studio_core.core.storage import read_json, write_json
-
 FILE = "data/sponsors.json"
-router = APIRouter(prefix="/sponsors", tags=["sponsors"])
-
+router = APIRouter(prefix="/sponsors", dependencies=[Depends(require_roles("owner", "admin"))], tags=["sponsors"])
 @router.get("")
 def list_sponsors():
     return read_json(FILE, [])
-
 @router.post("")
 def create_sponsor(payload: dict):
     data = read_json(FILE, [])

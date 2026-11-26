@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.auth_principal import require_roles
 from pydantic import BaseModel, Field
 
 from studio_core.services.commerce_group_service import (
@@ -49,12 +50,12 @@ class CommerceGroupPatchPayload(BaseModel):
 
 
 @router.get("")
-def commerce_groups_list() -> Dict[str, Any]:
+def commerce_groups_list(_principal=Depends(require_roles("owner", "admin", "editor", "creator"))) -> Dict[str, Any]:
     return list_commerce_groups()
 
 
 @router.post("")
-def commerce_groups_create(payload: CommerceGroupCreatePayload) -> Dict[str, Any]:
+def commerce_groups_create(payload: CommerceGroupCreatePayload, _principal=Depends(require_roles("owner", "admin"))) -> Dict[str, Any]:
     try:
         return {
             "ok": True,
@@ -65,7 +66,7 @@ def commerce_groups_create(payload: CommerceGroupCreatePayload) -> Dict[str, Any
 
 
 @router.patch("/{group_id}")
-def commerce_groups_patch(group_id: str, payload: CommerceGroupPatchPayload) -> Dict[str, Any]:
+def commerce_groups_patch(group_id: str, payload: CommerceGroupPatchPayload, _principal=Depends(require_roles("owner", "admin"))) -> Dict[str, Any]:
     try:
         return {
             "ok": True,
@@ -76,7 +77,7 @@ def commerce_groups_patch(group_id: str, payload: CommerceGroupPatchPayload) -> 
 
 
 @router.delete("/{group_id}")
-def commerce_groups_delete(group_id: str) -> Dict[str, Any]:
+def commerce_groups_delete(group_id: str, _principal=Depends(require_roles("owner", "admin"))) -> Dict[str, Any]:
     return {
         "ok": True,
         "result": delete_commerce_group(group_id),

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.auth_principal import require_roles
 
 from studio_core.services.website_visual_set_service import (
     export_saga_visual_sets_payload,
@@ -16,12 +17,12 @@ router = APIRouter(prefix="/website-visual-sets", tags=["website-visual-sets"])
 
 
 @router.get("/export")
-def website_visual_sets_export() -> Dict[str, Any]:
+def website_visual_sets_export(_principal=Depends(require_roles("owner", "admin", "editor"))) -> Dict[str, Any]:
     return export_saga_visual_sets_payload()
 
 
 @router.get("/status")
-def website_visual_sets_status() -> Dict[str, Any]:
+def website_visual_sets_status(_principal=Depends(require_roles("owner", "admin", "editor"))) -> Dict[str, Any]:
     try:
         return get_website_visual_sets_status()
     except ValueError as exc:
@@ -29,7 +30,7 @@ def website_visual_sets_status() -> Dict[str, Any]:
 
 
 @router.get("/summary")
-def website_visual_sets_summary() -> Dict[str, Any]:
+def website_visual_sets_summary(_principal=Depends(require_roles("owner", "admin", "editor"))) -> Dict[str, Any]:
     try:
         return get_website_visual_sets_summary()
     except ValueError as exc:
@@ -37,7 +38,7 @@ def website_visual_sets_summary() -> Dict[str, Any]:
 
 
 @router.post("/publish/{item_id}")
-def website_visual_sets_publish(item_id: str) -> Dict[str, Any]:
+def website_visual_sets_publish(item_id: str, _principal=Depends(require_roles("owner", "admin"))) -> Dict[str, Any]:
     try:
         return publish_saga_visual_set_to_website(item_id)
     except ValueError as exc:
@@ -45,7 +46,7 @@ def website_visual_sets_publish(item_id: str) -> Dict[str, Any]:
 
 
 @router.post("/publish-all")
-def website_visual_sets_publish_all() -> Dict[str, Any]:
+def website_visual_sets_publish_all(_principal=Depends(require_roles("owner", "admin"))) -> Dict[str, Any]:
     try:
         return publish_all_saga_visual_sets_to_website()
     except ValueError as exc:

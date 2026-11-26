@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from studio_core.services.project_route_auth import require_project_path_access
 
 from studio_core.core.storage import read_json
 from studio_core.services.publication_package_freeze_service import (
@@ -14,16 +15,6 @@ router = APIRouter(prefix="/publication-package", tags=["publication-package"])
 PROJECTS_FILE = "data/projects.json"
 
 
-def _normalize_name(value: str) -> str:
-    return str(value or "").strip().lower()
-
-
-def _can_edit_or_publish(user_role: str, user_name: str) -> bool:
-    role = str(user_role or "").strip().lower()
-    name = _normalize_name(user_name)
-    return role in {"owner", "creator", "admin"} or name in {"andré", "andre", "esposa", "wife", "mama"}
-
-
 def _get_project(project_id: str) -> dict | None:
     projects = read_json(PROJECTS_FILE, [])
     for project in projects:
@@ -33,7 +24,7 @@ def _get_project(project_id: str) -> dict | None:
 
 
 @router.get("/{project_id}")
-def get_publication_package(project_id: str) -> dict:
+def get_publication_package(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
@@ -49,7 +40,7 @@ def get_publication_package(project_id: str) -> dict:
 
 
 @router.get("/{project_id}/freeze-preview")
-def get_publication_package_freeze_preview(project_id: str) -> dict:
+def get_publication_package_freeze_preview(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
@@ -63,16 +54,13 @@ def get_publication_package_freeze_preview(project_id: str) -> dict:
 
 
 @router.post("/{project_id}/freeze")
-def freeze_publication_package(project_id: str, user_name: str = "", user_role: str = "") -> dict:
-    if not _can_edit_or_publish(user_role, user_name):
-        raise HTTPException(status_code=403, detail="Sem permissão para congelar pacote final.")
-
+def freeze_publication_package(project_id: str, _principal=Depends(require_project_path_access)) -> dict:
     project = _get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
     try:
-        return freeze_publication_package_operationally(project_id, user_name=user_name, user_role=user_role)
+        return freeze_publication_package_operationally(project_id, user_name=_principal.name, user_role=_principal.role)
     except ValueError as exc:
         message = str(exc)
         if message == "project_not_found":

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from studio_core.services.auth_principal import require_roles
 
 from studio_core.services.website_bundle_reconcile_service import get_bundle_reconcile_report
 
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/website-bundles-reconcile", tags=["website-bundles-r
 
 
 @router.get("")
-def website_bundle_reconcile(limit: int = Query(default=100, ge=1, le=100)) -> Dict[str, Any]:
+def website_bundle_reconcile(limit: int = Query(default=100, ge=1, le=100), _principal=Depends(require_roles("owner", "admin"))) -> Dict[str, Any]:
     try:
         return get_bundle_reconcile_report(limit=limit)
     except ValueError as exc:

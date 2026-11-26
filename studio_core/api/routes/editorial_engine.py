@@ -12,6 +12,7 @@ from studio_core.services.editorial_page_engine import (
 )
 from studio_core.services.saga_runtime_service import load_saga_runtime
 from studio_core.services.auth_principal import require_roles
+from studio_core.services.project_route_auth import require_project_path_access
 
 router = APIRouter(prefix="/editorial-engine", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["editorial-engine"])
 
@@ -44,7 +45,7 @@ def _project_metadata(project: dict, payload: dict | None = None) -> dict:
 
 
 @router.post("/build/{project_id}")
-def build_editorial(project_id: str, payload: dict | None = None) -> dict:
+def build_editorial(project_id: str, payload: dict | None = None, _principal=Depends(require_project_path_access)) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
@@ -84,7 +85,7 @@ def build_editorial(project_id: str, payload: dict | None = None) -> dict:
 
 
 @router.post("/preview/{project_id}")
-def preview_editorial(project_id: str, payload: dict | None = None) -> dict:
+def preview_editorial(project_id: str, payload: dict | None = None, _principal=Depends(require_project_path_access)) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
@@ -114,7 +115,7 @@ def preview_editorial(project_id: str, payload: dict | None = None) -> dict:
 
 
 @router.post("/repaginate/{project_id}")
-def repaginate_editorial(project_id: str, payload: dict | None = None) -> dict:
+def repaginate_editorial(project_id: str, payload: dict | None = None, _principal=Depends(require_project_path_access)) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
@@ -149,7 +150,7 @@ def repaginate_editorial(project_id: str, payload: dict | None = None) -> dict:
 
 
 @router.post("/merge-pages/{project_id}")
-def merge_pages(project_id: str, payload: dict | None = None) -> dict:
+def merge_pages(project_id: str, payload: dict | None = None, _principal=Depends(require_project_path_access)) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
@@ -184,7 +185,7 @@ def merge_pages(project_id: str, payload: dict | None = None) -> dict:
 
 
 @router.post("/split-page/{project_id}")
-def split_page(project_id: str, payload: dict | None = None) -> dict:
+def split_page(project_id: str, payload: dict | None = None, _principal=Depends(require_project_path_access)) -> dict:
     payload = payload or {}
     project = _get_project(project_id)
     if not project:
