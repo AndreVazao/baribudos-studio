@@ -466,3 +466,14 @@ A declaração final exige evidência de todos os pontos:
 - Cada preview cria sidecar privado com owner_user_id e timestamp; o endpoint de download exige o mesmo utilizador (ou owner/admin) e aplica TTL de 15 minutos.
 - O payload deixou de devolver `speaker_wav` ou caminhos físicos da amostra usada.
 - Audio Cast propaga o principal autenticado para o serviço de preview; a titularidade é verificada antes de sintetizar e antes de descarregar.
+
+
+#### Certificação CI — 26/11/2026, 09:49–09:54 UTC (SHA final desta revisão)
+
+- SHA testado: `c4ec9ae25ad5b872d143faa93d1cfcbcabd609b8`.
+- `Studio CI`: frontend build + contract bearer, backend validate, Windows Tauri credential-vault check — 3 jobs concluídos com sucesso.
+- `Distribution Hub V6 Smoke`: concluído com sucesso.
+- `Story Production Cloud Validation`: integração EPUB + audiobook + minissérie + bundle de cinco histórias concluída com sucesso.
+- As 3 falhas anteriores de testes não aparecem nesta execução do SHA acima; todos os workflows ligados ao commit estão verdes.
+- PR #98 permanece Draft e **não é merge-ready**: falta validação funcional manual/visual de media em todos os ecrãs e runtime nativo, revisão de compatibilidade/legacy voice samples, e auditoria final independente de rotas/ownership. CI verde não equivale a certificação de produto.
+
