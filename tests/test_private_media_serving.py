@@ -265,19 +265,25 @@ class PrivateMediaServingTests(unittest.TestCase):
         self.assertEqual(allowed.json()["asset"]["url"], "/api/public/assets/asset-1/file")
 
     def test_asset_upload_collision_does_not_delete_existing_file(self):
+        import asyncio
+        from io import BytesIO
+        from starlette.datastructures import UploadFile
+
         with tempfile.TemporaryDirectory() as directory:
             existing = Path(directory) / "existing.png"
             existing.write_bytes(b"preexisting-data")
-            self.client.raise_server_exceptions = False
+            upload = UploadFile(filename="cover.png", file=BytesIO(b"new-upload"), headers=None)
             with patch.object(assets, "_build_asset_storage_path", return_value=(existing, "existing.png")), patch.object(
                 assets, "assert_project_access"
             ), patch.object(assets, "assert_ip_edit_access"):
-                response = self.client.post(
-                    "/api/assets/upload",
-                    files={"file": ("cover.png", b"new-upload", "image/png")},
-                    data={"ip_slug": "saga-one", "asset_type": "cover", "context": "test"},
-                )
-            self.assertEqual(response.status_code, 500)
+                with self.assertRaises(FileExistsError):
+                    asyncio.run(assets.upload_asset(
+                        file=upload,
+                        ip_slug="saga-one",
+                        asset_type="cover",
+                        context="test",
+                        principal=self.principal,
+                    ))
             self.assertEqual(existing.read_bytes(), b"preexisting-data")
 
     def test_public_manifest_strips_physical_storage_paths(self):
