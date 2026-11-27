@@ -265,8 +265,10 @@ async def upload_asset(
 
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
     file_size = 0
+    created_file = False
     try:
         with absolute_path.open("xb") as destination:
+            created_file = True
             while chunk := await file.read(ASSET_UPLOAD_CHUNK_BYTES):
                 file_size += len(chunk)
                 if file_size > MAX_ASSET_UPLOAD_BYTES:
@@ -276,7 +278,9 @@ async def upload_asset(
                     )
                 destination.write(chunk)
     except Exception:
-        absolute_path.unlink(missing_ok=True)
+        # Never delete a path that this request did not successfully create.
+        if created_file:
+            absolute_path.unlink(missing_ok=True)
         raise
     finally:
         await file.close()
