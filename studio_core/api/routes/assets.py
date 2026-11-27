@@ -234,6 +234,7 @@ async def upload_asset(
     priority: Optional[str] = Form(default="0"),
     width: Optional[str] = Form(default=None),
     height: Optional[str] = Form(default=None),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
 ) -> dict:
     normalized_ip_slug = _safe_str(ip_slug)
     normalized_asset_type = _safe_str(asset_type)
