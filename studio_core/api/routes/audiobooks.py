@@ -100,9 +100,15 @@ def export_audiobook(
             if key in voice_sample
         }
 
+    safe_audiobook_output = {
+        key: value
+        for key, value in audiobook_output.items()
+        if key not in {"file_path", "speaker_wav"}
+    }
+
     return {
         "ok": True,
-        "audiobook": audiobook_output,
+        "audiobook": safe_audiobook_output,
         "voice_sample": safe_voice_sample,
         "audio_cast": audio_cast,
     }
