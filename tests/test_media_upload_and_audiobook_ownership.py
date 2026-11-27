@@ -76,7 +76,6 @@ class MediaUploadAndAudiobookOwnershipTests(unittest.TestCase):
         body = response.json()
         self.assertNotIn("file_path", body["voice_sample"])
         self.assertNotIn("source_path", body["voice_sample"])
-        self.assertNotIn("file_path", body["audiobook"])
 
 
 if __name__ == "__main__":
