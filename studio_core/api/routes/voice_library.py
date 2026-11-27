@@ -12,6 +12,9 @@ def _voice_dto(voice: dict) -> dict:
     return {key: value for key, value in voice.items() if key not in {"file_path", "source_path"}}
 
 
+MAX_VOICE_UPLOAD_BYTES = 50 * 1024 * 1024
+UPLOAD_CHUNK_BYTES = 1024 * 1024
+
 router = APIRouter(
     prefix="/voice-library",
     tags=["voice-library"],
@@ -49,15 +52,21 @@ async def upload_voice(
     tmp_path = ""
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            while chunk := await file.read(1024 * 1024):
-                tmp.write(chunk)
             tmp_path = tmp.name
+            total_bytes = 0
+            while chunk := await file.read(UPLOAD_CHUNK_BYTES):
+                total_bytes += len(chunk)
+                if total_bytes > MAX_VOICE_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="Amostra de voz excede o limite de 50 MB.")
+                tmp.write(chunk)
         voice = add_voice_sample(
             name=name, language=language, notes=notes, source_path=tmp_path,
             original_filename=file.filename or "sample.wav",
             owner_user_id=principal.user_id,
         )
         return {"ok": True, "voice": _voice_dto(voice)}
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
