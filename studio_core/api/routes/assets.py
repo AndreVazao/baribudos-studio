@@ -24,6 +24,9 @@ from studio_core.services.project_route_auth import assert_project_access
 
 router = APIRouter(prefix="/assets", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["assets"])
 
+MAX_ASSET_UPLOAD_BYTES = 50 * 1024 * 1024
+ASSET_UPLOAD_CHUNK_BYTES = 1024 * 1024
+
 
 def _public_asset_url(asset: dict) -> str:
     asset_id = str(asset.get("asset_id", "")).strip()
@@ -261,11 +264,24 @@ async def upload_asset(
     )
 
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
-    content = await file.read()
-    absolute_path.write_bytes(content)
+    file_size = 0
+    try:
+        with absolute_path.open("xb") as destination:
+            while chunk := await file.read(ASSET_UPLOAD_CHUNK_BYTES):
+                file_size += len(chunk)
+                if file_size > MAX_ASSET_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Asset excede o limite de {MAX_ASSET_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                    )
+                destination.write(chunk)
+    except Exception:
+        absolute_path.unlink(missing_ok=True)
+        raise
+    finally:
+        await file.close()
 
     mime_type = file.content_type or mimetypes.guess_type(file.filename or "")[0] or "application/octet-stream"
-    file_size = len(content)
 
     payload = {
         "project_id": _safe_str(project_id) or None,
