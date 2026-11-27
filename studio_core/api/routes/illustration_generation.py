@@ -19,6 +19,9 @@ from studio_core.services.project_route_auth import (
     require_project_path_access,
 )
 
+MAX_ILLUSTRATION_UPLOAD_BYTES = 50 * 1024 * 1024
+UPLOAD_CHUNK_BYTES = 1024 * 1024
+
 _PROJECT_ROLES = ("owner", "admin", "editor", "creator")
 router = APIRouter(
     prefix="/illustration-generation",
@@ -99,9 +102,13 @@ async def import_generated_image(
     tmp_path = ""
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            while chunk := await file.read(1024 * 1024):
-                tmp.write(chunk)
             tmp_path = tmp.name
+            total_bytes = 0
+            while chunk := await file.read(UPLOAD_CHUNK_BYTES):
+                total_bytes += len(chunk)
+                if total_bytes > MAX_ILLUSTRATION_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="Imagem excede o limite de 50 MB.")
+                tmp.write(chunk)
 
         return import_generated_frame_image_from_temp_upload(
             project_id=project_id,
@@ -110,6 +117,8 @@ async def import_generated_image(
             original_filename=file.filename or f"{frame_id}.png",
             approve=approve,
         )
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
