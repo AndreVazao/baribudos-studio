@@ -477,3 +477,11 @@ A declaração final exige evidência de todos os pontos:
 - As 3 falhas anteriores de testes não aparecem nesta execução do SHA acima; todos os workflows ligados ao commit estão verdes.
 - PR #98 permanece Draft e **não é merge-ready**: falta validação funcional manual/visual de media em todos os ecrãs e runtime nativo, revisão de compatibilidade/legacy voice samples, e auditoria final independente de rotas/ownership. CI verde não equivale a certificação de produto.
 
+
+
+#### Revalidação da branch após atualização documental — 27/11/2026
+
+- SHA final: `37b416d893736ea5fd81411f8ae7bd576c1832e9`.
+- Checks concluídos com sucesso: backend-validate, frontend-build, tauri-windows-check.
+- Workflows adicionais também concluídos com sucesso: Distribution Hub V6 Smoke e EPUB + audiobook + mini-series + five-story bundle.
+- PR #98 continua aberta e Draft. O CI está verde; a validação visual/funcional e a revisão independente de segurança continuam pendentes. Não promover a Ready for review nem integrar apenas com base no CI.
