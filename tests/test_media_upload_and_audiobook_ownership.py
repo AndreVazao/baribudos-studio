@@ -28,18 +28,6 @@ class MediaUploadAndAudiobookOwnershipTests(unittest.TestCase):
     def test_asset_upload_rejects_oversized_stream_and_removes_partial_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             destination = Path(temp_dir) / "asset.bin"
-            class FakeUpload:
-                filename = "asset.png"
-                content_type = "image/png"
-                def __init__(self):
-                    self.chunks = [b"x" * 8, b"y" * 8, b""]
-                    self.closed = False
-                async def read(self, _size):
-                    return self.chunks.pop(0)
-                async def close(self):
-                    self.closed = True
-
-            upload = FakeUpload()
             with patch.object(assets, "MAX_ASSET_UPLOAD_BYTES", 10), patch.object(
                 assets, "_assert_asset_access"
             ), patch.object(
@@ -48,7 +36,7 @@ class MediaUploadAndAudiobookOwnershipTests(unittest.TestCase):
                 response = self.client.post(
                     "/api/assets/upload",
                     data={"ip_slug": "test", "asset_type": "cover", "context": "story"},
-                    files={"file": ("asset.png", b"ignored", "image/png")},
+                    files={"file": ("asset.png", b"x" * 11, "image/png")},
                 )
             self.assertEqual(response.status_code, 413)
             self.assertFalse(destination.exists())
