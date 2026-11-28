@@ -537,3 +537,15 @@ A declaração final exige evidência de todos os pontos:
 - Website Stripe checkout: added validation of the returned hosted checkout URL; only HTTPS `checkout.stripe.com` is accepted, with regression test. Latest Website CI must validate this commit before considering the branch green.
 
 - Studio illustration imports: manual image import now validates actual PNG/JPEG/WEBP signature before service attaches and auto-approves the frame. Invalid/mismatched content is rejected with 415 and temporary files are cleaned. Added regression helper tests.
+
+
+### Atualização incremental — 28 Nov 2026 (hardening de uploads e validação)
+
+- Identificado e corrigido erro de comparação de magic bytes: os testes e validadores agora comparam bytes binários reais, não escapes literais.
+- Corrigido teste de upload mismatch que estava a receber 404 por não isolar a dependência de ownership; o cenário testa agora especificamente a rejeição 415 de conteúdo inválido.
+- Voice Library: upload agora valida assinaturas WAV (RIFF/WAVE), MP3 (ID3 ou frame MPEG), M4A (ftyp), OGG (OggS) e FLAC (fLaC) antes de registar/guardar amostra; mismatch responde 415.
+- Adicionados testes para rejeição de voice sample inválida e formatos permitidos.
+- Studio CI e Cloud Validation no SHA atual estão pendentes/em execução. A última execução anterior falhou no teste por isolamento incompleto; correção foi aplicada e os novos checks ainda não concluíram.
+- Website PR #56: revisão read-only da Stripe webhook confirmou verificação da assinatura, correspondência provider/session/checkout, modo payment, estado paid, amount/currency e fulfillment idempotente por transição condicional. Falha de pagamento só marca checkout PENDING como FAILED; não ressuscita checkout falhado. Não foram efetuados pagamentos nem testes live.
+- Bloqueios continuam: prova editorial real end-to-end, visual/manual media-flow, compatibilidade nativa, reconcilição de pagamentos/produção, revisão de baseline de schema e autorização de rollout.
+- Sem merge, deploy, migrações de produção, pagamentos ou sandbox.
