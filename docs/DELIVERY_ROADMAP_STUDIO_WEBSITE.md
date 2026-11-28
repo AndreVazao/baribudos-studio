@@ -402,3 +402,158 @@ A declaração final exige evidência de todos os pontos:
 - O token só é restaurado após ligação à API e é validado por `/users/me`; o perfil nunca é usado como prova de autenticação.
 - O cliente web não persiste tokens. O armazenamento nativo só é chamado quando a runtime é Capacitor nativa ou Tauri; falhas do cofre bloqueiam a persistência e não provocam fallback para localStorage.
 - Pendente: validação real de compilação/execução Android e Windows, incluindo instalação/sync Capacitor, cargo check/build e ensaio de logout/expiração/reinício em dispositivos. Até essa evidência, a persistência nativa está implementada mas ainda não certificada.
+
+
+### Atualização de execução — 26/11/2026 (contenção da exposição de storage)
+
+- Nova branch `security/studio-private-storage-serving-2026-11-26`, PR #98 em preparação sobre `main`.
+- Removida a montagem estática da raiz privada em `/storage`. O inventário FastAPI e a CI passam agora a falhar se essa rota reaparecer.
+- Criado `GET /api/projects/{project_id}/media?path=...`: exige sessão e ownership do projeto, só aceita ficheiros explicitamente referenciados nos campos de caminho do próprio projeto, rejeita traversal e extensões não permitidas, e devolve `private, no-store` + `nosniff`.
+- Criado `GET /api/public/assets/{asset_id}/file`: só serve registos do asset registry em estado `published`; drafts/arquivados são 404. Manifestos públicos passam a usar este endpoint.
+- Respostas da API de assets deixaram de devolver caminhos `/storage`; URLs de assets não publicados ficam vazias.
+- Outputs do projeto passaram a ser descarregados/visualizados via fetch autenticado com Bearer; URLs `/storage` deixaram de ser convertidas em URLs diretas.
+- CORS deixou de aceitar wildcard com credenciais: origins explícitas configuráveis por `BARIBUDOS_CORS_ORIGINS`, sem cookies, com Authorization/Content-Type e métodos limitados.
+- Testes adicionados para acesso anónimo, ownership, paths não referenciados, traversal, extensões, assets published vs draft e CORS.
+- Pendente: migrar os previews de voz/audio, updater e restantes consumidores de media para endpoints específicos autorizados; validação CI no SHA final. Nenhum ficheiro de produção foi alterado nem movido.
+
+
+#### Media privado — previews de voz e updater
+
+- Voice Preview passa a emitir um identificador UUID opaco e `file_url` em vez de expor `file_path`; o endpoint `GET /api/voice-preview/{preview_id}/file` exige sessão e papel owner/admin/editor/creator e só resolve o ficheiro com nome derivado do UUID.
+- Audio Cast e Voice Cloning carregam o preview como blob autenticado, sem URL direta para storage.
+- Updater deixa de devolver `file_path`/ `storage_url`; valida o basename e a extensão do instalador, devolve `file_url` e serve-o em `GET /api/updater/files/{file_name}`, limitado a owner/admin e a extensões de instalador permitidas.
+- O cliente faz fetch same-origin com Bearer e rejeita destinos externos para impedir fuga do token.
+- Testes acrescentados para preview autenticado, updater admin-only, traversal, media same-origin e rejeição de encaminhamento de Bearer para outro domínio.
+- Continuam por auditar todos os restantes campos/consumidores de media e validar a compatibilidade de assets publicados em todos os ecrãs; CI final ainda pendente.
+
+
+#### Assets privados e aprovação de publicação
+
+- Assets com projecto/IP têm agora `GET /api/assets/{asset_id}/file`, Bearer obrigatório e autorização por ownership do projeto ou acesso de leitura à IP; assets globais ficam owner/admin-only.
+- DTOs de assets incluem `file_url` autenticada e mantêm `url` pública apenas para assets já publicados.
+- Upload e registo forçam estado `draft`, ignorando qualquer tentativa do cliente de definir `published`.
+- Publicação, arquivo e rollback foram limitados a owner/admin. Só o endpoint de publicação explícita pode promover um asset para `published`.
+- Testes cobrem tentativa de self-publish por editor e isolamento do ficheiro privado por projeto.
+
+
+#### Isolamento de amostras de voz
+
+- Upload de amostra associa `owner_user_id` à sessão autenticada.
+- Listagem de editor/creator fica limitada às próprias amostras; owner/admin mantém visão administrativa.
+- Consulta individual e geração de preview verificam a titularidade da amostra; amostras legadas sem owner ficam restritas a owner/admin até reconciliação/consentimento.
+- Audio Cast preview aplica a mesma verificação; respostas públicas de voz deixam de incluir caminhos físicos.
+- Testes cobrem isolamento entre utilizadores e bloqueio de preview de amostra alheia.
+
+
+#### Fecho de superfícies estáticas e DTOs
+
+- O mount `/public` também deixa de seguir symlinks para fora da raiz do projeto; apenas diretório físico dentro de `APP_CONFIG.project_root` pode ser montado.
+- CORS rejeita explicitamente `*` em `BARIBUDOS_CORS_ORIGINS`, além de usar `allow_credentials=False`.
+- DTOs privados de assets removem `storage_path`, `file_path`, `absolute_path` e `source_path`; o manifest sanitiza os mesmos campos recursivamente.
+- Upload de assets não aceita estado de publicação vindo do cliente; a promoção pública continua reservada a owner/admin.
+
+
+#### Ownership transversal da API de assets
+
+- Listagem e consulta de assets filtram/verificam acesso ao projeto e à IP; assets globais são reservados a owner/admin.
+- Upload e registo exigem autorização de edição do projeto e, quando indicado, também da IP. Não basta ter acesso a um projeto para escrever assets numa IP diferente.
+- Downloads privados repetem a verificação de ownership, independentemente da autorização usada na listagem.
+- Testes atualizados para exigir simultaneamente acesso ao projeto e à IP quando o asset está associado a ambos.
+
+
+#### Isolamento do ficheiro de preview de voz
+
+- Cada preview cria sidecar privado com owner_user_id e timestamp; o endpoint de download exige o mesmo utilizador (ou owner/admin) e aplica TTL de 15 minutos.
+- O payload deixou de devolver `speaker_wav` ou caminhos físicos da amostra usada.
+- Audio Cast propaga o principal autenticado para o serviço de preview; a titularidade é verificada antes de sintetizar e antes de descarregar.
+
+
+#### Certificação CI — 26/11/2026, 09:49–09:54 UTC (SHA final desta revisão)
+
+- SHA testado: `c4ec9ae25ad5b872d143faa93d1cfcbcabd609b8`.
+- `Studio CI`: frontend build + contract bearer, backend validate, Windows Tauri credential-vault check — 3 jobs concluídos com sucesso.
+- `Distribution Hub V6 Smoke`: concluído com sucesso.
+- `Story Production Cloud Validation`: integração EPUB + audiobook + minissérie + bundle de cinco histórias concluída com sucesso.
+- As 3 falhas anteriores de testes não aparecem nesta execução do SHA acima; todos os workflows ligados ao commit estão verdes.
+- PR #98 permanece Draft e **não é merge-ready**: falta validação funcional manual/visual de media em todos os ecrãs e runtime nativo, revisão de compatibilidade/legacy voice samples, e auditoria final independente de rotas/ownership. CI verde não equivale a certificação de produto.
+
+
+
+#### Revalidação da branch após atualização documental — 27/11/2026
+
+- SHA final: `37b416d893736ea5fd81411f8ae7bd576c1832e9`.
+- Checks concluídos com sucesso: backend-validate, frontend-build, tauri-windows-check.
+- Workflows adicionais também concluídos com sucesso: Distribution Hub V6 Smoke e EPUB + audiobook + mini-series + five-story bundle.
+- PR #98 continua aberta e Draft. O CI está verde; a validação visual/funcional e a revisão independente de segurança continuam pendentes. Não promover a Ready for review nem integrar apenas com base no CI.
+
+
+## 10. Atualização de execução — 28 de novembro de 2026
+
+### Evidência CI confirmada
+
+- Studio PR #98, commit `f573fef7c2e478f41a98059ab85faf86c3bb494d`: Studio CI, Distribution Hub V6 Smoke e Story Production Cloud Validation concluíram com sucesso. O estado verde é evidência de testes/build, não de produção editorial real.
+- Website PR #56, commit `4c17377c203bc286d21b07392d54c0f4f0fcd1e7`: Website CI e Repository Visibility concluíram com sucesso.
+- Website PR #56 recebeu novas alterações após esse SHA e os pipelines correspondentes ainda estão em execução; não declarar o head atual verde até confirmação.
+
+### Correções adicionais Website PR #56
+
+- CSRF same-origin guard para PayPal create-order, antes da leitura do JSON.
+- Checkouts PayPal órfãos: marcar FAILED quando a criação do provider falha, com atualização condicional somente em estado PENDING sem providerRef.
+- Validar URL de aprovação PayPal: HTTPS e host paypal.com ou subdomínio real; rejeitar URL inválido/não confiável.
+- **Novo risco descoberto:** Stripe checkout creation também é mutável e não tinha guard same-origin. Adicionada proteção same-origin antes do JSON parsing.
+- Stripe checkout: tracking do checkout local e cleanup condicional para falhas de provider; resposta Stripe malformada/incompleta devolve 502 e marca checkout como FAILED.
+- Testes de regressão source-level para guard CSRF, cleanup de órfãos e validação de approval URL. Stripe tests em `tests/stripe-checkout-security.test.mjs`.
+
+### Segurança Studio — backlog de revisão
+
+- Continuar auditoria de media/upload; o limite de tamanho, streaming e cleanup seguro estão implementados. Próximo hardening: validação MIME por conteúdo/magic bytes e política de formatos permitidos, garantindo que ficheiros não são publicados com tipo declarado enganador.
+- Revalidar DTOs e URLs entregues ao frontend para confirmar que downloads privados usam autenticação e que nenhum path de storage é exposto.
+
+### Produção narrativa — gate permanece bloqueado
+
+- Smokes sintéticos verdes não demonstram histórias canónicas distintas, aprovações editoriais humanas, ilustrações/audio final reais, temporada compilada ou minissérie final.
+- Não declarar Studio operacional end-to-end até executar e documentar uma produção real, com aprovação editorial e artefactos verificáveis em cada etapa.
+
+### Próximos gates
+
+1. Confirmar CI no head mais recente da PR #56; corrigir falhas sem enfraquecer checks.
+2. Revisão Stripe/PayPal: same-origin, ownership/guest capability, provider-state recovery, idempotency, concorrência, compensação e estados de falha.
+3. Auditar Webhooks e fulfillment (Stripe/PayPal), se presentes, quanto a assinatura, idempotência e transições de estado.
+4. Studio: validação de conteúdo de uploads e auditoria de media URLs/DTOs.
+5. Criar uma produção editorial real controlada e registar outputs, aprovações, custos, retries e artefactos; não usar fixtures como prova.
+6. Manter PRs Draft e sem merge enquanto gates de segurança/produção/schema e dependências não estiverem resolvidos.
+
+**Restrições mantidas:** sem merge, deploy, migração de produção, pagamento real, sandbox de pagamento ou alteração de infraestrutura sem autorização explícita.
+
+
+### Atualização incremental — hardening de uploads e Stripe
+
+- Studio assets: introduzida validação de assinatura do conteúdo (magic bytes) contra extensão para PNG, JPEG, GIF, WEBP, AVIF, PDF, MP3, WAV, OGG, M4A, MP4, WebM e EPUB; mismatch responde 415 e elimina apenas o ficheiro criado pelo upload.
+- Studio: testes para assinaturas conhecidas, extensões desconhecidas, mismatch e cleanup.
+- Website: Stripe checkout creation recebeu same-origin guard antes do JSON parsing, compensação condicional para checkouts órfãos e validação de sessão Stripe antes de devolver URL.
+- Website: testes em `tests/stripe-checkout-security.test.mjs`.
+- CI de Studio e Website para estas alterações está em execução; não declarar checks verdes até terminar no head de cada branch.
+
+- Website Stripe checkout: added validation of the returned hosted checkout URL; only HTTPS `checkout.stripe.com` is accepted, with regression test. Latest Website CI must validate this commit before considering the branch green.
+
+- Studio illustration imports: manual image import now validates actual PNG/JPEG/WEBP signature before service attaches and auto-approves the frame. Invalid/mismatched content is rejected with 415 and temporary files are cleaned. Added regression helper tests.
+
+
+### Atualização incremental — 28 Nov 2026 (hardening de uploads e validação)
+
+- Identificado e corrigido erro de comparação de magic bytes: os testes e validadores agora comparam bytes binários reais, não escapes literais.
+- Corrigido teste de upload mismatch que estava a receber 404 por não isolar a dependência de ownership; o cenário testa agora especificamente a rejeição 415 de conteúdo inválido.
+- Voice Library: upload agora valida assinaturas WAV (RIFF/WAVE), MP3 (ID3 ou frame MPEG), M4A (ftyp), OGG (OggS) e FLAC (fLaC) antes de registar/guardar amostra; mismatch responde 415.
+- Adicionados testes para rejeição de voice sample inválida e formatos permitidos.
+- Studio CI e Cloud Validation no SHA atual estão pendentes/em execução. A última execução anterior falhou no teste por isolamento incompleto; correção foi aplicada e os novos checks ainda não concluíram.
+- Website PR #56: revisão read-only da Stripe webhook confirmou verificação da assinatura, correspondência provider/session/checkout, modo payment, estado paid, amount/currency e fulfillment idempotente por transição condicional. Falha de pagamento só marca checkout PENDING como FAILED; não ressuscita checkout falhado. Não foram efetuados pagamentos nem testes live.
+- Bloqueios continuam: prova editorial real end-to-end, visual/manual media-flow, compatibilidade nativa, reconcilição de pagamentos/produção, revisão de baseline de schema e autorização de rollout.
+- Sem merge, deploy, migrações de produção, pagamentos ou sandbox.
+
+
+### 28 nov 2026 — falha CI na validação de assinatura Voice Library
+
+- Studio PR #98 SHA `b45ddb91`: CI e Story Production Cloud Validation falharam porque a rota de upload de Voice Library não chamava o validador de assinatura; o teste existente revelou que ficheiros WAV falsos eram aceites.
+- Correção aplicada em `c61e4da2`: rejeita extensões não permitidas e valida a assinatura do conteúdo antes de registar o sample (HTTP 415); o teste existente confirma que `add_voice_sample` não é chamado quando o conteúdo é inválido. A CI do novo SHA está pendente.
+- CI FFmpeg/Tauri e frontend permanecem bem; Smoke Distribution Hub V6 passou. Website PR #56 CI e visibility checks passaram no SHA `01a4bddf`.
+- Smoke de produção narrativa continua sintético: aprovação editorial 0, bundle de 5 histórias não aprovado, guia/compilação/temporada não gerados. Não equivale a produção real.

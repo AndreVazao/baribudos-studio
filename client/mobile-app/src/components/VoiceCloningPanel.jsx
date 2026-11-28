@@ -6,7 +6,7 @@ import {
   listVoiceSamples,
   uploadVoiceSample
 } from "../api.js"
-import { normalizeMediaUrl } from "../utils/media.js"
+import { fetchPrivateMediaBlob } from "../api.js"
 
 function Card({ title, children }) {
   return (
@@ -39,6 +39,7 @@ export default function VoiceCloningPanel({ user }) {
   const [voiceNotes, setVoiceNotes] = useState("")
   const [previewText, setPreviewText] = useState("Olá. Este é um teste de voz do Baribudos Studio.")
   const [previewResult, setPreviewResult] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState("")
 
   useEffect(() => {
     loadAll()
@@ -111,7 +112,23 @@ export default function VoiceCloningPanel({ user }) {
     }
   }
 
-  const previewUrl = normalizeMediaUrl(previewResult?.file_path)
+  useEffect(() => {
+    let active = true
+    let objectUrl = ""
+    if (!previewResult?.file_url) {
+      setPreviewUrl("")
+      return undefined
+    }
+    fetchPrivateMediaBlob(previewResult.file_url).then((blob) => {
+      objectUrl = URL.createObjectURL(blob)
+      if (active) setPreviewUrl(objectUrl)
+      else URL.revokeObjectURL(objectUrl)
+    }).catch(() => { if (active) setPreviewUrl("") })
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [previewResult?.file_url])
 
   return (
     <Card title="Voice Cloning / Voice Library">
@@ -275,7 +292,7 @@ export default function VoiceCloningPanel({ user }) {
           }}
         >
           <div><strong>Provider:</strong> {previewResult.provider}</div>
-          <div><strong>Ficheiro:</strong> {previewResult.file_path}</div>
+          <div><strong>Ficheiro:</strong> {previewResult.file_name}</div>
           <div><strong>Fallback:</strong> {previewResult.fallback_used ? "Sim" : "Não"}</div>
           {previewUrl ? <audio controls src={previewUrl} style={{ width: "100%" }} /> : null}
         </div>
@@ -294,7 +311,7 @@ export default function VoiceCloningPanel({ user }) {
         <strong>Biblioteca de vozes</strong>
         {voices.map((voice) => (
           <div key={voice.id}>
-            {voice.name} — {voice.language || "-"} — {voice.file_path}
+            {voice.name} — {voice.language || "-"} — {voice.file_name || "Amostra guardada"}
           </div>
         ))}
       </div>

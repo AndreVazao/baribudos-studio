@@ -1,4 +1,5 @@
-import { resolveBackendFileUrl } from "../api.js"
+import { useEffect, useState } from "react"
+import { fetchProjectMediaBlob } from "../api.js"
 
 function Card({ title, children }) {
   return (
@@ -20,44 +21,99 @@ function Card({ title, children }) {
   )
 }
 
-function FileLink({ label, path }) {
-  const url = resolveBackendFileUrl(path)
+function openBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename || "baribudos-output"
+  anchor.rel = "noopener"
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
+
+function FileLink({ label, path, projectId }) {
+  const [busy, setBusy] = useState(false)
   if (!path) return null
+
+  async function handleOpen() {
+    if (/^https?:\/\//i.test(String(path))) {
+      window.open(path, "_blank", "noopener,noreferrer")
+      return
+    }
+    setBusy(true)
+    try {
+      const blob = await fetchProjectMediaBlob(projectId, path)
+      const filename = String(path).replace(/\\/g, "/").split("/").pop()
+      openBlob(blob, filename)
+    } catch (error) {
+      alert(error?.message || "Não foi possível descarregar o ficheiro.")
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div style={{ display: "grid", gap: 4 }}>
       <strong>{label}</strong>
-      <div style={{ fontSize: 12, wordBreak: "break-all" }}>{path}</div>
-      {url ? (
-        <a href={url} target="_blank" rel="noreferrer">
-          Abrir / descarregar
-        </a>
-      ) : (
-        <span>Link direto indisponível</span>
-      )}
+      <div style={{ fontSize: 12 }}>{String(path).replace(/\\/g, "/").split("/").pop()}</div>
+      <button type="button" onClick={handleOpen} disabled={busy}>
+        {busy ? "A obter ficheiro..." : "Abrir / descarregar"}
+      </button>
     </div>
   )
 }
 
-function ImagePreview({ label, path }) {
-  const url = resolveBackendFileUrl(path)
-  if (!path || !url) return null
+function ImagePreview({ label, path, projectId }) {
+  const [src, setSrc] = useState("")
+
+  useEffect(() => {
+    let active = true
+    let objectUrl = ""
+
+    async function load() {
+      if (!path) return
+      try {
+        if (/^https?:\/\//i.test(String(path))) {
+          if (active) setSrc(path)
+          return
+        }
+        const blob = await fetchProjectMediaBlob(projectId, path)
+        objectUrl = URL.createObjectURL(blob)
+        if (active) setSrc(objectUrl)
+        else URL.revokeObjectURL(objectUrl)
+      } catch {
+        if (active) setSrc("")
+      }
+    }
+
+    setSrc("")
+    load()
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [projectId, path])
+
+  if (!path) return null
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
       <strong>{label}</strong>
-      <img
-        src={url}
-        alt={label}
-        style={{
-          maxWidth: "100%",
-          borderRadius: 12,
-          border: "1px solid #e5e7eb"
-        }}
-      />
-      <a href={url} target="_blank" rel="noreferrer">
-        Abrir / descarregar
-      </a>
+      {src ? (
+        <img
+          src={src}
+          alt={label}
+          style={{
+            maxWidth: "100%",
+            borderRadius: 12,
+            border: "1px solid #e5e7eb"
+          }}
+        />
+      ) : (
+        <span>Preview indisponível ou sem autorização.</span>
+      )}
     </div>
   )
 }
@@ -72,7 +128,6 @@ export default function OutputsPanel({ projects }) {
         const epub = outputs?.epub || {}
         const audiobook = outputs?.audiobook || {}
         const video = outputs?.video || {}
-
         const covers = project?.outputs?.covers || {}
         const latestCover = covers?.file_path || project?.cover_image || ""
         const latestBadge = covers?.badge_file_path || ""
@@ -95,14 +150,15 @@ export default function OutputsPanel({ projects }) {
               <div>Língua base: {project.language}</div>
             </div>
 
-            <ImagePreview label="Capa" path={latestCover} />
-            <ImagePreview label="Badge etária" path={latestBadge} />
+            <ImagePreview label="Capa" path={latestCover} projectId={project.id} />
+            <ImagePreview label="Badge etária" path={latestBadge} projectId={project.id} />
 
             {Object.entries(epub).map(([lang, data]) => (
               <FileLink
                 key={`epub-${project.id}-${lang}`}
                 label={`EPUB (${lang})`}
                 path={data?.file_path}
+                projectId={project.id}
               />
             ))}
 
@@ -111,6 +167,7 @@ export default function OutputsPanel({ projects }) {
                 key={`audio-${project.id}-${lang}`}
                 label={`Audiobook (${lang})`}
                 path={data?.file_path}
+                projectId={project.id}
               />
             ))}
 
@@ -119,6 +176,7 @@ export default function OutputsPanel({ projects }) {
                 key={`video-${project.id}-${lang}`}
                 label={`Vídeo (${lang})`}
                 path={data?.file_path}
+                projectId={project.id}
               />
             ))}
           </div>
@@ -126,4 +184,4 @@ export default function OutputsPanel({ projects }) {
       })}
     </Card>
   )
-  }
+}

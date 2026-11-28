@@ -49,6 +49,11 @@ def export_audiobook(
         voice_sample = get_voice_sample(voice_sample_id)
         if not voice_sample:
             raise HTTPException(status_code=404, detail="Voice sample não encontrada.")
+        if (
+            principal.role.lower() not in {"owner", "admin"}
+            and str(voice_sample.get("owner_user_id", "")).strip() != principal.user_id
+        ):
+            raise HTTPException(status_code=404, detail="Voice sample não encontrada.")
         speaker_wav = str(voice_sample.get("file_path", "")).strip()
 
     audio_cast = project.get("audio_cast", {}) or {}
@@ -87,9 +92,23 @@ def export_audiobook(
         },
     )
 
+    safe_voice_sample = None
+    if isinstance(voice_sample, dict):
+        safe_voice_sample = {
+            key: voice_sample[key]
+            for key in ("id", "name", "language", "notes", "created_at")
+            if key in voice_sample
+        }
+
+    safe_audiobook_output = {
+        key: value
+        for key, value in audiobook_output.items()
+        if key not in {"file_path", "speaker_wav"}
+    }
+
     return {
         "ok": True,
-        "audiobook": audiobook_output,
-        "voice_sample": voice_sample,
+        "audiobook": safe_audiobook_output,
+        "voice_sample": safe_voice_sample,
         "audio_cast": audio_cast,
     }

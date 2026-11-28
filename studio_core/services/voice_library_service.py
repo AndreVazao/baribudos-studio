@@ -43,6 +43,7 @@ def add_voice_sample(
     original_filename: str,
     language: str = "",
     notes: str = "",
+    owner_user_id: str = "",
 ) -> Dict[str, Any]:
     src = Path(_safe_text(source_path)).expanduser().resolve()
     if not src.exists() or not src.is_file():
@@ -61,6 +62,7 @@ def add_voice_sample(
         "name": _safe_text(name) or "Voice Sample",
         "language": _safe_text(language),
         "notes": _safe_text(notes),
+        "owner_user_id": _safe_text(owner_user_id),
         "file_name": target_path.name,
         "file_path": str(target_path),
         "created_at": now_iso(),

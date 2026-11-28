@@ -96,3 +96,34 @@ A migração só pode ser considerada concluída quando **todas** as rotas estiv
 ## Próxima frente
 
 Começar pela prova de exposição de `/storage` em ambiente de teste e pela separação de assets públicos. Em paralelo, produzir a matriz rota → permissão → dependências de serviço. Só depois implementar a sessão central e migrar os clientes numa PR dedicada.
+
+
+## Atualização de remediação — 26-11-2026
+
+A montagem estática da raiz privada foi removida de `studio_core/api/main.py`. A rota `/storage` já não deve existir na aplicação. A pipeline de inventário e `tests/test_fastapi_route_manifest.py` foram alterados para falhar se voltar a existir uma montagem com esse prefixo.
+
+A substituição funcional passa a ter duas fronteiras:
+
+- Media de projeto: `GET /api/projects/{project_id}/media`, sessão Bearer + ownership do projeto, caminho comparado contra campos de ficheiro explícitos do projeto, allowlist de extensões, canonicalização e cache privado desativado.
+- Assets deliberadamente públicos: `GET /api/public/assets/{asset_id}/file`, apenas asset registry com estado `published`; drafts e assets arquivados não são servidos.
+
+A API de assets já não deve devolver URLs diretas da raiz de storage. O cliente de outputs usa fetch autenticado e converte o blob localmente. O CORS foi restringido a origins configuráveis por `BARIBUDOS_CORS_ORIGINS`, sem wildcard e sem credenciais de cookie.
+
+**Limitação ainda aberta:** previews de voz/audio, updater e quaisquer consumidores restantes que ainda dependam de caminhos `/storage` necessitam de endpoints específicos com autorização por recurso antes de a compatibilidade visual estar completa. Não se deve reintroduzir a montagem estática como fallback. A implementação desta fase aguarda CI no SHA final e testes nativos.
+
+
+### Extensão da remediação — previews e instaladores
+
+A fase atual também substitui dois consumidores que ainda dependiam da raiz estática:
+
+- Voice Preview/Audio Cast: UUID opaco + endpoint autenticado; o cliente recebe blobs via Bearer.
+- Updater: basename/extensão validados, endpoint de download limitado a owner/admin, sem devolver caminho físico nem URL `/storage`.
+
+O cliente valida same-origin antes de enviar Bearer para media privada. Os testes de segurança cobrem também esta fronteira. Outros campos/consumidores de media continuam em auditoria e a CI final ainda não certificou a fase.
+
+
+### Proteção adicional do asset registry
+
+- A leitura de ficheiros de assets privados usa `GET /api/assets/{asset_id}/file` e valida ownership do projeto ou permissão de leitura da IP. Assets globais exigem owner/admin.
+- Uploads e registos não podem definir o estado `published`; o servidor força `draft`. A promoção pública, arquivo e rollback exigem owner/admin.
+- O DTO separa `file_url` autenticada de `url` pública, disponível apenas quando o asset está publicado.

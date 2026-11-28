@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 
 from studio_core.core.config import resolve_storage_path
 from studio_core.services.asset_registry_service import (
@@ -17,10 +18,80 @@ from studio_core.services.asset_registry_service import (
     rollback_asset,
     update_asset,
 )
-from studio_core.services.cdn_service import resolve_cdn_url
-from studio_core.services.auth_principal import require_roles
+from studio_core.services.auth_principal import AuthenticatedPrincipal, require_roles
+from studio_core.services.ip_route_auth import assert_ip_edit_access, assert_ip_read_access
+from studio_core.services.project_route_auth import assert_project_access
 
 router = APIRouter(prefix="/assets", dependencies=[Depends(require_roles("owner", "admin", "editor"))], tags=["assets"])
+
+MAX_ASSET_UPLOAD_BYTES = 50 * 1024 * 1024
+ASSET_UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+ASSET_SIGNATURES = {
+    ".png": lambda header: header.startswith(b"\x89PNG\r\n\x1a\n"),
+    ".jpg": lambda header: header.startswith(b"\xff\xd8\xff"),
+    ".jpeg": lambda header: header.startswith(b"\xff\xd8\xff"),
+    ".gif": lambda header: header.startswith((b"GIF87a", b"GIF89a")),
+    ".webp": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WEBP",
+    ".avif": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"avif", b"avis"),
+    ".pdf": lambda header: header.startswith(b"%PDF-"),
+    ".mp3": lambda header: header.startswith(b"ID3") or (len(header) >= 2 and header[0] == 0xFF and (header[1] & 0xE0) == 0xE0),
+    ".wav": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WAVE",
+    ".ogg": lambda header: header.startswith(b"OggS"),
+    ".m4a": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"M4A ", b"isom", b"mp42"),
+    ".mp4": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"isom", b"mp42", b"avc1", b"M4V "),
+    ".webm": lambda header: header.startswith(b"\x1a\x45\xdf\xa3"),
+    ".epub": lambda header: header.startswith(b"PK\x03\x04") and b"mimetype" in header[:96] and b"application/epub+zip" in header[:128],
+}
+
+
+def _asset_signature_matches(extension: str, header: bytes) -> bool:
+    validator = ASSET_SIGNATURES.get(str(extension or "").lower())
+    return bool(validator and validator(header))
+
+
+
+def _public_asset_url(asset: dict) -> str:
+    asset_id = str(asset.get("asset_id", "")).strip()
+    if asset_id and str(asset.get("status", "")).lower() == "published":
+        return f"/api/public/assets/{asset_id}/file"
+    return ""
+
+
+def _asset_dto(asset: dict) -> dict:
+    asset_id = str(asset.get("asset_id", "")).strip()
+    safe = {
+        key: value
+        for key, value in asset.items()
+        if key not in {"storage_path", "file_path", "absolute_path", "source_path"}
+    }
+    return {
+        **safe,
+        "url": _public_asset_url(asset),
+        "file_url": f"/api/assets/{asset_id}/file" if asset_id else "",
+    }
+
+
+def _assert_asset_access(asset: dict, principal: AuthenticatedPrincipal, *, edit: bool = False) -> None:
+    if principal.role.lower() in {"owner", "admin"}:
+        return
+    project_id = str(asset.get("project_id", "")).strip()
+    ip_slug = str(asset.get("ip_slug", "")).strip()
+    if project_id:
+        assert_project_access(project_id, principal)
+        if ip_slug:
+            if edit:
+                assert_ip_edit_access(ip_slug, principal)
+            else:
+                assert_ip_read_access(ip_slug, principal)
+        return
+    if ip_slug:
+        if edit:
+            assert_ip_edit_access(ip_slug, principal)
+        else:
+            assert_ip_read_access(ip_slug, principal)
+        return
+    raise HTTPException(status_code=403, detail="Sem acesso a este asset.")
 
 
 def _safe_str(value: str | None) -> str:
@@ -76,6 +147,7 @@ def list_registered_assets(
     language: str | None = Query(default=None),
     status: str | None = Query(default=None),
     is_primary: bool | None = Query(default=None),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
 ) -> dict:
     filters = {
         "project_id": project_id,
@@ -90,31 +162,86 @@ def list_registered_assets(
     }
 
     items = get_assets(filters)
+    if principal.role.lower() not in {"owner", "admin"}:
+        visible = []
+        for item in items:
+            try:
+                _assert_asset_access(item, principal)
+                visible.append(item)
+            except HTTPException:
+                continue
+        items = visible
     return {
         "ok": True,
         "filters": filters,
-        "items": items,
+        "items": [_asset_dto(item) for item in items],
         "count": len(items),
     }
 
 
 @router.get("/{asset_id}")
-def get_registered_asset(asset_id: str) -> dict:
+def get_registered_asset(asset_id: str, principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor"))) -> dict:
     asset = get_asset_by_id(asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset não encontrado")
+    try:
+        _assert_asset_access(asset, principal)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Asset não encontrado.") from None
     return {
         "ok": True,
-        "asset": asset,
+        "asset": _asset_dto(asset),
     }
 
 
+@router.get("/{asset_id}/file")
+def get_registered_asset_file(
+    asset_id: str,
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
+) -> FileResponse:
+    asset = get_asset_by_id(asset_id)
+    if not isinstance(asset, dict):
+        raise HTTPException(status_code=404, detail="Asset não encontrado.")
+
+    _assert_asset_access(asset, principal)
+
+    relative_path = str(asset.get("storage_path", "")).strip()
+    try:
+        file_path = resolve_storage_path(relative_path)
+    except (OSError, ValueError):
+        raise HTTPException(status_code=404, detail="Asset não encontrado.") from None
+
+    allowed_extensions = {
+        ".avif", ".epub", ".gif", ".jpeg", ".jpg", ".m4a", ".mp3",
+        ".mp4", ".ogg", ".pdf", ".png", ".wav", ".webm", ".webp",
+    }
+    if file_path.suffix.lower() not in allowed_extensions or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Asset não encontrado.")
+
+    media_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    safe_name = "".join(char for char in file_path.name if char.isalnum() or char in "._-") or "asset"
+    inline = media_type.startswith(("image/", "audio/", "video/"))
+    disposition = "inline" if inline else "attachment"
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": f'{disposition}; filename="{safe_name}"',
+        },
+    )
+
+
 @router.post("/register")
-def register_asset_record(payload: dict) -> dict:
-    asset = register_asset(payload or {})
+def register_asset_record(payload: dict, principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor"))) -> dict:
+    source = payload or {}
+    _assert_asset_access(source, principal, edit=True)
+    safe_payload = {**source, "status": "draft", "url": ""}
+    asset = register_asset(safe_payload)
     return {
         "ok": True,
-        "asset": asset,
+        "asset": _asset_dto(asset),
     }
 
 
@@ -133,7 +260,7 @@ async def upload_asset(
     priority: Optional[str] = Form(default="0"),
     width: Optional[str] = Form(default=None),
     height: Optional[str] = Form(default=None),
-    status: Optional[str] = Form(default="draft"),
+    principal: AuthenticatedPrincipal = Depends(require_roles("owner", "admin", "editor")),
 ) -> dict:
     normalized_ip_slug = _safe_str(ip_slug)
     normalized_asset_type = _safe_str(asset_type)
@@ -145,6 +272,11 @@ async def upload_asset(
         raise HTTPException(status_code=400, detail="asset_type é obrigatório")
     if not normalized_context:
         raise HTTPException(status_code=400, detail="context é obrigatório")
+    _assert_asset_access(
+        {"project_id": project_id, "ip_slug": normalized_ip_slug},
+        principal,
+        edit=True,
+    )
 
     absolute_path, relative_path = _build_asset_storage_path(
         ip_slug=normalized_ip_slug,
@@ -155,11 +287,39 @@ async def upload_asset(
     )
 
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
-    content = await file.read()
-    absolute_path.write_bytes(content)
+    file_size = 0
+    created_file = False
+    try:
+        with absolute_path.open("xb") as destination:
+            created_file = True
+            while chunk := await file.read(ASSET_UPLOAD_CHUNK_BYTES):
+                file_size += len(chunk)
+                if file_size > MAX_ASSET_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Asset excede o limite de {MAX_ASSET_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                    )
+                destination.write(chunk)
+    except Exception:
+        # Never delete a path that this request did not successfully create.
+        if created_file:
+            absolute_path.unlink(missing_ok=True)
+        raise
+    finally:
+        await file.close()
 
-    mime_type = file.content_type or mimetypes.guess_type(file.filename or "")[0] or "application/octet-stream"
-    file_size = len(content)
+    extension = absolute_path.suffix.lower()
+    try:
+        with absolute_path.open("rb") as stored_file:
+            header = stored_file.read(128)
+        if not _asset_signature_matches(extension, header):
+            raise HTTPException(status_code=415, detail="Formato de ficheiro não corresponde à extensão permitida.")
+    except Exception:
+        if created_file:
+            absolute_path.unlink(missing_ok=True)
+        raise
+
+    mime_type = mimetypes.guess_type(file.filename or "")[0] or "application/octet-stream"
 
     payload = {
         "project_id": _safe_str(project_id) or None,
@@ -177,8 +337,8 @@ async def upload_asset(
         "mime_type": mime_type,
         "file_size": file_size,
         "storage_path": relative_path,
-        "url": resolve_cdn_url(relative_path, 1),
-        "status": _safe_str(status) or "draft",
+        "url": "",
+        "status": "draft",
     }
 
     asset = register_asset(payload)
@@ -186,56 +346,56 @@ async def upload_asset(
     asset = update_asset(
         asset["asset_id"],
         {
-            "url": resolve_cdn_url(asset.get("storage_path", ""), asset.get("version")),
+            "url": _public_asset_url(asset),
         },
     ) or asset
 
     return {
         "ok": True,
-        "asset": asset,
+        "asset": _asset_dto(asset),
     }
 
 
 @router.post("/{asset_id}/publish")
-def publish_registered_asset(asset_id: str) -> dict:
+def publish_registered_asset(asset_id: str, _principal=Depends(require_roles("owner", "admin"))) -> dict:
     asset = publish_asset(asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset não encontrado")
     asset = update_asset(
         asset_id,
         {
-            "url": resolve_cdn_url(asset.get("storage_path", ""), asset.get("version")),
+            "url": _public_asset_url(asset),
         },
     ) or asset
     return {
         "ok": True,
-        "asset": asset,
+        "asset": _asset_dto(asset),
     }
 
 
 @router.post("/{asset_id}/archive")
-def archive_registered_asset(asset_id: str) -> dict:
+def archive_registered_asset(asset_id: str, _principal=Depends(require_roles("owner", "admin"))) -> dict:
     asset = archive_asset(asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset não encontrado")
     return {
         "ok": True,
-        "asset": asset,
+        "asset": _asset_dto(asset),
     }
 
 
 @router.post("/{asset_id}/rollback")
-def rollback_registered_asset(asset_id: str) -> dict:
+def rollback_registered_asset(asset_id: str, _principal=Depends(require_roles("owner", "admin"))) -> dict:
     asset = rollback_asset(asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset não encontrado")
     asset = update_asset(
         asset_id,
         {
-            "url": resolve_cdn_url(asset.get("storage_path", ""), asset.get("version")),
+            "url": _public_asset_url(asset),
         },
     ) or asset
     return {
         "ok": True,
-        "asset": asset,
+        "asset": _asset_dto(asset),
 }
