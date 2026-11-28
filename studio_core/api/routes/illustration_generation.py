@@ -22,6 +22,18 @@ from studio_core.services.project_route_auth import (
 MAX_ILLUSTRATION_UPLOAD_BYTES = 50 * 1024 * 1024
 UPLOAD_CHUNK_BYTES = 1024 * 1024
 
+ALLOWED_IMAGE_SIGNATURES = {
+    ".png": lambda header: header.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),
+    ".jpg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
+    ".jpeg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
+    ".webp": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WEBP",
+}
+
+
+def _uploaded_image_signature_matches(extension: str, header: bytes) -> bool:
+    validator = ALLOWED_IMAGE_SIGNATURES.get(str(extension or "").lower())
+    return bool(validator and validator(header))
+
 _PROJECT_ROLES = ("owner", "admin", "editor", "creator")
 router = APIRouter(
     prefix="/illustration-generation",
@@ -109,6 +121,12 @@ async def import_generated_image(
                 if total_bytes > MAX_ILLUSTRATION_UPLOAD_BYTES:
                     raise HTTPException(status_code=413, detail="Imagem excede o limite de 50 MB.")
                 tmp.write(chunk)
+
+        extension = suffix.lower()
+        with Path(tmp_path).open("rb") as uploaded_file:
+            header = uploaded_file.read(32)
+        if not _uploaded_image_signature_matches(extension, header):
+            raise HTTPException(status_code=415, detail="O conteúdo não corresponde a uma imagem PNG, JPEG ou WEBP.")
 
         return import_generated_frame_image_from_temp_upload(
             project_id=project_id,
