@@ -23,9 +23,9 @@ MAX_ILLUSTRATION_UPLOAD_BYTES = 50 * 1024 * 1024
 UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 ALLOWED_IMAGE_SIGNATURES = {
-    ".png": lambda header: header.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),
-    ".jpg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
-    ".jpeg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
+    ".png": lambda header: header.startswith(b"\x89PNG\r\n\x1a\n"),
+    ".jpg": lambda header: header.startswith(b"\xff\xd8\xff"),
+    ".jpeg": lambda header: header.startswith(b"\xff\xd8\xff"),
     ".webp": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WEBP",
 }
 
