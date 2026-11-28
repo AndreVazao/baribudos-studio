@@ -324,9 +324,9 @@ class PrivateMediaServingTests(unittest.TestCase):
 
     def test_asset_upload_signature_validator_rejects_mismatched_and_accepts_known_signatures(self):
         valid_headers = {
-            ".png": b"\\x89PNG\\r\\n\\x1a\\n",
-            ".jpg": b"\\xff\\xd8\\xff",
-            ".jpeg": b"\\xff\\xd8\\xff",
+            ".png": b"\x89PNG\r\n\x1a\n",
+            ".jpg": b"\xff\xd8\xff",
+            ".jpeg": b"\xff\xd8\xff",
             ".gif": b"GIF89a",
             ".webp": b"RIFFxxxxWEBP",
             ".avif": b"xxxxftypavif",
@@ -336,8 +336,8 @@ class PrivateMediaServingTests(unittest.TestCase):
             ".ogg": b"OggS",
             ".m4a": b"xxxxftypM4A ",
             ".mp4": b"xxxxftypisom",
-            ".webm": b"\\x1a\\x45\\xdf\\xa3",
-            ".epub": b"PK\\x03\\x04mimetypeapplication/epub+zip",
+            ".webm": b"\x1a\x45\xdf\xa3",
+            ".epub": b"PK\x03\x04mimetypeapplication/epub+zip",
         }
         for extension, signature in valid_headers.items():
             with self.subTest(extension=extension):
@@ -348,7 +348,7 @@ class PrivateMediaServingTests(unittest.TestCase):
     def test_asset_upload_rejects_mismatched_signature_and_cleans_created_file(self):
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "wrong.png"
-            with patch.object(assets, "_build_asset_storage_path", return_value=(destination, "wrong.png")):
+            with patch.object(assets, "_build_asset_storage_path", return_value=(destination, "wrong.png")), patch.object(assets, "assert_ip_edit_access"):
                 with self.assertRaises(HTTPException) as raised:
                     asyncio.run(assets.upload_asset(
                         file=UploadFile(filename="wrong.png", file=io.BytesIO(b"not a png file")),
@@ -362,9 +362,9 @@ class PrivateMediaServingTests(unittest.TestCase):
 
     def test_illustration_import_signature_validator_rejects_mismatches(self):
         valid_headers = {
-            ".png": b"\\x89PNG\\r\\n\\x1a\\n",
-            ".jpg": b"\\xff\\xd8\\xff",
-            ".jpeg": b"\\xff\\xd8\\xff",
+            ".png": b"\x89PNG\r\n\x1a\n",
+            ".jpg": b"\xff\xd8\xff",
+            ".jpeg": b"\xff\xd8\xff",
             ".webp": b"RIFFxxxxWEBP",
         }
         for extension, signature in valid_headers.items():
