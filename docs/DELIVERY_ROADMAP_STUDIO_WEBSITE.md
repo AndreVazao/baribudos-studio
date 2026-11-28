@@ -485,3 +485,42 @@ A declaração final exige evidência de todos os pontos:
 - Checks concluídos com sucesso: backend-validate, frontend-build, tauri-windows-check.
 - Workflows adicionais também concluídos com sucesso: Distribution Hub V6 Smoke e EPUB + audiobook + mini-series + five-story bundle.
 - PR #98 continua aberta e Draft. O CI está verde; a validação visual/funcional e a revisão independente de segurança continuam pendentes. Não promover a Ready for review nem integrar apenas com base no CI.
+
+
+## 10. Atualização de execução — 28 de novembro de 2026
+
+### Evidência CI confirmada
+
+- Studio PR #98, commit `f573fef7c2e478f41a98059ab85faf86c3bb494d`: Studio CI, Distribution Hub V6 Smoke e Story Production Cloud Validation concluíram com sucesso. O estado verde é evidência de testes/build, não de produção editorial real.
+- Website PR #56, commit `4c17377c203bc286d21b07392d54c0f4f0fcd1e7`: Website CI e Repository Visibility concluíram com sucesso.
+- Website PR #56 recebeu novas alterações após esse SHA e os pipelines correspondentes ainda estão em execução; não declarar o head atual verde até confirmação.
+
+### Correções adicionais Website PR #56
+
+- CSRF same-origin guard para PayPal create-order, antes da leitura do JSON.
+- Checkouts PayPal órfãos: marcar FAILED quando a criação do provider falha, com atualização condicional somente em estado PENDING sem providerRef.
+- Validar URL de aprovação PayPal: HTTPS e host paypal.com ou subdomínio real; rejeitar URL inválido/não confiável.
+- **Novo risco descoberto:** Stripe checkout creation também é mutável e não tinha guard same-origin. Adicionada proteção same-origin antes do JSON parsing.
+- Stripe checkout: tracking do checkout local e cleanup condicional para falhas de provider; resposta Stripe malformada/incompleta devolve 502 e marca checkout como FAILED.
+- Testes de regressão source-level para guard CSRF, cleanup de órfãos e validação de approval URL. Stripe tests em `tests/stripe-checkout-security.test.mjs`.
+
+### Segurança Studio — backlog de revisão
+
+- Continuar auditoria de media/upload; o limite de tamanho, streaming e cleanup seguro estão implementados. Próximo hardening: validação MIME por conteúdo/magic bytes e política de formatos permitidos, garantindo que ficheiros não são publicados com tipo declarado enganador.
+- Revalidar DTOs e URLs entregues ao frontend para confirmar que downloads privados usam autenticação e que nenhum path de storage é exposto.
+
+### Produção narrativa — gate permanece bloqueado
+
+- Smokes sintéticos verdes não demonstram histórias canónicas distintas, aprovações editoriais humanas, ilustrações/audio final reais, temporada compilada ou minissérie final.
+- Não declarar Studio operacional end-to-end até executar e documentar uma produção real, com aprovação editorial e artefactos verificáveis em cada etapa.
+
+### Próximos gates
+
+1. Confirmar CI no head mais recente da PR #56; corrigir falhas sem enfraquecer checks.
+2. Revisão Stripe/PayPal: same-origin, ownership/guest capability, provider-state recovery, idempotency, concorrência, compensação e estados de falha.
+3. Auditar Webhooks e fulfillment (Stripe/PayPal), se presentes, quanto a assinatura, idempotência e transições de estado.
+4. Studio: validação de conteúdo de uploads e auditoria de media URLs/DTOs.
+5. Criar uma produção editorial real controlada e registar outputs, aprovações, custos, retries e artefactos; não usar fixtures como prova.
+6. Manter PRs Draft e sem merge enquanto gates de segurança/produção/schema e dependências não estiverem resolvidos.
+
+**Restrições mantidas:** sem merge, deploy, migração de produção, pagamento real, sandbox de pagamento ou alteração de infraestrutura sem autorização explícita.
