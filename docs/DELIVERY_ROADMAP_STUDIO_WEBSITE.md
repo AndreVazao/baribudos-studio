@@ -524,3 +524,12 @@ A declaração final exige evidência de todos os pontos:
 6. Manter PRs Draft e sem merge enquanto gates de segurança/produção/schema e dependências não estiverem resolvidos.
 
 **Restrições mantidas:** sem merge, deploy, migração de produção, pagamento real, sandbox de pagamento ou alteração de infraestrutura sem autorização explícita.
+
+
+### Atualização incremental — hardening de uploads e Stripe
+
+- Studio assets: introduzida validação de assinatura do conteúdo (magic bytes) contra extensão para PNG, JPEG, GIF, WEBP, AVIF, PDF, MP3, WAV, OGG, M4A, MP4, WebM e EPUB; mismatch responde 415 e elimina apenas o ficheiro criado pelo upload.
+- Studio: testes para assinaturas conhecidas, extensões desconhecidas, mismatch e cleanup.
+- Website: Stripe checkout creation recebeu same-origin guard antes do JSON parsing, compensação condicional para checkouts órfãos e validação de sessão Stripe antes de devolver URL.
+- Website: testes em `tests/stripe-checkout-security.test.mjs`.
+- CI de Studio e Website para estas alterações está em execução; não declarar checks verdes até terminar no head de cada branch.
