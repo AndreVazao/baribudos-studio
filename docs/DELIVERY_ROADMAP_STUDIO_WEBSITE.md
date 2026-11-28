@@ -549,3 +549,11 @@ A declaração final exige evidência de todos os pontos:
 - Website PR #56: revisão read-only da Stripe webhook confirmou verificação da assinatura, correspondência provider/session/checkout, modo payment, estado paid, amount/currency e fulfillment idempotente por transição condicional. Falha de pagamento só marca checkout PENDING como FAILED; não ressuscita checkout falhado. Não foram efetuados pagamentos nem testes live.
 - Bloqueios continuam: prova editorial real end-to-end, visual/manual media-flow, compatibilidade nativa, reconcilição de pagamentos/produção, revisão de baseline de schema e autorização de rollout.
 - Sem merge, deploy, migrações de produção, pagamentos ou sandbox.
+
+
+### 28 nov 2026 — falha CI na validação de assinatura Voice Library
+
+- Studio PR #98 SHA `b45ddb91`: CI e Story Production Cloud Validation falharam porque a rota de upload de Voice Library não chamava o validador de assinatura; o teste existente revelou que ficheiros WAV falsos eram aceites.
+- Corrigir a rota para rejeitar extensões não permitidas e validar a assinatura do conteúdo antes de registar o sample (HTTP 415). O teste negativo deve confirmar que `add_voice_sample` não é chamado.
+- CI FFmpeg/Tauri e frontend permanecem bem; Smoke Distribution Hub V6 passou. Website PR #56 CI e visibility checks passaram no SHA `01a4bddf`.
+- Smoke de produção narrativa continua sintético: aprovação editorial 0, bundle de 5 histórias não aprovado, guia/compilação/temporada não gerados. Não equivale a produção real.
