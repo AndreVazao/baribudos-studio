@@ -14,7 +14,7 @@ def _voice_dto(voice: dict) -> dict:
 
 MAX_VOICE_UPLOAD_BYTES = 50 * 1024 * 1024
 UPLOAD_CHUNK_BYTES = 1024 * 1024
-_AUDIO_SIGNATURES = {
+_VOICE_VOICE_AUDIO_SIGNATURES = {
     ".wav": lambda data: len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WAVE",
     ".mp3": lambda data: data.startswith(b"ID3") or (len(data) >= 2 and data[0] == 0xFF and data[1] & 0xE0 == 0xE0),
     ".m4a": lambda data: len(data) >= 12 and data[4:8] == b"ftyp",
@@ -24,7 +24,7 @@ _AUDIO_SIGNATURES = {
 
 
 def _audio_signature_matches(extension: str, data: bytes) -> bool:
-    validator = _AUDIO_SIGNATURES.get(str(extension or "").lower())
+    validator = _VOICE_VOICE_AUDIO_SIGNATURES.get(str(extension or "").lower())
     return bool(validator and validator(data))
 
 router = APIRouter(
@@ -71,6 +71,13 @@ async def upload_voice(
                 if total_bytes > MAX_VOICE_UPLOAD_BYTES:
                     raise HTTPException(status_code=413, detail="Amostra de voz excede o limite de 50 MB.")
                 tmp.write(chunk)
+        extension = suffix.lower()
+        if extension not in _VOICE_AUDIO_SIGNATURES:
+            raise HTTPException(status_code=415, detail="Formato de áudio não suportado.")
+        with open(tmp_path, "rb") as stored_file:
+            signature = stored_file.read(64 * 1024)
+        if not _audio_signature_matches(extension, signature):
+            raise HTTPException(status_code=415, detail="Assinatura do ficheiro não corresponde ao formato de áudio.")
         voice = add_voice_sample(
             name=name, language=language, notes=notes, source_path=tmp_path,
             original_filename=file.filename or "sample.wav",
