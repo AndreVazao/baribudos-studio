@@ -27,6 +27,29 @@ router = APIRouter(prefix="/assets", dependencies=[Depends(require_roles("owner"
 MAX_ASSET_UPLOAD_BYTES = 50 * 1024 * 1024
 ASSET_UPLOAD_CHUNK_BYTES = 1024 * 1024
 
+ASSET_SIGNATURES = {
+    ".png": lambda header: header.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),
+    ".jpg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
+    ".jpeg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
+    ".gif": lambda header: header.startswith((b"GIF87a", b"GIF89a")),
+    ".webp": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WEBP",
+    ".avif": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"avif", b"avis"),
+    ".pdf": lambda header: header.startswith(b"%PDF-"),
+    ".mp3": lambda header: header.startswith(b"ID3") or (len(header) >= 2 and header[0] == 0xFF and (header[1] & 0xE0) == 0xE0),
+    ".wav": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WAVE",
+    ".ogg": lambda header: header.startswith(b"OggS"),
+    ".m4a": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"M4A ", b"isom", b"mp42"),
+    ".mp4": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"isom", b"mp42", b"avc1", b"M4V "),
+    ".webm": lambda header: header.startswith(b"\\x1a\\x45\\xdf\\xa3"),
+    ".epub": lambda header: header.startswith(b"PK\\x03\\x04") and b"mimetype" in header[:96] and b"application/epub+zip" in header[:128],
+}
+
+
+def _asset_signature_matches(extension: str, header: bytes) -> bool:
+    validator = ASSET_SIGNATURES.get(str(extension or "").lower())
+    return bool(validator and validator(header))
+
+
 
 def _public_asset_url(asset: dict) -> str:
     asset_id = str(asset.get("asset_id", "")).strip()
@@ -285,7 +308,18 @@ async def upload_asset(
     finally:
         await file.close()
 
-    mime_type = file.content_type or mimetypes.guess_type(file.filename or "")[0] or "application/octet-stream"
+    extension = absolute_path.suffix.lower()
+    try:
+        with absolute_path.open("rb") as stored_file:
+            header = stored_file.read(128)
+        if not _asset_signature_matches(extension, header):
+            raise HTTPException(status_code=415, detail="Formato de ficheiro não corresponde à extensão permitida.")
+    except Exception:
+        if created_file:
+            absolute_path.unlink(missing_ok=True)
+        raise
+
+    mime_type = mimetypes.guess_type(file.filename or "")[0] or "application/octet-stream"
 
     payload = {
         "project_id": _safe_str(project_id) or None,
