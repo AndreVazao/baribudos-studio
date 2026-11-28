@@ -277,7 +277,7 @@ class PrivateMediaServingTests(unittest.TestCase):
             upload = UploadFile(filename="cover.png", file=BytesIO(b"new-upload"), headers=None)
             with patch.object(assets, "_build_asset_storage_path", return_value=(existing, "existing.png")), patch.object(
                 assets, "assert_project_access"
-            ), patch.object(assets, "assert_ip_edit_access"):
+            ), patch.object(assets, "_assert_asset_access"):
                 with self.assertRaises(FileExistsError):
                     asyncio.run(assets.upload_asset(
                         file=upload,
