@@ -11,7 +11,7 @@ from unittest.mock import patch
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.testclient import TestClient
 
-from studio_core.api.routes import assets, project_media, public_assets, updater, voice_library, voice_preview
+from studio_core.api.routes import assets, illustration_generation, project_media, public_assets, updater, voice_library, voice_preview
 from studio_core.core.config import APP_CONFIG
 from studio_core.services.auth_principal import AuthenticatedPrincipal, get_current_principal
 from studio_core.services import project_route_auth
@@ -362,3 +362,16 @@ if __name__ == "__main__":
                     ))
             self.assertEqual(raised.exception.status_code, 415)
             self.assertFalse(destination.exists())
+
+    def test_illustration_import_signature_validator_rejects_mismatches(self):
+        valid_headers = {
+            ".png": b"\\x89PNG\\r\\n\\x1a\\n",
+            ".jpg": b"\\xff\\xd8\\xff",
+            ".jpeg": b"\\xff\\xd8\\xff",
+            ".webp": b"RIFFxxxxWEBP",
+        }
+        for extension, signature in valid_headers.items():
+            with self.subTest(extension=extension):
+                self.assertTrue(illustration_generation._uploaded_image_signature_matches(extension, signature))
+                self.assertFalse(illustration_generation._uploaded_image_signature_matches(extension, b"not an image"))
+        self.assertFalse(illustration_generation._uploaded_image_signature_matches(".gif", b"GIF89a"))
