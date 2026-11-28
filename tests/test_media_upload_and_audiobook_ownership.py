@@ -16,7 +16,8 @@ class MediaUploadAndAudiobookOwnershipTests(unittest.TestCase):
     def setUp(self):
         self.app = FastAPI()
         self.app.include_router(assets.router, prefix="/api")
-        self.app.include_router(audiobooks.router, prefix="/api")\n        self.app.include_router(voice_library.router, prefix="/api")
+        self.app.include_router(audiobooks.router, prefix="/api")
+        self.app.include_router(voice_library.router, prefix="/api")
         self.client = TestClient(self.app)
         self.app.dependency_overrides[get_current_principal] = lambda: AuthenticatedPrincipal(
             user_id="user-a", name="Test", role="editor"
