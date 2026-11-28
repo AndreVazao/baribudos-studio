@@ -535,3 +535,5 @@ A declaração final exige evidência de todos os pontos:
 - CI de Studio e Website para estas alterações está em execução; não declarar checks verdes até terminar no head de cada branch.
 
 - Website Stripe checkout: added validation of the returned hosted checkout URL; only HTTPS `checkout.stripe.com` is accepted, with regression test. Latest Website CI must validate this commit before considering the branch green.
+
+- Studio illustration imports: manual image import now validates actual PNG/JPEG/WEBP signature before service attaches and auto-approves the frame. Invalid/mismatched content is rejected with 415 and temporary files are cleaned. Added regression helper tests.
