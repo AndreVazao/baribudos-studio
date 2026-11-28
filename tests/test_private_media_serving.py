@@ -348,7 +348,7 @@ class PrivateMediaServingTests(unittest.TestCase):
     def test_asset_upload_rejects_mismatched_signature_and_cleans_created_file(self):
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "wrong.png"
-            with patch.object(assets, "_build_asset_storage_path", return_value=(destination, "wrong.png")), patch.object(assets, "assert_ip_edit_access"):
+            with patch.object(assets, "_build_asset_storage_path", return_value=(destination, "wrong.png")), patch.object(assets, "_assert_asset_access"):
                 with self.assertRaises(HTTPException) as raised:
                     asyncio.run(assets.upload_asset(
                         file=UploadFile(filename="wrong.png", file=io.BytesIO(b"not a png file")),
