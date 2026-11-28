@@ -554,6 +554,6 @@ A declaração final exige evidência de todos os pontos:
 ### 28 nov 2026 — falha CI na validação de assinatura Voice Library
 
 - Studio PR #98 SHA `b45ddb91`: CI e Story Production Cloud Validation falharam porque a rota de upload de Voice Library não chamava o validador de assinatura; o teste existente revelou que ficheiros WAV falsos eram aceites.
-- Corrigir a rota para rejeitar extensões não permitidas e validar a assinatura do conteúdo antes de registar o sample (HTTP 415). O teste negativo deve confirmar que `add_voice_sample` não é chamado.
+- Correção aplicada em `c61e4da2`: rejeita extensões não permitidas e valida a assinatura do conteúdo antes de registar o sample (HTTP 415); o teste existente confirma que `add_voice_sample` não é chamado quando o conteúdo é inválido. A CI do novo SHA está pendente.
 - CI FFmpeg/Tauri e frontend permanecem bem; Smoke Distribution Hub V6 passou. Website PR #56 CI e visibility checks passaram no SHA `01a4bddf`.
 - Smoke de produção narrativa continua sintético: aprovação editorial 0, bundle de 5 histórias não aprovado, guia/compilação/temporada não gerados. Não equivale a produção real.
