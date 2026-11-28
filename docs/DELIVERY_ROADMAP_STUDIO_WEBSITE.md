@@ -533,3 +533,5 @@ A declaração final exige evidência de todos os pontos:
 - Website: Stripe checkout creation recebeu same-origin guard antes do JSON parsing, compensação condicional para checkouts órfãos e validação de sessão Stripe antes de devolver URL.
 - Website: testes em `tests/stripe-checkout-security.test.mjs`.
 - CI de Studio e Website para estas alterações está em execução; não declarar checks verdes até terminar no head de cada branch.
+
+- Website Stripe checkout: added validation of the returned hosted checkout URL; only HTTPS `checkout.stripe.com` is accepted, with regression test. Latest Website CI must validate this commit before considering the branch green.
