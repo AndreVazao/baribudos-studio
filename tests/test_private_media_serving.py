@@ -322,9 +322,6 @@ class PrivateMediaServingTests(unittest.TestCase):
             self.assertIn("public", allowed.headers["cache-control"])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_asset_upload_signature_validator_rejects_mismatched_and_accepts_known_signatures(self):
         valid_headers = {
             ".png": b"\\x89PNG\\r\\n\\x1a\\n",
@@ -375,3 +372,7 @@ if __name__ == "__main__":
                 self.assertTrue(illustration_generation._uploaded_image_signature_matches(extension, signature))
                 self.assertFalse(illustration_generation._uploaded_image_signature_matches(extension, b"not an image"))
         self.assertFalse(illustration_generation._uploaded_image_signature_matches(".gif", b"GIF89a"))
+
+
+if __name__ == "__main__":
+    unittest.main()
