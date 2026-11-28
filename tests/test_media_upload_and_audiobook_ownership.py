@@ -8,7 +8,7 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from studio_core.api.routes import assets, audiobooks
+from studio_core.api.routes import assets, audiobooks, voice_library
 from studio_core.services.auth_principal import AuthenticatedPrincipal, get_current_principal
 
 
@@ -16,7 +16,7 @@ class MediaUploadAndAudiobookOwnershipTests(unittest.TestCase):
     def setUp(self):
         self.app = FastAPI()
         self.app.include_router(assets.router, prefix="/api")
-        self.app.include_router(audiobooks.router, prefix="/api")
+        self.app.include_router(audiobooks.router, prefix="/api")\n        self.app.include_router(voice_library.router, prefix="/api")
         self.client = TestClient(self.app)
         self.app.dependency_overrides[get_current_principal] = lambda: AuthenticatedPrincipal(
             user_id="user-a", name="Test", role="editor"
@@ -40,6 +40,30 @@ class MediaUploadAndAudiobookOwnershipTests(unittest.TestCase):
                 )
             self.assertEqual(response.status_code, 413)
             self.assertFalse(destination.exists())
+
+    def test_voice_sample_upload_rejects_mismatched_audio_signature(self):
+        with patch.object(voice_library, "add_voice_sample") as add_sample:
+            response = self.client.post(
+                "/api/voice-library/upload",
+                data={"name": "Bad sample", "language": "pt-PT"},
+                files={"file": ("sample.wav", b"not a wav file", "audio/wav")},
+            )
+        self.assertEqual(response.status_code, 415)
+        add_sample.assert_not_called()
+
+    def test_voice_audio_signature_validator_accepts_allowed_formats(self):
+        valid = {
+            ".wav": b"RIFF1234WAVE",
+            ".mp3": b"ID3header",
+            ".m4a": b"0000ftypM4A ",
+            ".ogg": b"OggSdata",
+            ".flac": b"fLaCdata",
+        }
+        for extension, signature in valid.items():
+            with self.subTest(extension=extension):
+                self.assertTrue(voice_library._audio_signature_matches(extension, signature))
+                self.assertFalse(voice_library._audio_signature_matches(extension, b"not audio"))
+        self.assertFalse(voice_library._audio_signature_matches(".exe", b"RIFF1234WAVE"))
 
     def test_audiobook_export_rejects_another_users_voice_sample(self):
         project = {"id": "project-1", "created_by": "user-a", "story": {"pages": [{"text": "Olá"}]}}
