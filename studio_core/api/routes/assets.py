@@ -28,9 +28,9 @@ MAX_ASSET_UPLOAD_BYTES = 50 * 1024 * 1024
 ASSET_UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 ASSET_SIGNATURES = {
-    ".png": lambda header: header.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),
-    ".jpg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
-    ".jpeg": lambda header: header.startswith(b"\\xff\\xd8\\xff"),
+    ".png": lambda header: header.startswith(b"\x89PNG\r\n\x1a\n"),
+    ".jpg": lambda header: header.startswith(b"\xff\xd8\xff"),
+    ".jpeg": lambda header: header.startswith(b"\xff\xd8\xff"),
     ".gif": lambda header: header.startswith((b"GIF87a", b"GIF89a")),
     ".webp": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WEBP",
     ".avif": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"avif", b"avis"),
@@ -40,8 +40,8 @@ ASSET_SIGNATURES = {
     ".ogg": lambda header: header.startswith(b"OggS"),
     ".m4a": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"M4A ", b"isom", b"mp42"),
     ".mp4": lambda header: len(header) >= 12 and header[4:8] == b"ftyp" and header[8:12] in (b"isom", b"mp42", b"avc1", b"M4V "),
-    ".webm": lambda header: header.startswith(b"\\x1a\\x45\\xdf\\xa3"),
-    ".epub": lambda header: header.startswith(b"PK\\x03\\x04") and b"mimetype" in header[:96] and b"application/epub+zip" in header[:128],
+    ".webm": lambda header: header.startswith(b"\x1a\x45\xdf\xa3"),
+    ".epub": lambda header: header.startswith(b"PK\x03\x04") and b"mimetype" in header[:96] and b"application/epub+zip" in header[:128],
 }
 
 
