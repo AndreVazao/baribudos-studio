@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import io
 import tempfile
 import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.testclient import TestClient
 
 from studio_core.api.routes import assets, project_media, public_assets, updater, voice_library, voice_preview
@@ -322,3 +324,41 @@ class PrivateMediaServingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_asset_upload_signature_validator_rejects_mismatched_and_accepts_known_signatures(self):
+        valid_headers = {
+            ".png": b"\\x89PNG\\r\\n\\x1a\\n",
+            ".jpg": b"\\xff\\xd8\\xff",
+            ".jpeg": b"\\xff\\xd8\\xff",
+            ".gif": b"GIF89a",
+            ".webp": b"RIFFxxxxWEBP",
+            ".avif": b"xxxxftypavif",
+            ".pdf": b"%PDF-1.7",
+            ".mp3": b"ID3",
+            ".wav": b"RIFFxxxxWAVE",
+            ".ogg": b"OggS",
+            ".m4a": b"xxxxftypM4A ",
+            ".mp4": b"xxxxftypisom",
+            ".webm": b"\\x1a\\x45\\xdf\\xa3",
+            ".epub": b"PK\\x03\\x04mimetypeapplication/epub+zip",
+        }
+        for extension, signature in valid_headers.items():
+            with self.subTest(extension=extension):
+                self.assertTrue(assets._asset_signature_matches(extension, signature))
+                self.assertFalse(assets._asset_signature_matches(extension, b"not a valid signature"))
+        self.assertFalse(assets._asset_signature_matches(".exe", b"MZ"))
+
+    def test_asset_upload_rejects_mismatched_signature_and_cleans_created_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "wrong.png"
+            with patch.object(assets, "_build_asset_storage_path", return_value=(destination, "wrong.png")):
+                with self.assertRaises(HTTPException) as raised:
+                    asyncio.run(assets.upload_asset(
+                        file=UploadFile(filename="wrong.png", file=io.BytesIO(b"not a png file")),
+                        ip_slug="ip-test",
+                        asset_type="cover",
+                        context="test",
+                        principal=self.principal,
+                    ))
+            self.assertEqual(raised.exception.status_code, 415)
+            self.assertFalse(destination.exists())
