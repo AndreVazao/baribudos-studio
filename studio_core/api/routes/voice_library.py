@@ -14,7 +14,7 @@ def _voice_dto(voice: dict) -> dict:
 
 MAX_VOICE_UPLOAD_BYTES = 50 * 1024 * 1024
 UPLOAD_CHUNK_BYTES = 1024 * 1024
-_VOICE_VOICE_AUDIO_SIGNATURES = {
+_VOICE_AUDIO_SIGNATURES = {
     ".wav": lambda data: len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WAVE",
     ".mp3": lambda data: data.startswith(b"ID3") or (len(data) >= 2 and data[0] == 0xFF and data[1] & 0xE0 == 0xE0),
     ".m4a": lambda data: len(data) >= 12 and data[4:8] == b"ftyp",
@@ -24,7 +24,7 @@ _VOICE_VOICE_AUDIO_SIGNATURES = {
 
 
 def _audio_signature_matches(extension: str, data: bytes) -> bool:
-    validator = _VOICE_VOICE_AUDIO_SIGNATURES.get(str(extension or "").lower())
+    validator = _VOICE_AUDIO_SIGNATURES.get(str(extension or "").lower())
     return bool(validator and validator(data))
 
 router = APIRouter(
